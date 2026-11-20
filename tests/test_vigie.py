@@ -15,7 +15,8 @@ from http.server import ThreadingHTTPServer
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from vigie import (autorisation, banc, cli, comparaison, installeur,  # noqa: E402
+from vigie import (autorisation, banc, cli, comparaison, decouverte,  # noqa: E402
+                   installeur,
                    lanceur,
                    interface, outils, pdf, rapport, reseau, scenarios)
 from vigie.modeles import (CRITIQUE, IMPORTANT, INFO, OK, Cible, Constat,  # noqa: E402
@@ -453,6 +454,59 @@ class Banc(unittest.TestCase):
         melange = banc.meilleur_melange(mesure)
         self.assertEqual([e["outil"] for e in melange["melange"]], ["seul"])
         self.assertEqual(melange["inutiles"], [])
+
+
+class Decouverte(unittest.TestCase):
+    # Aide réelle de dnstwist : la cible est positionnelle, et « -d » est un dictionnaire.
+    AIDE_DNSTWIST = ("usage: dnstwist [OPTION]... DOMAIN\n"
+                     "  -d, --dictionary FILE  Generate more domains using dictionary FILE\n"
+                     "  -f, --format FORMAT    Output format\n")
+    AIDE_DRAPEAU = ("Usage of subfinder:\n"
+                    "  -d, --domain string   domain to find subdomains for\n"
+                    "  -silent               show only results\n")
+
+    def test_drapeau_qui_attend_un_fichier_nest_pas_la_cible(self):
+        proposition = decouverte.proposer("dnstwist", self.AIDE_DNSTWIST)
+        self.assertEqual(proposition["arguments"], ["{cible}"])   # et surtout pas ["-d", "{cible}"]
+        self.assertNotIn("-d", proposition["arguments"])
+        self.assertEqual(proposition["confiance"], "bonne")
+
+    def test_drapeau_de_cible_reconnu(self):
+        proposition = decouverte.proposer("subfinder", self.AIDE_DRAPEAU)
+        self.assertIn("{cible}", proposition["arguments"])
+        self.assertTrue({"-d", "--domain"} & set(proposition["arguments"]))
+        self.assertIn("-silent", proposition["arguments"])        # sortie propre
+        self.assertEqual(proposition["confiance"], "bonne")
+
+    # Aides réelles, relevées sur la machine.
+    AIDE_SHERLOCK = ("usage: sherlock [-h] [--version] [--verbose] [--no-color]\n"
+                     "                [--timeout TIMEOUT] USERNAMES [USERNAMES ...]\n\n"
+                     "  --verbose, -v, -d, --debug   Display debugging information\n")
+    AIDE_DNSRECON = ("usage: dnsrecon [-h] [-d DOMAIN] [-n NS_SERVER] [-D DICTIONARY]\n"
+                     "                [--threads THREADS]\n\n"
+                     "  -d DOMAIN, --domain DOMAIN   Target domain.\n")
+
+    def test_drapeau_synonyme_de_debug_nest_pas_la_cible(self):
+        proposition = decouverte.proposer("sherlock", self.AIDE_SHERLOCK)
+        self.assertNotIn("-d", proposition["arguments"])      # -d y est un synonyme de --debug
+        self.assertEqual(proposition["arguments"], ["--no-color", "{cible}"])
+        self.assertEqual(proposition["confiance"], "bonne")
+
+    def test_cible_entre_crochets_est_un_drapeau_pas_un_positionnel(self):
+        # « [-d DOMAIN] » décrit une option : la cible n'est PAS positionnelle ici
+        proposition = decouverte.proposer("dnsrecon", self.AIDE_DNSRECON)
+        self.assertIn("{cible}", proposition["arguments"])
+        self.assertTrue({"-d", "--domain"} & set(proposition["arguments"]))
+
+    def test_sans_aide_la_confiance_est_nulle(self):
+        proposition = decouverte.proposer("mystere", "")
+        self.assertEqual(proposition["confiance"], "nulle")
+        self.assertEqual(proposition["arguments"], [])
+
+    def test_aide_sans_indice_reste_une_supposition(self):
+        proposition = decouverte.proposer("opaque", "Ce programme fait des choses.\n")
+        self.assertEqual(proposition["confiance"], "faible")
+        self.assertIn("supposée", proposition["indices"])
 
 
 class Lanceur(unittest.TestCase):

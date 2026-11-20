@@ -83,6 +83,12 @@ def main(arguments=None):
                       help="outils à comparer, séparés par des virgules")
     comp.add_argument("--sortie", default="comparaisons")
 
+    dec = commandes.add_parser("decouvrir",
+                               help="lire l'aide des outils installés pour deviner leur lancement")
+    dec.add_argument("--outils", help="commandes séparées par des virgules (sinon : le catalogue)")
+    dec.add_argument("--rapport", default="declarations.json",
+                     help="fichier où écrire les propositions")
+
     lan = commandes.add_parser("lancer", help="lancer tous les outils d'une facette sur une cible")
     lan.add_argument("domaine", help="exemple.fr")
     lan.add_argument("--facette", default="domaines", help="domaines, mails, ip, failles ou urls")
@@ -112,6 +118,26 @@ def main(arguments=None):
     commandes.add_parser("questionnaire", help="afficher le questionnaire assureur")
 
     args = analyseur.parse_args(arguments)
+
+    if args.commande == "decouvrir":
+        from . import decouverte, installeur
+        import shutil as _shutil
+        if args.outils:
+            noms = [n.strip() for n in args.outils.split(",") if n.strip()]
+        else:
+            noms = sorted({o["nom"].split()[0].lower() for o in installeur.charger()})
+        presents = [n for n in noms if _shutil.which(n)]
+        print(f"{len(noms)} outils examinés, {len(presents)} installés sur cette machine.\n")
+        if not presents:
+            raise SystemExit("Aucun de ces outils n'est installé : "
+                             "python3 -m vigie installer --categorie \"...\"")
+        propositions = [decouverte.proposer(nom) for nom in presents]
+        print(decouverte.en_texte(propositions))
+        import json as _json
+        with open(args.rapport, "w", encoding="utf-8") as fichier:
+            _json.dump(propositions, fichier, ensure_ascii=False, indent=2)
+        print(f"\nPropositions écrites : {args.rapport}")
+        return
 
     if args.commande == "lancer":
         from . import banc, lanceur
