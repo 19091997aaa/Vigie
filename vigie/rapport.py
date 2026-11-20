@@ -20,15 +20,18 @@ def construire(societe, cible, date, constats, brut, non_realises, autorisation)
     blocs = {}
     for constat in constats:
         blocs.setdefault(constat.bloc, []).append(constat)
+    # La note globale est celle du domaine le plus faible : on vaut son maillon faible.
+    # Ainsi elle tombe toujours sur une lettre déjà affichée, et jamais sous le pire bloc.
+    notes_blocs = {nom: note(liste) for nom, liste in blocs.items()}
     return {
         "outil": "Vigie",
         "version": __version__,
         "societe": societe,
         "cible": cible,
         "date": date,
-        "note_globale": note(constats) if constats else None,
+        "note_globale": min(notes_blocs.values()) if notes_blocs else None,
         "scenarios": scenarios.scenarios_pour([c.en_dict() for c in constats]),
-        "blocs": {nom: {"note": note(liste), "constats": [c.en_dict() for c in trier(liste)]}
+        "blocs": {nom: {"note": notes_blocs[nom], "constats": [c.en_dict() for c in trier(liste)]}
                   for nom, liste in blocs.items()},
         "non_realises": non_realises,
         "autorisation": autorisation,

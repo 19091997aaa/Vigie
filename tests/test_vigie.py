@@ -247,6 +247,18 @@ class Ensemble(Base):
         self.assertEqual(note([]), 100)
         self.assertEqual(note([Constat("x", CRITIQUE, "t", "e")] * 5), 0)
 
+    def test_note_globale_est_celle_du_pire_bloc(self):
+        constats = [
+            Constat("Exposition", INFO, "a", "a"),                 # bloc à 98
+            Constat("Conformité assureur", CRITIQUE, "b", "b"),    # bloc à 75
+            Constat("Conformité assureur", IMPORTANT, "c", "c"),
+        ]
+        r = rapport.construire("S", "ex.fr", "2026-11-20", constats, {}, [], None)
+        self.assertEqual(r["blocs"]["Exposition"]["note"], 98)
+        self.assertEqual(r["blocs"]["Conformité assureur"]["note"], 65)
+        # la globale suit le maillon faible, jamais en dessous
+        self.assertEqual(r["note_globale"], 65)
+
     def test_diagnostic_complet_et_fichiers(self):
         reseau.dns = faux_dns(SITE_SEUL)
         self.site_propre()
