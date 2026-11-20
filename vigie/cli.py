@@ -66,6 +66,8 @@ def main(arguments=None):
                       help="le dirigeant a donné son accord écrit pour chercher ses comptes")
     diag.add_argument("--autorisation", help="autorisation signée du client (fichier)")
     diag.add_argument("--reponses", help="réponses au questionnaire assureur (fichier JSON)")
+    diag.add_argument("--pdf", action="store_true",
+                      help="produire aussi les rapports en PDF (via Chrome/Edge déjà installé)")
     diag.add_argument("--sortie", default="rapports", help="dossier où écrire les rapports")
 
     interface = commandes.add_parser("interface", help="ouvrir Vigie dans le navigateur")
@@ -156,6 +158,15 @@ def main(arguments=None):
     print("Rapports écrits :")
     for chemin in chemins.values():
         print("  " + chemin)
+    if args.pdf:
+        from . import pdf as export_pdf
+        try:
+            produits = export_pdf.ecrire_pdf(chemins)
+            print("PDF produits :")
+            for chemin in produits.values():
+                print("  " + chemin)
+        except export_pdf.PasDeNavigateur as empechement:
+            print("PDF non produit : " + str(empechement))
 
 
 if __name__ == "__main__":

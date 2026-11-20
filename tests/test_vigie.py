@@ -16,7 +16,7 @@ from http.server import ThreadingHTTPServer
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from vigie import (autorisation, cli, comparaison, interface, outils,  # noqa: E402
-                   rapport, reseau, scenarios)
+                   pdf, rapport, reseau, scenarios)
 from vigie.modeles import (CRITIQUE, IMPORTANT, INFO, OK, Cible, Constat,  # noqa: E402
                            ControleImpossible, fusionner, note)
 from vigie.modules import MODULES, conformite, domaines, mail, pseudos, site  # noqa: E402
@@ -380,6 +380,29 @@ class Interface(Base):
             ouvreur = urllib.request.build_opener(urllib.request.HTTPCookieProcessor())
             page = ouvreur.open(base + "/?code=secret123").read().decode()
             self.assertIn("Nouveau diagnostic", page)
+
+
+class Pdf(unittest.TestCase):
+    def test_sans_navigateur_message_clair(self):
+        vrai = pdf.trouver_navigateur
+        pdf.trouver_navigateur = lambda: None
+        try:
+            with self.assertRaises(pdf.PasDeNavigateur) as absence:
+                pdf.html_vers_pdf("peu importe.html", "sortie.pdf")
+            self.assertIn("Ctrl+P", str(absence.exception))
+        finally:
+            pdf.trouver_navigateur = vrai
+
+    def test_conversion_reelle_si_navigateur_present(self):
+        if not pdf.trouver_navigateur():
+            self.skipTest("aucun navigateur Chromium sur cette machine")
+        with tempfile.TemporaryDirectory() as dossier:
+            html = os.path.join(dossier, "p.html")
+            with open(html, "w", encoding="utf-8") as fichier:
+                fichier.write("<!DOCTYPE html><html><body><h1>Vigie</h1></body></html>")
+            sortie = pdf.html_vers_pdf(html, os.path.join(dossier, "p.pdf"))
+            with open(sortie, "rb") as fichier:
+                self.assertTrue(fichier.read(5).startswith(b"%PDF"))
 
 
 if __name__ == "__main__":
