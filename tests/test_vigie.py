@@ -15,8 +15,8 @@ from http.server import ThreadingHTTPServer
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from vigie import (autorisation, cli, comparaison, interface, outils,  # noqa: E402
-                   pdf, rapport, reseau, scenarios)
+from vigie import (autorisation, cli, comparaison, installeur, interface,  # noqa: E402
+                   outils, pdf, rapport, reseau, scenarios)
 from vigie.modeles import (CRITIQUE, IMPORTANT, INFO, OK, Cible, Constat,  # noqa: E402
                            ControleImpossible, fusionner, note)
 from vigie.modules import MODULES, conformite, domaines, mail, pseudos, site  # noqa: E402
@@ -392,6 +392,38 @@ class Interface(Base):
             ouvreur = urllib.request.build_opener(urllib.request.HTTPCookieProcessor())
             page = ouvreur.open(base + "/?code=secret123").read().decode()
             self.assertIn("Nouveau diagnostic", page)
+
+
+class Installeur(unittest.TestCase):
+    def test_lecture_du_depot(self):
+        self.assertEqual(installeur.depot("https://github.com/soxoj/maigret"), ("soxoj", "maigret"))
+        self.assertEqual(installeur.depot("https://github.com/a/b.git"), ("a", "b"))
+        self.assertIsNone(installeur.depot("https://exemple.fr/outil"))
+
+    def test_methodes_essayees_dans_l_ordre(self):
+        outil = {"nom": "Maigret", "lien": "https://github.com/soxoj/maigret"}
+        libelles = [libelle for libelle, _ in installeur.methodes(outil)]
+        self.assertEqual(libelles, ["pipx (PyPI)", "pipx (dépôt)", "go", "npm"])
+        self.assertEqual(installeur.methodes({"nom": "X", "lien": ""}), [])
+
+    def test_a_blanc_n_installe_rien(self):
+        outil = {"nom": "Maigret", "lien": "https://github.com/soxoj/maigret"}
+        resultat = installeur.installer_un(outil, a_blanc=True)
+        self.assertFalse(resultat["installe"])
+        self.assertIn("pipx install maigret", resultat["raison"])
+
+    def test_catalogue_complet_et_categorise(self):
+        outils_catalogue = installeur.charger()
+        self.assertEqual(len(outils_catalogue), 222)
+        self.assertEqual(sum(installeur.categories(outils_catalogue).values()), 222)
+
+    def test_resume_compte_par_methode(self):
+        comptes = [{"nom": "a", "installe": True, "methode": "pipx (PyPI)", "raison": ""},
+                   {"nom": "b", "installe": True, "methode": "pipx (PyPI)", "raison": ""},
+                   {"nom": "c", "installe": False, "methode": "", "raison": "cassé"}]
+        bilan = installeur.resume(comptes)
+        self.assertEqual((bilan["total"], bilan["installes"], bilan["echecs"]), (3, 2, 1))
+        self.assertEqual(bilan["par_methode"], {"pipx (PyPI)": 2})
 
 
 class Pdf(unittest.TestCase):

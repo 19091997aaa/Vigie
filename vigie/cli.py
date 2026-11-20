@@ -83,11 +83,50 @@ def main(arguments=None):
                       help="outils à comparer, séparés par des virgules")
     comp.add_argument("--sortie", default="comparaisons")
 
+    inst = commandes.add_parser("installer", help="installer en masse les outils du catalogue")
+    inst.add_argument("--categorie", help="n'installer qu'une catégorie (nom exact)")
+    inst.add_argument("--tous", action="store_true", help="tout le catalogue")
+    inst.add_argument("--a-blanc", action="store_true",
+                      help="n'installe rien : affiche ce qui serait tenté")
+    inst.add_argument("--limite", type=int, help="s'arrêter après N outils (pour essayer)")
+    inst.add_argument("--rapport", default="installation.json",
+                      help="fichier où écrire le compte rendu")
+
     commandes.add_parser("modules", help="lister les contrôles disponibles")
     commandes.add_parser("outils", help="lister les outils externes")
     commandes.add_parser("questionnaire", help="afficher le questionnaire assureur")
 
     args = analyseur.parse_args(arguments)
+
+    if args.commande == "installer":
+        from . import installeur
+        outils_catalogue = installeur.charger()
+        if not args.categorie and not args.tous:
+            print("Catégories du catalogue (utilise --categorie \"...\" ou --tous) :\n")
+            for nom, nombre in sorted(installeur.categories(outils_catalogue).items(),
+                                      key=lambda couple: -couple[1]):
+                print(f"  {nombre:4}  {nom}")
+            return
+        choisis = (outils_catalogue if args.tous else
+                   [o for o in outils_catalogue if o["categorie"] == args.categorie])
+        if not choisis:
+            raise SystemExit(f"Aucun outil dans la catégorie : {args.categorie}")
+        if args.limite:
+            choisis = choisis[:args.limite]
+        print(f"{len(choisis)} outils à traiter"
+              + (" (à blanc, rien ne sera installé)" if args.a_blanc else "") + "\n")
+        comptes = installeur.installer(choisis, args.a_blanc)
+        bilan = installeur.resume(comptes)
+        import json as _json
+        with open(args.rapport, "w", encoding="utf-8") as fichier:
+            _json.dump({"resume": bilan, "details": comptes}, fichier,
+                       ensure_ascii=False, indent=2)
+        print(f"\nBilan : {bilan['installes']} installés, {bilan['echecs']} en échec "
+              f"sur {bilan['total']}.")
+        for methode, nombre in bilan["par_methode"].items():
+            print(f"  {nombre:4}  via {methode}")
+        print(f"Compte rendu écrit : {args.rapport}")
+        return
 
     if args.commande == "modules":
         for nom, module in MODULES.items():
