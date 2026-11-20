@@ -1,0 +1,1556 @@
+[
+ {
+  "nom": "Sherlock",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Cherche un pseudo sur des centaines de réseaux sociaux.",
+  "besoin": "rien",
+  "lien": "https://github.com/sherlock-project/sherlock"
+ },
+ {
+  "nom": "Maigret",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Comme Sherlock, mais fabrique en plus un dossier à partir des profils trouvés.",
+  "besoin": "rien",
+  "lien": "https://github.com/soxoj/maigret"
+ },
+ {
+  "nom": "ArchiveBox",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Archive des pages web pour garder une preuve d'une page qui peut disparaître.",
+  "besoin": "rien",
+  "lien": "https://github.com/ArchiveBox/ArchiveBox"
+ },
+ {
+  "nom": "SpiderFoot",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Automatise la collecte d'infos sur un domaine, une IP, un e-mail ou un nom.",
+  "besoin": "rien",
+  "lien": "https://github.com/smicallef/spiderfoot"
+ },
+ {
+  "nom": "Social Analyzer",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Analyse un pseudo sur des centaines de sites, avec une note de fiabilité.",
+  "besoin": "rien",
+  "lien": "https://github.com/qeeqbox/social-analyzer"
+ },
+ {
+  "nom": "GHunt",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Récupère les infos publiques d'un compte Google à partir d'un e-mail. (données personnelles)",
+  "besoin": "rien",
+  "lien": "https://github.com/mxrch/GHunt"
+ },
+ {
+  "nom": "PhoneInfoga",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Infos publiques sur un numéro de téléphone (pays, opérateur, traces en ligne). (données personnelles)",
+  "besoin": "rien",
+  "lien": "https://github.com/sundowndev/phoneinfoga"
+ },
+ {
+  "nom": "theHarvester",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Collecte e-mails, sous-domaines et noms d'une société à partir de sources publiques.",
+  "besoin": "rien",
+  "lien": "https://github.com/laramies/theHarvester"
+ },
+ {
+  "nom": "Holehe",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Teste si une adresse e-mail a un compte sur 120+ sites.",
+  "besoin": "rien",
+  "lien": "https://github.com/megadose/holehe"
+ },
+ {
+  "nom": "Instaloader",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Télécharge des photos et métadonnées publiques d'Instagram.",
+  "besoin": "rien",
+  "lien": "https://github.com/instaloader/instaloader"
+ },
+ {
+  "nom": "Recon-ng",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Cadre de reconnaissance web en ligne de commande, avec des modules.",
+  "besoin": "rien",
+  "lien": "https://github.com/lanmaster53/recon-ng"
+ },
+ {
+  "nom": "ExifTool",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Lit et modifie les métadonnées (photo, PDF, Office) : GPS, appareil, auteur.",
+  "besoin": "rien",
+  "lien": "https://github.com/exiftool/exiftool"
+ },
+ {
+  "nom": "Toutatis",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Infos publiques d'un compte Instagram.",
+  "besoin": "rien",
+  "lien": "https://github.com/megadose/toutatis"
+ },
+ {
+  "nom": "Exiv2",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Lit les métadonnées d'images en ligne de commande ou via bibliothèque.",
+  "besoin": "rien",
+  "lien": "https://github.com/exiv2/exiv2"
+ },
+ {
+  "nom": "auto-archiver",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Archive automatiquement des liens et médias (outil de Bellingcat).",
+  "besoin": "rien",
+  "lien": "https://github.com/bellingcat/auto-archiver"
+ },
+ {
+  "nom": "Datashare",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Cherche dans de gros volumes de documents (outil des journalistes d'investigation).",
+  "besoin": "rien",
+  "lien": "https://github.com/ICIJ/datashare"
+ },
+ {
+  "nom": "Metagoofil",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Récupère les documents publics d'un site et en extrait les métadonnées.",
+  "besoin": "rien",
+  "lien": "https://github.com/opsdisk/metagoofil"
+ },
+ {
+  "nom": "InVID-WeVerify",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Extension de navigateur pour vérifier images et vidéos (recherche inversée, loupe, métadonnées). (extension navigateur)",
+  "besoin": "rien",
+  "lien": "https://github.com/AFP-Medialab/verification-plugin"
+ },
+ {
+  "nom": "Flowsint",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Plateforme graphique pour relier les résultats d'une enquête OSINT.",
+  "besoin": "rien",
+  "lien": "https://github.com/reconurge/flowsint"
+ },
+ {
+  "nom": "Robin",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Recherche sur le dark web assistée par LLM (clé API ou modèle local nécessaire).",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/apurvsinghgautam/robin"
+ },
+ {
+  "nom": "geo-sleuth",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Aide à trouver où une photo a été prise (carte, relief, ombres).",
+  "besoin": "rien",
+  "lien": "https://github.com/Oldcircle/geo-sleuth"
+ },
+ {
+  "nom": "user-scanner",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Recherche pseudo et e-mail en un seul outil, avec support MCP.",
+  "besoin": "rien",
+  "lien": "https://github.com/kaifcodec/user-scanner"
+ },
+ {
+  "nom": "OpenOSINT",
+  "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
+  "role": "Agent OSINT qui pilote 21 outils publics par questions en langage naturel.",
+  "besoin": "rien",
+  "lien": "https://github.com/OpenOSINT/OpenOSINT"
+ },
+ {
+  "nom": "Web-Check",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Tableau de bord qui analyse un site (DNS, TLS, en-têtes, redirections, ports, SEO de base). (auto-hébergeable)",
+  "besoin": "rien",
+  "lien": "https://github.com/Lissy93/web-check"
+ },
+ {
+  "nom": "Gitleaks",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Détecte les secrets dans l'historique Git.",
+  "besoin": "rien",
+  "lien": "https://github.com/gitleaks/gitleaks"
+ },
+ {
+  "nom": "Lighthouse",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Audit de page : performance, SEO, accessibilité, bonnes pratiques. (SEO)",
+  "besoin": "rien",
+  "lien": "https://github.com/GoogleChrome/lighthouse"
+ },
+ {
+  "nom": "TruffleHog",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Cherche des mots de passe et clés oubliés dans du code et des dépôts.",
+  "besoin": "rien",
+  "lien": "https://github.com/trufflesecurity/trufflehog"
+ },
+ {
+  "nom": "OWASP Amass",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Cartographie la surface exposée d'une organisation (domaines, DNS, réseaux).",
+  "besoin": "rien",
+  "lien": "https://github.com/owasp-amass/amass"
+ },
+ {
+  "nom": "Subfinder",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Liste les sous-domaines d'un domaine à partir de sources publiques.",
+  "besoin": "rien",
+  "lien": "https://github.com/projectdiscovery/subfinder"
+ },
+ {
+  "nom": "httpx",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Vérifie quels sites répondent et récupère leur titre, technologie et statut.",
+  "besoin": "rien",
+  "lien": "https://github.com/projectdiscovery/httpx"
+ },
+ {
+  "nom": "WhatWeb",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Identifie les technologies d'un site (CMS, serveur, bibliothèques).",
+  "besoin": "rien",
+  "lien": "https://github.com/urbanadventurer/WhatWeb"
+ },
+ {
+  "nom": "dnstwist",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Détecte les noms de domaine ressemblants au tien (typosquatting, hameçonnage).",
+  "besoin": "rien",
+  "lien": "https://github.com/elceef/dnstwist"
+ },
+ {
+  "nom": "sitespeed.io",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Mesure la vitesse réelle d'un site (impact sur le référencement). (SEO)",
+  "besoin": "rien",
+  "lien": "https://github.com/sitespeedio/sitespeed.io"
+ },
+ {
+  "nom": "Unlighthouse",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Lance Lighthouse sur tout un site pour trouver les pages faibles en SEO et performance. (SEO)",
+  "besoin": "rien",
+  "lien": "https://github.com/harlan-zw/unlighthouse"
+ },
+ {
+  "nom": "Pa11y",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Teste l'accessibilité d'un site (critère aussi pris en compte par les moteurs). (SEO)",
+  "besoin": "rien",
+  "lien": "https://github.com/pa11y/pa11y"
+ },
+ {
+  "nom": "gowitness",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Captures d'écran de sites web en masse.",
+  "besoin": "rien",
+  "lien": "https://github.com/sensepost/gowitness"
+ },
+ {
+  "nom": "SSLyze",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Analyse rapide de la configuration TLS d'un site.",
+  "besoin": "rien",
+  "lien": "https://github.com/nabla-c0d3/sslyze"
+ },
+ {
+  "nom": "uncover",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Interroge Shodan, Censys et autres moteurs pour voir ce qui est exposé (clés API gratuites).",
+  "besoin": "clé API (souvent gratuite)",
+  "lien": "https://github.com/projectdiscovery/uncover"
+ },
+ {
+  "nom": "dnsrecon",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Audit DNS : enregistrements, transferts de zone, sous-domaines.",
+  "besoin": "rien",
+  "lien": "https://github.com/darkoperator/dnsrecon"
+ },
+ {
+  "nom": "dnsx",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Interroge le DNS en masse (enregistrements A, MX, TXT…).",
+  "besoin": "rien",
+  "lien": "https://github.com/projectdiscovery/dnsx"
+ },
+ {
+  "nom": "cloud_enum",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Cherche des ressources cloud publiques (Azure, AWS, GCP) au nom d'une marque.",
+  "besoin": "rien",
+  "lien": "https://github.com/initstring/cloud_enum"
+ },
+ {
+  "nom": "LinkChecker",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Trouve les liens cassés d'un site (mauvais pour le SEO). (SEO)",
+  "besoin": "rien",
+  "lien": "https://github.com/linkchecker/linkchecker"
+ },
+ {
+  "nom": "checkdmarc",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Vérifie SPF, DKIM et DMARC d'un domaine (réputation des e-mails).",
+  "besoin": "rien",
+  "lien": "https://github.com/domainaware/checkdmarc"
+ },
+ {
+  "nom": "EyeWitness",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Prend des captures d'écran de sites et services exposés pour les passer en revue.",
+  "besoin": "rien",
+  "lien": "https://github.com/ChrisTruncer/EyeWitness"
+ },
+ {
+  "nom": "Betterleaks",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Cherche les secrets qui ont fuité (clés, jetons) dans le code.",
+  "besoin": "rien",
+  "lien": "https://github.com/betterleaks/betterleaks"
+ },
+ {
+  "nom": "Xingrin",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Plateforme de gestion de surface d’attaque et d’automatisation de scans autorisés.",
+  "besoin": "rien",
+  "lien": "https://github.com/yyhuni/xingrin"
+ },
+ {
+  "nom": "ARL-Next",
+  "categorie": "OSINT : ma société est-elle bien référencée ?",
+  "role": "Surveillance continue de la surface d'attaque et des actifs d'une société (documentation en chinois).",
+  "besoin": "rien",
+  "lien": "https://github.com/owl234/ARL-Next"
+ },
+ {
+  "nom": "Masscan",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Scanner de ports ultra-rapide pour de très grandes plages d'adresses.",
+  "besoin": "rien",
+  "lien": "https://github.com/robertdavidgraham/masscan"
+ },
+ {
+  "nom": "RustScan",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Scanner de ports très rapide qui passe ensuite la main à Nmap.",
+  "besoin": "rien",
+  "lien": "https://github.com/bee-san/RustScan"
+ },
+ {
+  "nom": "Bettercap",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Outil d'analyse et d'audit réseau local (écoute, ARP, Wi-Fi, Bluetooth). Légal seulement sur ton réseau.",
+  "besoin": "rien",
+  "lien": "https://github.com/bettercap/bettercap"
+ },
+ {
+  "nom": "Nmap",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Le scanner de ports et de services de référence. (licence Nmap (NPSL), gratuite)",
+  "besoin": "rien",
+  "lien": "https://github.com/nmap/nmap"
+ },
+ {
+  "nom": "reconftw",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Enchaîne une quarantaine d'outils de reconnaissance sur un domaine.",
+  "besoin": "rien",
+  "lien": "https://github.com/six2dez/reconftw"
+ },
+ {
+  "nom": "Osmedeus",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Plateforme de reconnaissance et de scan de vulnérabilités automatisés.",
+  "besoin": "rien",
+  "lien": "https://github.com/j3ssie/osmedeus"
+ },
+ {
+  "nom": "ZMap",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Scanne tout Internet sur un port en quelques minutes (recherche, réseaux entiers).",
+  "besoin": "rien",
+  "lien": "https://github.com/zmap/zmap"
+ },
+ {
+  "nom": "Naabu",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Scan de ports rapide et simple, facile à enchaîner avec d'autres outils.",
+  "besoin": "rien",
+  "lien": "https://github.com/projectdiscovery/naabu"
+ },
+ {
+  "nom": "AutoRecon",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Lance automatiquement une série de scans pour chaque machine. Très pratique en CTF et labs.",
+  "besoin": "rien",
+  "lien": "https://github.com/AutoRecon/AutoRecon"
+ },
+ {
+  "nom": "OWASP Nettacker",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Automatise scan de ports, détection de services et tests de vulnérabilités.",
+  "besoin": "rien",
+  "lien": "https://github.com/OWASP/Nettacker"
+ },
+ {
+  "nom": "Angry IP Scanner",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Scanner d'adresses IP et de ports avec interface graphique, très simple.",
+  "besoin": "rien",
+  "lien": "https://github.com/angryip/ipscan"
+ },
+ {
+  "nom": "IVRE",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Base de reconnaissance réseau auto-hébergée, façon petit Shodan perso.",
+  "besoin": "clé API (souvent gratuite)",
+  "lien": "https://github.com/ivre/ivre"
+ },
+ {
+  "nom": "nmap-vulners",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Script Nmap qui affiche les failles connues des versions détectées.",
+  "besoin": "rien",
+  "lien": "https://github.com/vulnersCom/nmap-vulners"
+ },
+ {
+  "nom": "arp-scan",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Liste les machines d'un réseau local par ARP.",
+  "besoin": "rien",
+  "lien": "https://github.com/royhills/arp-scan"
+ },
+ {
+  "nom": "tlsx",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Récupère les certificats TLS d'une liste de machines.",
+  "besoin": "rien",
+  "lien": "https://github.com/projectdiscovery/tlsx"
+ },
+ {
+  "nom": "Nerva",
+  "categorie": "Reconnaissance et scan réseau",
+  "role": "Identifie vite le service derrière chaque port (170+ protocoles TCP/UDP/SCTP).",
+  "besoin": "rien",
+  "lien": "https://github.com/praetorian-inc/nerva"
+ },
+ {
+  "nom": "Trivy",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Scanne conteneurs, dépôts et fichiers d'infra (Terraform, Kubernetes) pour trouver failles et erreurs de config.",
+  "besoin": "rien",
+  "lien": "https://github.com/aquasecurity/trivy"
+ },
+ {
+  "nom": "Nuclei",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Scanner de vulnérabilités à base de modèles YAML, avec une énorme communauté.",
+  "besoin": "rien",
+  "lien": "https://github.com/projectdiscovery/nuclei"
+ },
+ {
+  "nom": "PEASS-ng (WinPEAS/LinPEAS)",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Cherche les mauvaises configurations qui permettent de devenir administrateur sur Windows et Linux.",
+  "besoin": "rien",
+  "lien": "https://github.com/peass-ng/PEASS-ng"
+ },
+ {
+  "nom": "Semgrep",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Analyse de code source pour trouver des failles (édition communautaire en ligne de commande). (règles tierces sous licences variées)",
+  "besoin": "rien",
+  "lien": "https://github.com/semgrep/semgrep"
+ },
+ {
+  "nom": "Lynis",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Audit de sécurité et de durcissement d'un serveur Linux, avec conseils.",
+  "besoin": "rien",
+  "lien": "https://github.com/CISOfy/lynis"
+ },
+ {
+  "nom": "Prowler",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Audit de sécurité cloud : Azure, Microsoft 365, AWS, Google Cloud.",
+  "besoin": "rien",
+  "lien": "https://github.com/prowler-cloud/prowler"
+ },
+ {
+  "nom": "Nuclei Templates",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Les modèles de détection communautaires de Nuclei. (données)",
+  "besoin": "rien",
+  "lien": "https://github.com/projectdiscovery/nuclei-templates"
+ },
+ {
+  "nom": "Grype",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Cherche les vulnérabilités connues dans images et paquets.",
+  "besoin": "rien",
+  "lien": "https://github.com/anchore/grype"
+ },
+ {
+  "nom": "Kubescape",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Audit de sécurité Kubernetes (conformité, mauvaises configurations).",
+  "besoin": "rien",
+  "lien": "https://github.com/kubescape/kubescape"
+ },
+ {
+  "nom": "Syft",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Fait l'inventaire des composants logiciels (SBOM).",
+  "besoin": "rien",
+  "lien": "https://github.com/anchore/syft"
+ },
+ {
+  "nom": "Checkov",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Analyse Terraform, Bicep, ARM, etc. pour repérer les erreurs de sécurité avant déploiement.",
+  "besoin": "rien",
+  "lien": "https://github.com/bridgecrewio/checkov"
+ },
+ {
+  "nom": "kube-bench",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Vérifie un cluster Kubernetes contre le référentiel CIS.",
+  "besoin": "rien",
+  "lien": "https://github.com/aquasecurity/kube-bench"
+ },
+ {
+  "nom": "ScoutSuite",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Audit de config cloud multi-fournisseur (dont Azure).",
+  "besoin": "rien",
+  "lien": "https://github.com/nccgroup/ScoutSuite"
+ },
+ {
+  "nom": "OWASP Dependency-Check",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Détecte les bibliothèques vulnérables dans un projet.",
+  "besoin": "rien",
+  "lien": "https://github.com/dependency-check/DependencyCheck"
+ },
+ {
+  "nom": "OpenVAS (Greenbone Community)",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Scanner de vulnérabilités réseau complet, édition communautaire libre.",
+  "besoin": "rien",
+  "lien": "https://github.com/greenbone/openvas-scanner"
+ },
+ {
+  "nom": "PrivescCheck",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Audit Windows des erreurs de config qui mènent à l'élévation de privilèges.",
+  "besoin": "rien",
+  "lien": "https://github.com/itm4n/PrivescCheck"
+ },
+ {
+  "nom": "linux-smart-enumeration",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Énumération Linux pas à pas, plus lisible que LinPEAS pour débuter.",
+  "besoin": "rien",
+  "lien": "https://github.com/diego-treitos/linux-smart-enumeration"
+ },
+ {
+  "nom": "ComplianceAsCode",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Profils de sécurité (CIS, ANSSI) utilisables avec OpenSCAP. (données)",
+  "besoin": "rien",
+  "lien": "https://github.com/ComplianceAsCode/content"
+ },
+ {
+  "nom": "ScubaGear",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Compare ta config Microsoft 365 aux recommandations de l'agence américaine CISA.",
+  "besoin": "rien",
+  "lien": "https://github.com/cisagov/ScubaGear"
+ },
+ {
+  "nom": "ROADtools",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Explore et audite un tenant Entra ID (Azure AD).",
+  "besoin": "rien",
+  "lien": "https://github.com/dirkjanm/ROADtools"
+ },
+ {
+  "nom": "MicroBurst",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Scripts d'audit et de test d'intrusion pour Azure.",
+  "besoin": "rien",
+  "lien": "https://github.com/NetSPI/MicroBurst"
+ },
+ {
+  "nom": "Microsoft365DSC",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Décrit et contrôle la config Microsoft 365 sous forme de code.",
+  "besoin": "rien",
+  "lien": "https://github.com/Microsoft365DSC/Microsoft365DSC"
+ },
+ {
+  "nom": "HardeningKitty",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Audite la config de sécurité de Windows par rapport aux référentiels (CIS, Microsoft).",
+  "besoin": "rien",
+  "lien": "https://github.com/scipag/HardeningKitty"
+ },
+ {
+  "nom": "OpenSCAP",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Vérifie la conformité d'un système Linux à une norme (CIS, ANSSI…).",
+  "besoin": "rien",
+  "lien": "https://github.com/OpenSCAP/openscap"
+ },
+ {
+  "nom": "AADInternals",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Boîte à outils PowerShell pour administrer et auditer Entra ID / Microsoft 365.",
+  "besoin": "rien",
+  "lien": "https://github.com/Gerenios/AADInternals"
+ },
+ {
+  "nom": "Monkey365",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Audit de sécurité Microsoft 365, Entra ID et Azure en PowerShell.",
+  "besoin": "rien",
+  "lien": "https://github.com/silverhack/monkey365"
+ },
+ {
+  "nom": "Maester",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Tests de sécurité automatisés pour Microsoft 365 et Entra ID.",
+  "besoin": "rien",
+  "lien": "https://github.com/maester365/maester"
+ },
+ {
+  "nom": "AzureHound",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Collecte les relations d'accès Entra ID/Azure pour BloodHound.",
+  "besoin": "rien",
+  "lien": "https://github.com/SpecterOps/AzureHound"
+ },
+ {
+  "nom": "PSRule for Azure",
+  "categorie": "Scan de vulnérabilités et audit de configuration",
+  "role": "Contrôle les ressources et modèles Azure par rapport aux bonnes pratiques Microsoft. (utile AZ-104)",
+  "besoin": "rien",
+  "lien": "https://github.com/Azure/PSRule.Rules.Azure"
+ },
+ {
+  "nom": "mitmproxy",
+  "categorie": "Pentest web",
+  "role": "Proxy pour voir et modifier le trafic HTTP/HTTPS (analyse d'apps).",
+  "besoin": "rien",
+  "lien": "https://github.com/mitmproxy/mitmproxy"
+ },
+ {
+  "nom": "Metasploit Framework",
+  "categorie": "Pentest web",
+  "role": "Le grand cadre de test d'intrusion : modules d'exploitation et d'analyse.",
+  "besoin": "rien",
+  "lien": "https://github.com/rapid7/metasploit-framework"
+ },
+ {
+  "nom": "sqlmap",
+  "categorie": "Pentest web",
+  "role": "Détecte et teste automatiquement les injections SQL.",
+  "besoin": "rien",
+  "lien": "https://github.com/sqlmapproject/sqlmap"
+ },
+ {
+  "nom": "Katana",
+  "categorie": "Pentest web",
+  "role": "Explore (crawl) un site pour lister ses pages et ses points d'entrée.",
+  "besoin": "rien",
+  "lien": "https://github.com/projectdiscovery/katana"
+ },
+ {
+  "nom": "ffuf",
+  "categorie": "Pentest web",
+  "role": "Cherche pages et paramètres cachés d'un site par force brute de listes.",
+  "besoin": "rien",
+  "lien": "https://github.com/ffuf/ffuf"
+ },
+ {
+  "nom": "OWASP ZAP",
+  "categorie": "Pentest web",
+  "role": "Scanner et proxy de test d'applications web, gratuit, idéal pour débuter.",
+  "besoin": "rien",
+  "lien": "https://github.com/zaproxy/zaproxy"
+ },
+ {
+  "nom": "XSStrike",
+  "categorie": "Pentest web",
+  "role": "Détecteur de XSS avancé.",
+  "besoin": "rien",
+  "lien": "https://github.com/s0md3v/XSStrike"
+ },
+ {
+  "nom": "dirsearch",
+  "categorie": "Pentest web",
+  "role": "Cherche des répertoires et fichiers cachés sur un serveur web.",
+  "besoin": "rien",
+  "lien": "https://github.com/maurosoria/dirsearch"
+ },
+ {
+  "nom": "Gobuster",
+  "categorie": "Pentest web",
+  "role": "Cherche dossiers, fichiers, sous-domaines par listes de mots.",
+  "besoin": "rien",
+  "lien": "https://github.com/OJ/gobuster"
+ },
+ {
+  "nom": "Nikto",
+  "categorie": "Pentest web",
+  "role": "Scanner web classique : configurations dangereuses, fichiers sensibles, versions anciennes.",
+  "besoin": "rien",
+  "lien": "https://github.com/sullo/nikto"
+ },
+ {
+  "nom": "feroxbuster",
+  "categorie": "Pentest web",
+  "role": "Découverte rapide de contenus web cachés, récursive.",
+  "besoin": "rien",
+  "lien": "https://github.com/epi052/feroxbuster"
+ },
+ {
+  "nom": "jwt_tool",
+  "categorie": "Pentest web",
+  "role": "Teste la sécurité des jetons JWT.",
+  "besoin": "rien",
+  "lien": "https://github.com/ticarpi/jwt_tool"
+ },
+ {
+  "nom": "Wfuzz",
+  "categorie": "Pentest web",
+  "role": "Teste des paramètres web en y injectant des listes de valeurs.",
+  "besoin": "rien",
+  "lien": "https://github.com/xmendez/wfuzz"
+ },
+ {
+  "nom": "Arjun",
+  "categorie": "Pentest web",
+  "role": "Trouve les paramètres HTTP cachés d'une page.",
+  "besoin": "rien",
+  "lien": "https://github.com/s0md3v/Arjun"
+ },
+ {
+  "nom": "Commix",
+  "categorie": "Pentest web",
+  "role": "Teste les injections de commandes sur les applications web.",
+  "besoin": "rien",
+  "lien": "https://github.com/commixproject/commix"
+ },
+ {
+  "nom": "Dalfox",
+  "categorie": "Pentest web",
+  "role": "Scanner de failles XSS rapide.",
+  "besoin": "rien",
+  "lien": "https://github.com/hahwul/dalfox"
+ },
+ {
+  "nom": "gau",
+  "categorie": "Pentest web",
+  "role": "Récupère les anciennes URL d'un domaine depuis les archives web.",
+  "besoin": "rien",
+  "lien": "https://github.com/lc/gau"
+ },
+ {
+  "nom": "Interactsh",
+  "categorie": "Pentest web",
+  "role": "Détecte les failles « aveugles » (SSRF, injections) par retour de connexion.",
+  "besoin": "rien",
+  "lien": "https://github.com/projectdiscovery/interactsh"
+ },
+ {
+  "nom": "Retire.js",
+  "categorie": "Pentest web",
+  "role": "Repère les bibliothèques JavaScript vulnérables.",
+  "besoin": "rien",
+  "lien": "https://github.com/RetireJS/retire.js"
+ },
+ {
+  "nom": "Exploit-DB (searchsploit)",
+  "categorie": "Pentest web",
+  "role": "Copie hors ligne de la base d’exploits publics, avec recherche en ligne de commande. (sur GitLab, pas GitHub)",
+  "besoin": "rien",
+  "lien": "https://gitlab.com/exploit-database/exploitdb"
+ },
+ {
+  "nom": "Burp Suite Community",
+  "categorie": "Pentest web",
+  "role": "Proxy d’interception pour tester des sites web à la main. Gratuit mais PAS open source, et sans scanner automatique. (édition Community gratuite)",
+  "besoin": "rien",
+  "lien": "https://portswigger.net/burp/communitydownload"
+ },
+ {
+  "nom": "SSRFmap",
+  "categorie": "Pentest web",
+  "role": "Teste les failles SSRF (le serveur fait des requêtes à la place de l'attaquant).",
+  "besoin": "rien",
+  "lien": "https://github.com/swisskyrepo/SSRFmap"
+ },
+ {
+  "nom": "sslscan",
+  "categorie": "Pentest web",
+  "role": "Liste les protocoles et chiffrements TLS acceptés par un serveur.",
+  "besoin": "rien",
+  "lien": "https://github.com/rbsec/sslscan"
+ },
+ {
+  "nom": "Wapiti",
+  "categorie": "Pentest web",
+  "role": "Scanner web « boîte noire » (XSS, injections, fichiers).",
+  "besoin": "rien",
+  "lien": "https://github.com/wapiti-scanner/wapiti"
+ },
+ {
+  "nom": "WPProbe",
+  "categorie": "Pentest web",
+  "role": "Liste rapide des extensions WordPress d'un site et de leurs failles connues. (alternative libre à WPScan)",
+  "besoin": "rien",
+  "lien": "https://github.com/Chocapikk/wpprobe"
+ },
+ {
+  "nom": "Impacket",
+  "categorie": "Active Directory",
+  "role": "Bibliothèque et scripts pour parler aux protocoles Windows (SMB, Kerberos…).",
+  "besoin": "rien",
+  "lien": "https://github.com/fortra/impacket"
+ },
+ {
+  "nom": "Responder",
+  "categorie": "Active Directory",
+  "role": "Montre si un réseau Windows laisse fuiter des identifiants (LLMNR, NBT-NS).",
+  "besoin": "rien",
+  "lien": "https://github.com/lgandx/Responder"
+ },
+ {
+  "nom": "NetExec",
+  "categorie": "Active Directory",
+  "role": "Teste les accès SMB, WinRM, LDAP… sur un réseau Windows (suite de CrackMapExec).",
+  "besoin": "rien",
+  "lien": "https://github.com/Pennyw0rth/NetExec"
+ },
+ {
+  "nom": "Certipy",
+  "categorie": "Active Directory",
+  "role": "Audite les services de certificats Active Directory (AD CS).",
+  "besoin": "rien",
+  "lien": "https://github.com/ly4k/Certipy"
+ },
+ {
+  "nom": "BloodHound",
+  "categorie": "Active Directory",
+  "role": "Dessine les chemins d'attaque dans Active Directory pour les corriger.",
+  "besoin": "rien",
+  "lien": "https://github.com/SpecterOps/BloodHound"
+ },
+ {
+  "nom": "kerbrute",
+  "categorie": "Active Directory",
+  "role": "Teste des comptes et mots de passe via Kerberos.",
+  "besoin": "rien",
+  "lien": "https://github.com/ropnop/kerbrute"
+ },
+ {
+  "nom": "Adalanche",
+  "categorie": "Active Directory",
+  "role": "Visualise et audite les droits dans Active Directory, utile côté défense.",
+  "besoin": "rien",
+  "lien": "https://github.com/lkarlslund/Adalanche"
+ },
+ {
+  "nom": "SMBMap",
+  "categorie": "Active Directory",
+  "role": "Liste les partages SMB et les droits dessus.",
+  "besoin": "rien",
+  "lien": "https://github.com/ShawnDEvans/smbmap"
+ },
+ {
+  "nom": "mitm6",
+  "categorie": "Active Directory",
+  "role": "Teste l'attaque via IPv6 contre un domaine Windows.",
+  "besoin": "rien",
+  "lien": "https://github.com/dirkjanm/mitm6"
+ },
+ {
+  "nom": "enum4linux-ng",
+  "categorie": "Active Directory",
+  "role": "Énumère les infos d'un serveur Windows/Samba (utilisateurs, partages).",
+  "besoin": "rien",
+  "lien": "https://github.com/cddmp/enum4linux-ng"
+ },
+ {
+  "nom": "Locksmith",
+  "categorie": "Active Directory",
+  "role": "Trouve et corrige les failles de configuration AD CS (côté défense).",
+  "besoin": "rien",
+  "lien": "https://github.com/jakehildreth/Locksmith"
+ },
+ {
+  "nom": "ldapdomaindump",
+  "categorie": "Active Directory",
+  "role": "Exporte les infos d'un domaine via LDAP en pages lisibles.",
+  "besoin": "rien",
+  "lien": "https://github.com/dirkjanm/ldapdomaindump"
+ },
+ {
+  "nom": "DPAT",
+  "categorie": "Active Directory",
+  "role": "Audit des mots de passe d'un domaine à partir des hashs, avec rapport.",
+  "besoin": "rien",
+  "lien": "https://github.com/clr2of8/DPAT"
+ },
+ {
+  "nom": "Group3r",
+  "categorie": "Active Directory",
+  "role": "Cherche les GPO (stratégies de groupe) mal configurées.",
+  "besoin": "rien",
+  "lien": "https://github.com/Group3r/Group3r"
+ },
+ {
+  "nom": "SecLists",
+  "categorie": "Mots de passe et audit d'authentification",
+  "role": "La grande collection de listes (mots de passe, noms d'utilisateurs, chemins web). (données)",
+  "besoin": "rien",
+  "lien": "https://github.com/danielmiessler/SecLists"
+ },
+ {
+  "nom": "Hashcat",
+  "categorie": "Mots de passe et audit d'authentification",
+  "role": "Le casseur de hashs le plus rapide (processeur graphique), pour tester la robustesse des mots de passe.",
+  "besoin": "rien",
+  "lien": "https://github.com/hashcat/hashcat"
+ },
+ {
+  "nom": "John the Ripper",
+  "categorie": "Mots de passe et audit d'authentification",
+  "role": "Casseur de mots de passe classique, très polyvalent.",
+  "besoin": "rien",
+  "lien": "https://github.com/openwall/john"
+ },
+ {
+  "nom": "THC-Hydra",
+  "categorie": "Mots de passe et audit d'authentification",
+  "role": "Teste des mots de passe sur de nombreux services (SSH, RDP, web…).",
+  "besoin": "rien",
+  "lien": "https://github.com/vanhauser-thc/thc-hydra"
+ },
+ {
+  "nom": "CUPP",
+  "categorie": "Mots de passe et audit d'authentification",
+  "role": "Génère une liste de mots de passe probables à partir du profil d'une cible.",
+  "besoin": "rien",
+  "lien": "https://github.com/Mebus/cupp"
+ },
+ {
+  "nom": "Patator",
+  "categorie": "Mots de passe et audit d'authentification",
+  "role": "Force brute modulaire et plus fiable que Hydra pour certains services.",
+  "besoin": "rien",
+  "lien": "https://github.com/lanjelot/patator"
+ },
+ {
+  "nom": "CeWL",
+  "categorie": "Mots de passe et audit d'authentification",
+  "role": "Fabrique une liste de mots à partir d'un site web (listes ciblées).",
+  "besoin": "rien",
+  "lien": "https://github.com/digininja/CeWL"
+ },
+ {
+  "nom": "Name-That-Hash",
+  "categorie": "Mots de passe et audit d'authentification",
+  "role": "Identifie le type d'un hash.",
+  "besoin": "rien",
+  "lien": "https://github.com/bee-san/Name-That-Hash"
+ },
+ {
+  "nom": "Medusa",
+  "categorie": "Mots de passe et audit d'authentification",
+  "role": "Force brute rapide et parallèle sur plusieurs services.",
+  "besoin": "rien",
+  "lien": "https://github.com/jmk-foofus/medusa"
+ },
+ {
+  "nom": "airgeddon",
+  "categorie": "Sans fil",
+  "role": "Menu tout-en-un d'audit Wi-Fi qui pilote d'autres outils.",
+  "besoin": "rien",
+  "lien": "https://github.com/v1s1t0r1sh3r3/airgeddon"
+ },
+ {
+  "nom": "Aircrack-ng",
+  "categorie": "Sans fil",
+  "role": "La suite d'audit Wi-Fi : capture, analyse, test de clés WEP/WPA. (Windows limité)",
+  "besoin": "rien",
+  "lien": "https://github.com/aircrack-ng/aircrack-ng"
+ },
+ {
+  "nom": "hcxtools",
+  "categorie": "Sans fil",
+  "role": "Convertit les captures Wi-Fi pour Hashcat.",
+  "besoin": "rien",
+  "lien": "https://github.com/ZerBea/hcxtools"
+ },
+ {
+  "nom": "Kismet",
+  "categorie": "Sans fil",
+  "role": "Détecte et analyse les réseaux Wi-Fi et Bluetooth autour de toi.",
+  "besoin": "rien",
+  "lien": "https://github.com/kismetwireless/kismet"
+ },
+ {
+  "nom": "hcxdumptool",
+  "categorie": "Sans fil",
+  "role": "Capture du trafic Wi-Fi pour auditer les clés WPA.",
+  "besoin": "rien",
+  "lien": "https://github.com/ZerBea/hcxdumptool"
+ },
+ {
+  "nom": "Reaver (fork t6x)",
+  "categorie": "Sans fil",
+  "role": "Teste la faiblesse du WPS sur un routeur.",
+  "besoin": "rien",
+  "lien": "https://github.com/t6x/reaver-wps-fork-t6x"
+ },
+ {
+  "nom": "Wifite2",
+  "categorie": "Sans fil",
+  "role": "Automatise l'audit de réseaux Wi-Fi.",
+  "besoin": "rien",
+  "lien": "https://github.com/kimocoder/wifite2"
+ },
+ {
+  "nom": "Sparrow-WiFi",
+  "categorie": "Sans fil",
+  "role": "Analyseur Wi-Fi et Bluetooth graphique pour Linux.",
+  "besoin": "rien",
+  "lien": "https://github.com/ghostop14/sparrow-wifi"
+ },
+ {
+  "nom": "Wifit3",
+  "categorie": "Sans fil",
+  "role": "Version de Wifite qui marche avec un adaptateur USB, multiplateforme.",
+  "besoin": "rien",
+  "lien": "https://github.com/derv82/wifit3"
+ },
+ {
+  "nom": "Ghidra",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Désassembleur et décompilateur pour étudier un programme.",
+  "besoin": "rien",
+  "lien": "https://github.com/NationalSecurityAgency/ghidra"
+ },
+ {
+  "nom": "CyberChef",
+  "categorie": "Analyse réseau et forensic",
+  "role": "« Couteau suisse » du web pour encoder, décoder et analyser des données.",
+  "besoin": "rien",
+  "lien": "https://github.com/gchq/CyberChef"
+ },
+ {
+  "nom": "radare2",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Boîte à outils d'ingénierie inverse en ligne de commande.",
+  "besoin": "rien",
+  "lien": "https://github.com/radareorg/radare2"
+ },
+ {
+  "nom": "Wireshark",
+  "categorie": "Analyse réseau et forensic",
+  "role": "L'analyseur de trafic réseau de référence.",
+  "besoin": "rien",
+  "lien": "https://github.com/wireshark/wireshark"
+ },
+ {
+  "nom": "YARA",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Décrit et recherche des motifs dans des fichiers (analyse de logiciels malveillants).",
+  "besoin": "rien",
+  "lien": "https://github.com/VirusTotal/yara"
+ },
+ {
+  "nom": "ntopng (Community)",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Supervision du trafic réseau en temps réel (édition Community gratuite). (édition Community)",
+  "besoin": "rien",
+  "lien": "https://github.com/ntop/ntopng"
+ },
+ {
+  "nom": "Zeek",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Analyse le trafic réseau et produit des journaux détaillés.",
+  "besoin": "rien",
+  "lien": "https://github.com/zeek/zeek"
+ },
+ {
+  "nom": "Arkime",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Capture et recherche de paquets réseau à grande échelle.",
+  "besoin": "rien",
+  "lien": "https://github.com/arkime/arkime"
+ },
+ {
+  "nom": "GRR Rapid Response",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Cadre de réponse à incident à distance (agent + serveur).",
+  "besoin": "rien",
+  "lien": "https://github.com/google/grr"
+ },
+ {
+  "nom": "Volatility 3",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Analyse la mémoire vive d'une machine pour une investigation. (licence Volatility (VSL), libre)",
+  "besoin": "rien",
+  "lien": "https://github.com/volatilityfoundation/volatility3"
+ },
+ {
+  "nom": "Velociraptor",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Collecte et chasse aux traces sur de nombreuses machines (DFIR).",
+  "besoin": "rien",
+  "lien": "https://github.com/Velocidex/velociraptor"
+ },
+ {
+  "nom": "Chainsaw",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Cherche vite des traces suspectes dans les journaux d'événements Windows.",
+  "besoin": "rien",
+  "lien": "https://github.com/WithSecureOpenSource/chainsaw"
+ },
+ {
+  "nom": "Hayabusa",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Chasse aux menaces dans les journaux d'événements Windows.",
+  "besoin": "rien",
+  "lien": "https://github.com/Yamato-Security/hayabusa"
+ },
+ {
+  "nom": "Autopsy",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Interface d'analyse forensique de disques, en Windows.",
+  "besoin": "rien",
+  "lien": "https://github.com/sleuthkit/autopsy"
+ },
+ {
+  "nom": "tcpdump",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Capture et affiche le trafic réseau en ligne de commande.",
+  "besoin": "rien",
+  "lien": "https://github.com/the-tcpdump-group/tcpdump"
+ },
+ {
+  "nom": "The Sleuth Kit",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Outils en ligne de commande pour analyser les disques et systèmes de fichiers.",
+  "besoin": "rien",
+  "lien": "https://github.com/sleuthkit/sleuthkit"
+ },
+ {
+  "nom": "Plaso (log2timeline)",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Construit une chronologie des événements à partir de traces d'un système.",
+  "besoin": "rien",
+  "lien": "https://github.com/log2timeline/plaso"
+ },
+ {
+  "nom": "Zircolite",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Applique des règles Sigma sur des journaux Windows ou Linux.",
+  "besoin": "rien",
+  "lien": "https://github.com/wagga40/Zircolite"
+ },
+ {
+  "nom": "Outils Zimmerman",
+  "categorie": "Analyse réseau et forensic",
+  "role": "Outils de forensic Windows (registre, journaux, artefacts).",
+  "besoin": "rien",
+  "lien": "https://github.com/EricZimmerman/Get-ZimmermanTools"
+ },
+ {
+  "nom": "Uptime Kuma",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Surveille la disponibilité de sites et services avec alertes.",
+  "besoin": "rien",
+  "lien": "https://github.com/louislam/uptime-kuma"
+ },
+ {
+  "nom": "Vaultwarden",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Serveur de mots de passe compatible Bitwarden, auto-hébergé.",
+  "besoin": "rien",
+  "lien": "https://github.com/dani-garcia/vaultwarden"
+ },
+ {
+  "nom": "Pi-hole",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Bloque publicités et domaines malveillants au niveau du DNS du réseau.",
+  "besoin": "rien",
+  "lien": "https://github.com/pi-hole/pi-hole"
+ },
+ {
+  "nom": "AdGuard Home",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Filtrage DNS du réseau, avec interface simple.",
+  "besoin": "rien",
+  "lien": "https://github.com/AdguardTeam/AdGuardHome"
+ },
+ {
+  "nom": "KeePassXC",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Gestionnaire de mots de passe local et chiffré.",
+  "besoin": "rien",
+  "lien": "https://github.com/keepassxreboot/keepassxc"
+ },
+ {
+  "nom": "osquery",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Interroge un poste ou serveur comme une base SQL pour voir son état de sécurité.",
+  "besoin": "rien",
+  "lien": "https://github.com/osquery/osquery"
+ },
+ {
+  "nom": "Fail2ban",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Bloque les adresses qui tentent des connexions en force brute.",
+  "besoin": "rien",
+  "lien": "https://github.com/fail2ban/fail2ban"
+ },
+ {
+  "nom": "Wazuh",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Surveillance de sécurité : journaux, intégrité des fichiers, détection de menaces, conformité.",
+  "besoin": "rien",
+  "lien": "https://github.com/wazuh/wazuh"
+ },
+ {
+  "nom": "CrowdSec",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Détecte et bloque les adresses malveillantes, avec une liste partagée par la communauté.",
+  "besoin": "rien",
+  "lien": "https://github.com/crowdsecurity/crowdsec"
+ },
+ {
+  "nom": "Gophish",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Campagnes de simulation d'hameçonnage pour sensibiliser les employés. Avec accord écrit seulement.",
+  "besoin": "rien",
+  "lien": "https://github.com/gophish/gophish"
+ },
+ {
+  "nom": "Atomic Red Team",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Petits tests d'attaque pour vérifier que ta détection les voit.",
+  "besoin": "rien",
+  "lien": "https://github.com/redcanaryco/atomic-red-team"
+ },
+ {
+  "nom": "VeraCrypt",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Chiffrement de disques et de conteneurs.",
+  "besoin": "rien",
+  "lien": "https://github.com/veracrypt/VeraCrypt"
+ },
+ {
+  "nom": "Sigma",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Format ouvert de règles de détection pour journaux, avec des milliers de règles. (règles sous licence DRL)",
+  "besoin": "rien",
+  "lien": "https://github.com/SigmaHQ/sigma"
+ },
+ {
+  "nom": "Falco",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Détection d'activités suspectes sur des conteneurs et serveurs Linux.",
+  "besoin": "rien",
+  "lien": "https://github.com/falcosecurity/falco"
+ },
+ {
+  "nom": "ClamAV",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Antivirus libre, utile sur serveurs de messagerie et fichiers.",
+  "besoin": "rien",
+  "lien": "https://github.com/Cisco-Talos/clamav"
+ },
+ {
+  "nom": "MITRE Caldera",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Plateforme d'émulation d'adversaire pour tester ses défenses.",
+  "besoin": "rien",
+  "lien": "https://github.com/apache/caldera"
+ },
+ {
+  "nom": "Infection Monkey",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Simule une attaque dans ton réseau pour trouver les chemins faibles.",
+  "besoin": "rien",
+  "lien": "https://github.com/guardicore/monkey"
+ },
+ {
+  "nom": "Suricata",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Détection et blocage d'intrusions réseau.",
+  "besoin": "rien",
+  "lien": "https://github.com/OISF/suricata"
+ },
+ {
+  "nom": "Cowrie",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Honeypot SSH/Telnet qui enregistre les attaques.",
+  "besoin": "rien",
+  "lien": "https://github.com/cowrie/cowrie"
+ },
+ {
+  "nom": "MISP",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Plateforme de partage d'informations sur les menaces.",
+  "besoin": "rien",
+  "lien": "https://github.com/MISP/MISP"
+ },
+ {
+  "nom": "pfSense CE",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Pare-feu et routeur libre, édition Community. (édition Community)",
+  "besoin": "rien",
+  "lien": "https://github.com/pfsense/pfsense"
+ },
+ {
+  "nom": "DevSec Hardening",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Rôles Ansible pour durcir Linux, SSH, nginx et MySQL.",
+  "besoin": "rien",
+  "lien": "https://github.com/dev-sec/ansible-collection-hardening"
+ },
+ {
+  "nom": "Harden-Windows-Security",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Guide et scripts pour durcir Windows 10/11 (Defender, BitLocker, pare-feu…).",
+  "besoin": "rien",
+  "lien": "https://github.com/HotCakeX/Harden-Windows-Security"
+ },
+ {
+  "nom": "OPNsense",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Pare-feu et routeur libre, clair et à jour, idéal pour une petite structure.",
+  "besoin": "rien",
+  "lien": "https://github.com/opnsense/core"
+ },
+ {
+  "nom": "Coraza WAF",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Pare-feu applicatif web libre, compatible avec les règles ModSecurity.",
+  "besoin": "rien",
+  "lien": "https://github.com/corazawaf/coraza"
+ },
+ {
+  "nom": "Snort 3",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Système de détection d'intrusions réseau historique.",
+  "besoin": "rien",
+  "lien": "https://github.com/snort3/snort3"
+ },
+ {
+  "nom": "OWASP CRS",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Règles génériques pour pare-feu applicatif web (ModSecurity, Coraza). (données)",
+  "besoin": "rien",
+  "lien": "https://github.com/coreruleset/coreruleset"
+ },
+ {
+  "nom": "sysmon-modular",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Configuration modulaire de Sysmon pour mieux journaliser Windows.",
+  "besoin": "rien",
+  "lien": "https://github.com/olafhartong/sysmon-modular"
+ },
+ {
+  "nom": "OpenCanary",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Faux services « pièges » qui alertent quand quelqu'un les touche.",
+  "besoin": "rien",
+  "lien": "https://github.com/thinkst/opencanary"
+ },
+ {
+  "nom": "hardentools",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Désactive d'un clic des fonctions Windows risquées (macros, scripts, PDF).",
+  "besoin": "rien",
+  "lien": "https://github.com/hardentools/hardentools"
+ },
+ {
+  "nom": "Stratus Red Team",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Simule des attaques dans le cloud (dont Azure) pour tester la détection.",
+  "besoin": "rien",
+  "lien": "https://github.com/DataDog/stratus-red-team"
+ },
+ {
+  "nom": "Caddy WAF",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Pare-feu applicatif web pour le serveur Caddy (règles regex, filtrage IP, limitation de débit).",
+  "besoin": "rien",
+  "lien": "https://github.com/fabriziosalmi/caddy-waf"
+ },
+ {
+  "nom": "Sigwood",
+  "categorie": "Défense, détection et durcissement",
+  "role": "Chasse aux menaces en local dans les journaux que tu as déjà (Zeek, Pi-hole, syslog).",
+  "besoin": "rien",
+  "lien": "https://github.com/helixmap/sigwood"
+ },
+ {
+  "nom": "promptfoo",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Teste et attaque des prompts et applications LLM.",
+  "besoin": "rien",
+  "lien": "https://github.com/promptfoo/promptfoo"
+ },
+ {
+  "nom": "PentestGPT",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Assistant de pentest guidé par LLM : propose les étapes et commandes.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/GreyDGL/PentestGPT"
+ },
+ {
+  "nom": "garak",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Teste la robustesse d'un LLM (injections, fuites, contenus dangereux).",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/NVIDIA/garak"
+ },
+ {
+  "nom": "Vulnhuntr",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Cherche des failles dans du code Python à l'aide d'un LLM.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/protectai/vulnhuntr"
+ },
+ {
+  "nom": "hackingBuddyGPT",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Recherche : un LLM tente de monter en privilèges sur Linux dans un labo.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/ipa-lab/hackingBuddyGPT"
+ },
+ {
+  "nom": "Nebula",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Assistant IA en ligne de commande pour pentest, avec modèle local possible.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/berylliumsec/nebula"
+ },
+ {
+  "nom": "Strix",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Agents IA autonomes qui testent une application et prouvent les failles dans un bac à sable Docker.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/usestrix/strix"
+ },
+ {
+  "nom": "Shannon",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Pentester IA pour applications et API web, qui lit aussi le code source.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/KeygraphHQ/shannon"
+ },
+ {
+  "nom": "PentAGI",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Système d'agents IA autonomes pour tâches de pentest complexes.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/vxcontrol/pentagi"
+ },
+ {
+  "nom": "SkillSpector",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Analyse la sécurité des « skills » d'agents IA (motifs malveillants, failles).",
+  "besoin": "rien",
+  "lien": "https://github.com/NVIDIA/SkillSpector"
+ },
+ {
+  "nom": "ARTEX",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Système de pentest autonome multi-agents (traduction anglaise d'un projet chinois).",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/BaaRai/ARTEX"
+ },
+ {
+  "nom": "DeepAudit",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Audit de code assisté par agents IA, avec vérification en bac à sable et rapport.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/lintsinghua/DeepAudit"
+ },
+ {
+  "nom": "Decepticon",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Agent autonome pour exercices de type Red Team.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/BitterSecurity/Decepticon"
+ },
+ {
+  "nom": "RedAmon",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Cadre de pentest IA auto-hébergé qui cartographie la surface d'attaque.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/samugit83/redamon"
+ },
+ {
+  "nom": "PentestAgent",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Cadre d'agent IA pour tests de sécurité en boîte noire et bug bounty.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/GH05TCREW/pentestagent"
+ },
+ {
+  "nom": "mcp-scan",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Analyse les serveurs MCP et les outils d'agents pour y trouver des risques.",
+  "besoin": "rien",
+  "lien": "https://github.com/snyk/agent-scan"
+ },
+ {
+  "nom": "open-kritt",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Outil de recherche de vulnérabilités avec agents IA, auto-hébergé.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/Kritt-ai/open-kritt"
+ },
+ {
+  "nom": "pentest-ai",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Pentester IA qui rejoue chaque exploit pour confirmer la faille avant de la signaler.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/0xSteph/pentest-ai"
+ },
+ {
+  "nom": "Burp AI Agent",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Extension Burp Suite qui ajoute analyse assistée par IA et outils MCP.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/six2dez/burp-ai-agent"
+ },
+ {
+  "nom": "Xalgorix",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Agent IA de pentest autonome qui vérifie chaque faille par exploitation.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/xalgorix/xalgorix"
+ },
+ {
+  "nom": "DorkAgent",
+  "categorie": "Pentest et audit assistés par IA ou LLM",
+  "role": "Automatise les recherches Google dorks avec un LLM.",
+  "besoin": "jetons payants ou modèle local",
+  "lien": "https://github.com/yee-yore/DorkAgent"
+ }
+]
