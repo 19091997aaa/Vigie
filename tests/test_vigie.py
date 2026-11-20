@@ -15,8 +15,8 @@ from http.server import ThreadingHTTPServer
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from vigie import (autorisation, cli, comparaison, installeur, interface,  # noqa: E402
-                   outils, pdf, rapport, reseau, scenarios)
+from vigie import (autorisation, banc, cli, comparaison, installeur,  # noqa: E402
+                   interface, outils, pdf, rapport, reseau, scenarios)
 from vigie.modeles import (CRITIQUE, IMPORTANT, INFO, OK, Cible, Constat,  # noqa: E402
                            ControleImpossible, fusionner, note)
 from vigie.modules import MODULES, conformite, domaines, mail, pseudos, site  # noqa: E402
@@ -392,6 +392,54 @@ class Interface(Base):
             ouvreur = urllib.request.build_opener(urllib.request.HTTPCookieProcessor())
             page = ouvreur.open(base + "/?code=secret123").read().decode()
             self.assertIn("Nouveau diagnostic", page)
+
+
+class Banc(unittest.TestCase):
+    SORTIES = {
+        "subfinder": "www.cible.fr mail.cible.fr vpn.cible.fr",
+        "amass": "www.cible.fr mail.cible.fr vpn.cible.fr old.cible.fr",
+        "dnsx": "www.cible.fr test.cible.fr preprod.cible.fr",
+        "assetfinder": "www.cible.fr mail.cible.fr",
+    }
+
+    def test_extraction_par_facette(self):
+        self.assertEqual(banc.extraire("a@cible.fr et b@autre.com", "mails"),
+                         {"a@cible.fr", "b@autre.com"})
+        self.assertEqual(banc.extraire("CVE-2024-3400 et cve-2023-1234", "failles"),
+                         {"cve-2024-3400", "cve-2023-1234"})
+        self.assertEqual(banc.extraire("serveur 10.0.0.4 et 999.1.1.1", "ip"), {"10.0.0.4"})
+
+    def test_le_bruit_n_est_pas_un_domaine(self):
+        # une sortie d'outil contient des noms de fichiers : ils ne doivent pas compter
+        self.assertEqual(banc.extraire("resultat.json config.yaml vrai.cible.fr", "domaines"),
+                         {"vrai.cible.fr"})
+
+    def test_facette_inconnue_refusee(self):
+        with self.assertRaises(ValueError):
+            banc.extraire("texte", "licornes")
+
+    def test_apport_propre_de_chaque_outil(self):
+        mesure = banc.mesurer(self.SORTIES, "domaines")
+        self.assertEqual(len(mesure["union"]), 6)
+        self.assertEqual(mesure["uniques"]["amass"], {"old.cible.fr"})
+        self.assertEqual(mesure["uniques"]["dnsx"], {"test.cible.fr", "preprod.cible.fr"})
+        self.assertEqual(mesure["uniques"]["subfinder"], set())   # tout est déjà chez amass
+
+    def test_meilleur_melange_couvre_tout_et_ecarte_les_inutiles(self):
+        mesure = banc.mesurer(self.SORTIES, "domaines")
+        melange = banc.meilleur_melange(mesure)
+        retenus = {etape["outil"] for etape in melange["melange"]}
+        self.assertEqual(retenus, {"amass", "dnsx"})
+        self.assertEqual(melange["inutiles"], ["assetfinder", "subfinder"])
+        self.assertEqual(melange["non_couvert"], [])
+        couvert = set().union(*(mesure["par_outil"][nom] for nom in retenus))
+        self.assertEqual(couvert, mesure["union"])
+
+    def test_un_seul_outil(self):
+        mesure = banc.mesurer({"seul": "a.cible.fr b.cible.fr"}, "domaines")
+        melange = banc.meilleur_melange(mesure)
+        self.assertEqual([e["outil"] for e in melange["melange"]], ["seul"])
+        self.assertEqual(melange["inutiles"], [])
 
 
 class Installeur(unittest.TestCase):

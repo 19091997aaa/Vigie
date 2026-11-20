@@ -83,6 +83,13 @@ def main(arguments=None):
                       help="outils à comparer, séparés par des virgules")
     comp.add_argument("--sortie", default="comparaisons")
 
+    bn = commandes.add_parser("banc", help="mesurer quels outils apportent quoi (meilleur mélange)")
+    bn.add_argument("--dossier", required=True,
+                    help="dossier de sorties d'outils : un fichier par outil, nommé comme lui")
+    bn.add_argument("--facette", default="domaines",
+                    help="domaines, mails, ip, failles ou urls")
+    bn.add_argument("--rapport", default="banc.json", help="fichier où écrire le compte rendu")
+
     inst = commandes.add_parser("installer", help="installer en masse les outils du catalogue")
     inst.add_argument("--categorie", help="n'installer qu'une catégorie (nom exact)")
     inst.add_argument("--tous", action="store_true", help="tout le catalogue")
@@ -97,6 +104,40 @@ def main(arguments=None):
     commandes.add_parser("questionnaire", help="afficher le questionnaire assureur")
 
     args = analyseur.parse_args(arguments)
+
+    if args.commande == "banc":
+        from . import banc
+        if not os.path.isdir(args.dossier):
+            raise SystemExit(f"Dossier introuvable : {args.dossier}")
+        sorties = {}
+        for nom_fichier in sorted(os.listdir(args.dossier)):
+            chemin = os.path.join(args.dossier, nom_fichier)
+            if not os.path.isfile(chemin):
+                continue
+            try:
+                with open(chemin, encoding="utf-8", errors="replace") as fichier:
+                    sorties[os.path.splitext(nom_fichier)[0]] = fichier.read()
+            except OSError as erreur:
+                print(f"  (ignoré : {nom_fichier} — {erreur})")
+        if not sorties:
+            raise SystemExit(f"Aucune sortie d'outil lisible dans {args.dossier}")
+        try:
+            mesure = banc.mesurer(sorties, args.facette)
+        except ValueError as erreur:
+            raise SystemExit(str(erreur))
+        melange = banc.meilleur_melange(mesure)
+        print(banc.en_texte(mesure, melange))
+        import json as _json
+        with open(args.rapport, "w", encoding="utf-8") as fichier:
+            _json.dump({
+                "facette": mesure["facette"],
+                "par_outil": {n: sorted(t) for n, t in mesure["par_outil"].items()},
+                "uniques": {n: sorted(t) for n, t in mesure["uniques"].items()},
+                "union": sorted(mesure["union"]),
+                "melange": melange,
+            }, fichier, ensure_ascii=False, indent=2)
+        print(f"\nCompte rendu écrit : {args.rapport}")
+        return
 
     if args.commande == "installer":
         from . import installeur
