@@ -65,6 +65,7 @@ def main(arguments=None):
     diag.add_argument("--accord-dirigeant", action="store_true",
                       help="le dirigeant a donné son accord écrit pour chercher ses comptes")
     diag.add_argument("--autorisation", help="autorisation signée du client (fichier)")
+    diag.add_argument("--reponses", help="réponses au questionnaire assureur (fichier JSON)")
     diag.add_argument("--sortie", default="rapports", help="dossier où écrire les rapports")
 
     interface = commandes.add_parser("interface", help="ouvrir Vigie dans le navigateur")
@@ -82,6 +83,7 @@ def main(arguments=None):
 
     commandes.add_parser("modules", help="lister les contrôles disponibles")
     commandes.add_parser("outils", help="lister les outils externes")
+    commandes.add_parser("questionnaire", help="afficher le questionnaire assureur")
 
     args = analyseur.parse_args(arguments)
 
@@ -99,6 +101,16 @@ def main(arguments=None):
             genre = "actif" if outil["actif"] else "passif"
             print(f"{outil['nom']:13} {etat}  {branche:10}  {genre:6}  {outil['role']}")
             print(f"{'':13} licence : {outil['licence']} | installation : {outil['installation']}")
+        return
+
+    if args.commande == "questionnaire":
+        from . import questionnaire
+        print("Questionnaire assureur — réponds oui/non à chaque question.")
+        print("Pour un diagnostic : mets les réponses dans un fichier JSON "
+              '{"id": true/false, ...} et passe --reponses ce fichier.\n')
+        for question in questionnaire.QUESTIONS:
+            print(f"[{question['id']}] ({question['assureurs']})")
+            print(f"  {question['question']}\n")
         return
 
     if args.commande == "interface":
@@ -127,7 +139,17 @@ def main(arguments=None):
             print("  " + chemin)
         return
 
-    cible = Cible(domaine, args.societe, args.pseudo, args.accord_dirigeant)
+    reponses = {}
+    if args.reponses:
+        import json
+        try:
+            with open(args.reponses, encoding="utf-8") as fichier:
+                reponses = json.load(fichier)
+        except (OSError, ValueError) as erreur:
+            raise SystemExit(f"Réponses illisibles : {erreur}")
+        if "conformite" not in noms:
+            noms.append("conformite")
+    cible = Cible(domaine, args.societe, args.pseudo, args.accord_dirigeant, reponses)
     resultat = lancer(cible, noms, args.autorisation)
     chemins = rapport.ecrire(resultat, dossier_rapport(args.sortie, resultat))
     print(rapport.en_texte(resultat))

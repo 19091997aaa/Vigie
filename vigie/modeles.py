@@ -18,6 +18,7 @@ class Cible:
     societe: str = ""
     pseudos: list = field(default_factory=list)   # pseudos du dirigeant, donnés par lui
     accord_dirigeant: bool = False                # accord écrit pour chercher ses comptes
+    reponses: dict = field(default_factory=dict)  # réponses au questionnaire assureur (id -> oui/non)
 
 
 @dataclass

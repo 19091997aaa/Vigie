@@ -19,7 +19,7 @@ from vigie import (autorisation, cli, comparaison, interface, outils,  # noqa: E
                    rapport, reseau, scenarios)
 from vigie.modeles import (CRITIQUE, IMPORTANT, INFO, OK, Cible, Constat,  # noqa: E402
                            ControleImpossible, fusionner, note)
-from vigie.modules import MODULES, domaines, mail, pseudos, site  # noqa: E402
+from vigie.modules import MODULES, conformite, domaines, mail, pseudos, site  # noqa: E402
 
 CIBLE = Cible("ex.fr", "Société <Test>")
 BON_DNS = {
@@ -190,6 +190,27 @@ class Convergence(unittest.TestCase):
         dmarc = fusionnes[0]
         self.assertEqual(dmarc.niveau, IMPORTANT)          # on garde le plus grave
         self.assertEqual(set(dmarc.sources), {"mail", "checkdmarc"})  # outils réunis
+
+
+class Conformite(unittest.TestCase):
+    def test_sans_reponses_non_realise(self):
+        with self.assertRaises(ControleImpossible):
+            conformite.analyser(Cible("ex.fr"))
+
+    def test_conforme_et_a_regler(self):
+        rep = {"mfa_distance": False, "sauvegarde_testee": True, "maj_30j": True}
+        constats, brut = conformite.analyser(Cible("ex.fr", reponses=rep))
+        niveaux = {c.titre.split(" :")[0]: c.niveau for c in constats}
+        self.assertEqual(niveaux["À régler"], CRITIQUE)   # MFA absente = critique
+        self.assertEqual(niveaux["Conforme"], OK)
+        # les questions non répondues sont listées à vérifier, pas comptées comme défaut
+        self.assertTrue(brut["a_verifier"])
+        self.assertEqual(len(constats), 3)
+
+    def test_integration_cli_reponses(self):
+        rep = {"mfa_distance": True, "sauvegarde_testee": False}
+        r = cli.lancer(Cible("ex.fr", "Essai", reponses=rep), ["conformite"], date="2026-11-20")
+        self.assertIn("Conformité assureur", r["blocs"])
 
 
 class Scenarios(unittest.TestCase):

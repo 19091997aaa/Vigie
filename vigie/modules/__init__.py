@@ -8,7 +8,7 @@ Si le contrôle ne peut pas se faire, la fonction lève ControleImpossible.
             de failles). Jamais lancé sans autorisation signée.
 "defaut"  = lancé quand on ne précise pas la liste des modules.
 """
-from . import checkdmarc_mod, domaines, mail, pseudos, site
+from . import checkdmarc_mod, conformite, domaines, mail, pseudos, site
 
 MODULES = {
     "mail": {"fonction": mail.analyser, "bloc": "Exposition", "actif": False, "defaut": True,
@@ -21,6 +21,8 @@ MODULES = {
                  "defaut": True, "nom": "Domaines imitateurs (dnstwist)"},
     "pseudos": {"fonction": pseudos.analyser, "bloc": "Exposition", "actif": False,
                 "defaut": False, "nom": "Comptes publics du dirigeant (Sherlock)"},
+    "conformite": {"fonction": conformite.analyser, "bloc": "Conformité assureur",
+                   "actif": False, "defaut": False, "nom": "Conformité assureur (questionnaire)"},
 }
 
 PAR_DEFAUT = [nom for nom, module in MODULES.items() if module["defaut"]]
