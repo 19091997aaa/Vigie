@@ -15,7 +15,8 @@ from http.server import ThreadingHTTPServer
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from vigie import autorisation, cli, comparaison, interface, outils, rapport, reseau  # noqa: E402
+from vigie import (autorisation, cli, comparaison, interface, outils,  # noqa: E402
+                   rapport, reseau, scenarios)
 from vigie.modeles import (CRITIQUE, IMPORTANT, INFO, OK, Cible, Constat,  # noqa: E402
                            ControleImpossible, fusionner, note)
 from vigie.modules import MODULES, domaines, mail, pseudos, site  # noqa: E402
@@ -189,6 +190,35 @@ class Convergence(unittest.TestCase):
         dmarc = fusionnes[0]
         self.assertEqual(dmarc.niveau, IMPORTANT)          # on garde le plus grave
         self.assertEqual(set(dmarc.sources), {"mail", "checkdmarc"})  # outils réunis
+
+
+class Scenarios(unittest.TestCase):
+    def dicts(self, *paires):
+        return [Constat("Exposition", niv, "t", "e", cle=cle).en_dict() for cle, niv in paires]
+
+    def test_mail_usurpable_declenche_faux_fournisseur(self):
+        s = scenarios.scenarios_pour(self.dicts(("dmarc", CRITIQUE)))
+        self.assertTrue(any("fausse facture" in x["titre"].lower() for x in s))
+
+    def test_rien_trouve_aucun_scenario(self):
+        self.assertEqual(scenarios.scenarios_pour(self.dicts(("spf", OK), ("dmarc", OK))), [])
+
+    def test_domaine_imitateur_declenche_hameconnage(self):
+        s = scenarios.scenarios_pour(self.dicts(("domaines_imitateurs", INFO)))
+        titres = " ".join(x["titre"].lower() for x in s)
+        self.assertIn("imite le vôtre", titres)
+
+    def test_scenarios_dans_le_rapport(self):
+        reseau.dns = faux_dns({("ex.fr", "A"): ["203.0.113.5"]})  # pas de SPF/DMARC → usurpable
+        r = cli.lancer(Cible("ex.fr", "Essai"), ["mail"], date="2026-11-20")
+        self.assertTrue(r["scenarios"])
+        self.assertIn("escroc pourrait faire", rapport.en_html(r))
+
+    def setUp(self):
+        self._dns = reseau.dns
+
+    def tearDown(self):
+        reseau.dns = self._dns
 
 
 class Ensemble(Base):

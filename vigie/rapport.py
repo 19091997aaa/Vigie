@@ -3,7 +3,7 @@ import html
 import json
 import os
 
-from . import __version__
+from . import __version__, scenarios
 from .modeles import CRITIQUE, IMPORTANT, INFO, OK, fusionner, note, trier
 
 LIBELLES = {CRITIQUE: "Critique", IMPORTANT: "Important", INFO: "À savoir", OK: "Correct"}
@@ -27,6 +27,7 @@ def construire(societe, cible, date, constats, brut, non_realises, autorisation)
         "cible": cible,
         "date": date,
         "note_globale": note(constats) if constats else None,
+        "scenarios": scenarios.scenarios_pour([c.en_dict() for c in constats]),
         "blocs": {nom: {"note": note(liste), "constats": [c.en_dict() for c in trier(liste)]}
                   for nom, liste in blocs.items()},
         "non_realises": non_realises,
@@ -57,6 +58,12 @@ def en_texte(rapport):
     resume = ", ".join(f"{compte[n]} {LIBELLES[n].lower()}"
                        for n in (CRITIQUE, IMPORTANT, INFO, OK) if n in compte)
     lignes += [f"Résumé : {resume}", ""]
+    if rapport.get("scenarios"):
+        lignes.append("CE QU'UN ESCROC POURRAIT FAIRE (d'après ce qui a été trouvé) :")
+        for scenario in rapport["scenarios"]:
+            lignes.append(f"- {scenario['titre']}")
+            lignes.append(f"  {scenario['texte']}")
+        lignes.append("")
     for nom, bloc in rapport["blocs"].items():
         lignes += [f"=== {nom.upper()} : {bloc['note']} / 100 ===", ""]
         for numero, constat in enumerate(bloc["constats"], 1):
@@ -138,6 +145,15 @@ h2 .scoreb { flex:none; font-size:12px; font-weight:800; letter-spacing:0; color
 .pastille.INFO{background:#2f5fa7;} .pastille.OK{background:#2e7d4f;}
 .nonfait { list-style:none; padding:0; margin:0; }
 .nonfait li { font-size:14px; color:var(--gris); padding:7px 0; border-bottom:1px solid var(--trait); }
+.menace { margin:0 40px; padding:22px 24px; background:#fdf6f5; border:1px solid #f0cfca;
+  border-left:5px solid #b3261e; border-radius:12px; }
+.menace h2 { margin:0 0 4px; color:#8a1d16; }
+.menace h2::after { background:#f0cfca; }
+.menace .sous { font-size:13.5px; color:#8a6a67; margin:0 0 14px; }
+.menace .cas { padding:12px 0; border-top:1px solid #f0cfca; }
+.menace .cas:first-of-type { border-top:0; }
+.menace .cas h3 { font-size:16px; margin:0 0 5px; color:#1b2330; }
+.menace .cas p { margin:0; color:#43362f; font-size:14.5px; }
 footer { padding:22px 40px 30px; font-size:12.5px; color:var(--gris);
   border-top:1px solid var(--trait); background:#fbfcfe; }
 @media print { body{background:#fff;} main{box-shadow:none; margin:0; max-width:none; border-radius:0;} }
@@ -159,6 +175,20 @@ def _jauge(note):
             f'<circle cx="59" cy="59" r="{r}" fill="none" stroke="{couleur}" stroke-width="11"'
             f' stroke-linecap="round" stroke-dasharray="{rempli:.1f} {circ:.1f}"/></svg>'
             f'<div class="val">{affiche}<small>/ 100</small></div></div>')
+
+
+def _menace(rapport):
+    """La section « ce qu'un escroc pourrait faire » — l'argument de vente. Vide si rien trouvé."""
+    scenarios_ = rapport.get("scenarios") or []
+    if not scenarios_:
+        return ""
+    e = html.escape
+    cas = "".join(f'<div class="cas"><h3>{e(s["titre"])}</h3><p>{e(s["texte"])}</p></div>'
+                  for s in scenarios_)
+    return (f'<section class="menace"><h2>Ce qu\'un escroc pourrait faire</h2>'
+            f'<p class="sous">Scénarios réels, rendus possibles par ce qui a été trouvé '
+            f'ci-dessous. Rien ne dit qu\'une attaque est en cours — c\'est ce qui est '
+            f'ouvert aujourd\'hui.</p>{cas}</section>')
 
 
 def en_html(rapport):
@@ -204,6 +234,7 @@ def en_html(rapport):
 <span>Date&nbsp;: <b>{e(date_fr(rapport['date']))}</b></span></div>
 </div>
 <div class="synthese">{_jauge(note)}<div class="chips">{chips}</div></div>
+{_menace(rapport)}
 <div class="corps">{''.join(corps)}</div>
 <footer>{cadre}<br>Rapport produit par Vigie {e(rapport['version'])}.
 Ce diagnostic décrit l'état constaté à sa date et ne garantit pas l'absence d'autres failles.</footer>

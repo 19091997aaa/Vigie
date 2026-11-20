@@ -123,5 +123,9 @@ def analyser(cible):
     jours, c_cert = _certificat(domaine)
     finale, c_redir = _redirection(domaine)
     reponse, c_entetes = _entetes(domaine)
+    # Clé de convergence : les constats qui touchent au chiffrement du site.
+    for constat in c_cert + c_redir:
+        if constat.niveau != OK:
+            constat.cle = "chiffrement"
     brut = {"jours_certificat": jours, "adresse_finale_http": finale, "reponse": reponse}
     return c_cert + c_redir + c_entetes, brut
