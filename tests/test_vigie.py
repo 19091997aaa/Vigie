@@ -259,6 +259,25 @@ class Ensemble(Base):
         self.assertIn("Société &lt;Test&gt;", page)   # le nom est bien neutralisé
         self.assertIn("DMARC absent", page)
 
+    def test_deux_documents_executif_et_technique(self):
+        reseau.dns = faux_dns(SITE_SEUL)
+        self.site_propre()
+        resultat = cli.lancer(CIBLE, ["mail", "site"], date="2026-11-20")
+        with tempfile.TemporaryDirectory() as dossier:
+            chemins = rapport.ecrire(resultat, dossier)
+            self.assertIn("rapport-executif.html", chemins)
+            with open(chemins["rapport-executif.html"], encoding="utf-8") as f:
+                executif = f.read()
+            with open(chemins["rapport.html"], encoding="utf-8") as f:
+                technique = f.read()
+        # l'exécutif renvoie au technique et n'affiche aucune carte de détail
+        self.assertIn("rapport technique", executif)
+        self.assertIn('class="suite"', executif)
+        self.assertNotIn('class="constat', executif)
+        # le technique détaille chaque constat
+        self.assertIn('class="constat', technique)
+        self.assertIn("DMARC absent", technique)
+
     def test_reseau_coupe(self):
         reseau.dns = reseau_coupe
         resultat = cli.lancer(CIBLE, ["mail", "site"])

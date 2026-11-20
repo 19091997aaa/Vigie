@@ -44,9 +44,11 @@ def _compte(rapport):
     return compte
 
 
-def en_texte(rapport):
+def en_texte(rapport, public="technique"):
+    """public='technique' : rapport complet (défaut). public='executif' : version patron."""
     lignes = [
-        "VIGIE - DIAGNOSTIC DE SÉCURITÉ",
+        "VIGIE - DIAGNOSTIC DE SÉCURITÉ"
+        + ("  (rapport exécutif)" if public == "executif" else "  (rapport technique)"),
         f"Société : {rapport['societe']}",
         f"Cible   : {rapport['cible']}",
         f"Date    : {date_fr(rapport['date'])}",
@@ -82,12 +84,20 @@ def en_texte(rapport):
     for nom, bloc in rapport["blocs"].items():
         lignes += [f"=== {nom.upper()} : {bloc['note']} / 100  (classe {_lettre(bloc['note'])}) ===",
                    f"  {_strategie_bloc(bloc)}", ""]
+        if public == "executif":
+            continue
         for numero, constat in enumerate(bloc["constats"], 1):
             lignes.append(f"{numero}. [{LIBELLES[constat['niveau']]}] {constat['titre']}")
             lignes.append(f"   {constat['explication']}")
             if constat["correction"]:
                 lignes.append(f"   Correction : {constat['correction']}")
+            if constat.get("sources"):
+                lignes.append(f"   Relevé par : {', '.join(constat['sources'])}")
             lignes.append("")
+    if public == "executif":
+        lignes += ["Le détail de chaque point et les contrôles non réalisés figurent dans "
+                   "le rapport technique joint.", ""]
+        return "\n".join(lignes)
     if rapport["non_realises"]:
         lignes.append("Contrôles non réalisés :")
         lignes += [f"- {element['module']} : {element['raison']}"
@@ -174,6 +184,7 @@ h2 .scoreb { flex:none; font-size:12px; font-weight:800; letter-spacing:0; color
 .correction { background:var(--fond); border-radius:8px; padding:10px 13px; font-size:14.5px;
   margin:10px 0 0 !important; }
 .correction b { color:var(--navy); }
+.sources { font-size:12.5px !important; color:var(--gris); margin:8px 0 0 !important; }
 .CRITIQUE { border-left-color:#b3261e; } .CRITIQUE .etiquette { background:#fbe9e7; color:#b3261e; }
 .IMPORTANT { border-left-color:#c07a12; } .IMPORTANT .etiquette { background:#fcf0dc; color:#9a5f00; }
 .INFO { border-left-color:#2f5fa7; } .INFO .etiquette { background:#e8effa; color:#2f5fa7; }
@@ -195,6 +206,12 @@ footer { padding:22px 40px 30px; font-size:12.5px; color:var(--gris);
   border-top:1px solid var(--trait); background:#fbfcfe; }
 .perimetre { margin-top:16px; font-size:13px; color:#c3cede; }
 .perimetre b { color:#fff; font-weight:600; }
+.doctype { margin-left:auto; align-self:center; font-size:11px; font-weight:700;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--or);
+  border:1px solid rgba(224,164,59,.55); border-radius:999px; padding:5px 13px; }
+.suite { margin:24px 40px 8px; padding:16px 20px; background:#f4f7fb; border:1px dashed #c3d0e2;
+  border-radius:12px; font-size:14px; color:#43494f; }
+.suite b { color:var(--navy); }
 .domaines { padding:26px 40px 8px; }
 .cartes { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; }
 .carte { border:1px solid var(--trait); border-radius:12px; padding:16px 18px;
@@ -337,29 +354,46 @@ def _synthese_blocs(rapport):
             f'<div class="cartes">{"".join(cartes)}</div></section>')
 
 
-def en_html(rapport):
+def _corps_detaille(rapport):
+    """Le détail par constat + contrôles non réalisés — le cœur du rapport technique."""
     e = html.escape
-    compte = _compte(rapport)
-    chips = "".join(
-        f'<span class="chip"><span class="pastille {n}"></span><b>{compte[n]}</b> '
-        f'{e(LIBELLES[n].lower())}</span>'
-        for n in (CRITIQUE, IMPORTANT, INFO, OK) if n in compte)
     corps = []
     for nom, bloc in rapport["blocs"].items():
         corps.append(f'<h2>{e(nom)}<span class="scoreb">{bloc["note"]} / 100</span></h2>')
         for constat in bloc["constats"]:
             correction = (f'<p class="correction"><b>À corriger :</b> {e(constat["correction"])}</p>'
                           if constat["correction"] else "")
+            sources = (f'<p class="sources">Relevé par&nbsp;: {e(", ".join(constat["sources"]))}.</p>'
+                       if constat.get("sources") else "")
             corps.append(
                 f'<section class="constat {constat["niveau"]}">'
                 f'<span class="etiquette">{e(LIBELLES[constat["niveau"]])}</span>'
                 f'<h3>{e(constat["titre"])}</h3>'
-                f'<p>{e(constat["explication"])}</p>{correction}</section>')
+                f'<p>{e(constat["explication"])}</p>{correction}{sources}</section>')
     if rapport["non_realises"]:
         corps.append('<h2>Contrôles non réalisés</h2><ul class="nonfait">')
         corps += [f'<li>{e(element["module"])} — {e(element["raison"])}</li>'
                   for element in rapport["non_realises"]]
         corps.append("</ul>")
+    return f'<div class="corps">{"".join(corps)}</div>'
+
+
+def en_html(rapport, public="technique"):
+    """public='technique' : rapport complet (défaut). public='executif' : version patron, sans le détail."""
+    e = html.escape
+    compte = _compte(rapport)
+    chips = "".join(
+        f'<span class="chip"><span class="pastille {n}"></span><b>{compte[n]}</b> '
+        f'{e(LIBELLES[n].lower())}</span>'
+        for n in (CRITIQUE, IMPORTANT, INFO, OK) if n in compte)
+    if public == "executif":
+        corps_html = ('<section class="suite">Le détail de chaque point — explication, '
+                      'correction, outil l\'ayant relevé — et les contrôles non réalisés '
+                      'figurent dans le <b>rapport technique</b> joint.</section>')
+        etiquette_doc = "Rapport exécutif"
+    else:
+        corps_html = _corps_detaille(rapport)
+        etiquette_doc = "Rapport technique"
     autorisation = rapport["autorisation"]
     cadre = ("Contrôles réalisés à partir d'informations publiques, sans action sur vos machines."
              if not autorisation else
@@ -369,11 +403,12 @@ def en_html(rapport):
     return f"""<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Diagnostic Vigie - {e(rapport['societe'])}</title>
+<title>Diagnostic Vigie - {e(rapport['societe'])} — {e(etiquette_doc.lower())}</title>
 <style>{CSS}</style></head>
 <body><main>
 <div class="couv">
-<div class="enseigne">{LOGO}<div class="mot">Vigie<small>Sécurité</small></div></div>
+<div class="enseigne">{LOGO}<div class="mot">Vigie<small>Sécurité</small></div>
+<span class="doctype">{e(etiquette_doc)}</span></div>
 <h1>Diagnostic de sécurité</h1>
 <div class="meta"><span>Société&nbsp;: <b>{e(rapport['societe'])}</b></span>
 <span>Cible&nbsp;: <b>{e(rapport['cible'])}</b></span>
@@ -387,7 +422,7 @@ def en_html(rapport):
 {_synthese_blocs(rapport)}
 {_menace(rapport)}
 {_feuille_route(rapport)}
-<div class="corps">{''.join(corps)}</div>
+{corps_html}
 <footer>{cadre}<br>Rapport produit par Vigie {e(rapport['version'])}.
 Ce diagnostic décrit l'état constaté à sa date et ne garantit pas l'absence d'autres failles.</footer>
 </main></body></html>
@@ -395,11 +430,17 @@ Ce diagnostic décrit l'état constaté à sa date et ne garantit pas l'absence 
 
 
 def ecrire(rapport, dossier):
+    """Écrit les deux documents : technique (rapport.*) et exécutif (rapport-executif.*)."""
     os.makedirs(dossier, exist_ok=True)
     chemins = {}
-    for nom, contenu in (("rapport.txt", en_texte(rapport)),
-                         ("rapport.html", en_html(rapport)),
-                         ("rapport.json", json.dumps(rapport, ensure_ascii=False, indent=2))):
+    fichiers = (
+        ("rapport.txt", en_texte(rapport)),
+        ("rapport.html", en_html(rapport)),
+        ("rapport.json", json.dumps(rapport, ensure_ascii=False, indent=2)),
+        ("rapport-executif.txt", en_texte(rapport, public="executif")),
+        ("rapport-executif.html", en_html(rapport, public="executif")),
+    )
+    for nom, contenu in fichiers:
         chemin = os.path.join(dossier, nom)
         with open(chemin, "w", encoding="utf-8") as fichier:
             fichier.write(contenu)
