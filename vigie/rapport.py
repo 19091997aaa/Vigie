@@ -50,14 +50,26 @@ def en_texte(rapport):
         f"Société : {rapport['societe']}",
         f"Cible   : {rapport['cible']}",
         f"Date    : {date_fr(rapport['date'])}",
-        "Note    : " + (f"{rapport['note_globale']} / 100" if rapport['note_globale'] is not None
+        "Note    : " + (f"{rapport['note_globale']} / 100  (classe {_lettre(rapport['note_globale'])})"
+                        if rapport['note_globale'] is not None
                         else "non calculée (aucun contrôle réalisé)"),
         "",
     ]
+    verdict = _verdict(rapport)
+    if verdict:
+        lignes += [f"Verdict : {verdict}", ""]
     compte = _compte(rapport)
     resume = ", ".join(f"{compte[n]} {LIBELLES[n].lower()}"
                        for n in (CRITIQUE, IMPORTANT, INFO, OK) if n in compte)
     lignes += [f"Résumé : {resume}", ""]
+    priorites = _priorites(rapport)
+    if priorites:
+        lignes.append("PAR OÙ COMMENCER (du plus grave au moins grave) :")
+        for numero, constat in enumerate(priorites, 1):
+            lignes.append(f"  {numero}. [{LIBELLES[constat['niveau']]}] {constat['titre']}")
+            if constat["correction"]:
+                lignes.append(f"     {constat['correction']}")
+        lignes += ["  Référentiel : guide d'hygiène informatique de l'ANSSI.", ""]
     if rapport.get("scenarios"):
         lignes.append("CE QU'UN ESCROC POURRAIT FAIRE (d'après ce qui a été trouvé) :")
         for scenario in rapport["scenarios"]:
@@ -112,6 +124,27 @@ main { max-width:860px; margin:28px auto; background:#fff; border-radius:16px; o
 .meta b { color:#fff; font-weight:600; }
 .synthese { display:flex; gap:30px; align-items:center; flex-wrap:wrap;
   padding:28px 40px; border-bottom:1px solid var(--trait); }
+.score { display:flex; flex-direction:column; align-items:center; gap:8px; flex:none; }
+.grade { width:40px; height:40px; border-radius:10px; display:flex; align-items:center;
+  justify-content:center; font-weight:800; font-size:22px; color:#fff; }
+.grade.note-A,.grade.note-B { background:#2e7d4f; } .grade.note-C { background:#c07a12; }
+.grade.note-D { background:#c0560f; } .grade.note-E,.grade.note-F { background:#b3261e; }
+.apercu { flex:1; min-width:240px; }
+.verdict { font-size:17px; font-weight:600; color:var(--encre); margin:0 0 14px; }
+.route { margin:0 40px; padding:22px 24px; background:#f4f7fb; border:1px solid #d6e0ee;
+  border-radius:12px; }
+.route h2 { margin:0 0 4px; } .route h2::after { background:#d6e0ee; }
+.route .sous { font-size:13.5px; color:var(--gris); margin:0 0 14px; }
+.route-liste { list-style:none; padding:0; margin:0; }
+.route-liste li { display:flex; gap:14px; align-items:flex-start; padding:12px 0;
+  border-top:1px solid #d6e0ee; }
+.route-liste li:first-child { border-top:0; }
+.rang { flex:none; width:28px; height:28px; border-radius:50%; color:#fff; font-weight:800;
+  font-size:14px; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+.rang.CRITIQUE { background:#b3261e; } .rang.IMPORTANT { background:#c07a12; }
+.route-liste b { font-size:15.5px; } .route-liste p { margin:4px 0 0; font-size:14px;
+  color:#43494f; }
+.route .ref { font-size:12.5px; color:var(--gris); margin:14px 0 0; }
 .jauge { position:relative; width:118px; height:118px; flex:none; }
 .jauge svg { transform:rotate(-90deg); }
 .jauge .val { position:absolute; inset:0; display:flex; flex-direction:column;
@@ -177,6 +210,57 @@ def _jauge(note):
             f'<div class="val">{affiche}<small>/ 100</small></div></div>')
 
 
+def _lettre(note):
+    """Note sur 100 -> lettre A..F, comme les plateformes de notation de sécurité."""
+    if note is None:
+        return "–"
+    for seuil, lettre in ((90, "A"), (75, "B"), (60, "C"), (45, "D"), (25, "E")):
+        if note >= seuil:
+            return lettre
+    return "F"
+
+
+def _verdict(rapport):
+    """Une phrase de décision en tête, façon « niveau de menace » d'Intruder."""
+    compte = _compte(rapport)
+    if rapport["note_globale"] is None:
+        return ""
+    if compte.get(CRITIQUE):
+        return ("Des failles critiques sont ouvertes aujourd'hui : une mise en sécurité "
+                "est nécessaire sans attendre.")
+    if compte.get(IMPORTANT):
+        return ("Pas de faille critique, mais des points importants à corriger pour "
+                "réduire votre exposition.")
+    return "Aucune faille majeure. Quelques réglages à surveiller, sans urgence."
+
+
+def _priorites(rapport):
+    """Les constats à régler en premier : critiques puis importants, dans l'ordre de gravité."""
+    tous = [c for bloc in rapport["blocs"].values() for c in bloc["constats"]
+            if c["niveau"] in (CRITIQUE, IMPORTANT)]
+    tous.sort(key=lambda c: 0 if c["niveau"] == CRITIQUE else 1)
+    return tous[:6]
+
+
+def _feuille_route(rapport):
+    """La feuille de route de remédiation, comme dans les rapports pros. Vide si rien à régler."""
+    priorites = _priorites(rapport)
+    if not priorites:
+        return ""
+    e = html.escape
+    lignes = "".join(
+        f'<li><span class="rang {c["niveau"]}">{i}</span><div>'
+        f'<b>{e(c["titre"])}</b>'
+        + (f'<p>{e(c["correction"])}</p>' if c["correction"] else "")
+        + '</div></li>'
+        for i, c in enumerate(priorites, 1))
+    return (f'<section class="route"><h2>Par où commencer</h2>'
+            f'<p class="sous">À régler dans cet ordre, du plus grave au moins grave.</p>'
+            f'<ol class="route-liste">{lignes}</ol>'
+            f'<p class="ref">Référentiel : guide d\'hygiène informatique de l\'ANSSI.</p>'
+            f'</section>')
+
+
 def _menace(rapport):
     """La section « ce qu'un escroc pourrait faire » — l'argument de vente. Vide si rien trouvé."""
     scenarios_ = rapport.get("scenarios") or []
@@ -233,8 +317,12 @@ def en_html(rapport):
 <span>Cible&nbsp;: <b>{e(rapport['cible'])}</b></span>
 <span>Date&nbsp;: <b>{e(date_fr(rapport['date']))}</b></span></div>
 </div>
-<div class="synthese">{_jauge(note)}<div class="chips">{chips}</div></div>
+<div class="synthese">
+<div class="score">{_jauge(note)}<div class="grade note-{_lettre(note)}">{_lettre(note)}</div></div>
+<div class="apercu"><p class="verdict">{e(_verdict(rapport))}</p>
+<div class="chips">{chips}</div></div></div>
 {_menace(rapport)}
+{_feuille_route(rapport)}
 <div class="corps">{''.join(corps)}</div>
 <footer>{cadre}<br>Rapport produit par Vigie {e(rapport['version'])}.
 Ce diagnostic décrit l'état constaté à sa date et ne garantit pas l'absence d'autres failles.</footer>
