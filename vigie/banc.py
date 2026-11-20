@@ -28,24 +28,29 @@ MOTIFS = {
 BRUIT = re.compile(r"\.(?:py|js|json|txt|go|md|yaml|yml|html|css|log|exe|sh)$", re.I)
 
 
-def extraire(texte, facette):
-    """Les trouvailles d'une sortie d'outil, pour une facette donnée. Ensemble, minuscules."""
+def extraire(texte, facette, exclure=()):
+    """Les trouvailles d'une sortie d'outil, pour une facette donnée. Ensemble, minuscules.
+
+    `exclure` sert à retirer la cible elle-même : un outil qui échoue affiche souvent
+    le domaine visé dans son message d'erreur, et le compter serait une fausse trouvaille.
+    """
     motif = MOTIFS.get(facette)
     if motif is None:
         raise ValueError(f"facette inconnue : {facette} (connues : {', '.join(MOTIFS)})")
+    ecartes = {str(valeur).strip().lower() for valeur in exclure if str(valeur).strip()}
     trouvailles = set()
     for brut in motif.findall(texte or ""):
         valeur = brut.strip().lower().rstrip(".,;:")
         if facette == "domaines" and BRUIT.search(valeur):
             continue
-        if valeur:
+        if valeur and valeur not in ecartes:
             trouvailles.add(valeur)
     return trouvailles
 
 
-def mesurer(sorties, facette):
+def mesurer(sorties, facette, exclure=()):
     """sorties : {nom_outil: texte brut}. Renvoie ce que chacun trouve et son apport propre."""
-    par_outil = {nom: extraire(texte, facette) for nom, texte in sorties.items()}
+    par_outil = {nom: extraire(texte, facette, exclure) for nom, texte in sorties.items()}
     union = set().union(*par_outil.values()) if par_outil else set()
     uniques = {}
     for nom, trouvailles in par_outil.items():

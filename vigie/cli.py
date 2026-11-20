@@ -83,6 +83,14 @@ def main(arguments=None):
                       help="outils à comparer, séparés par des virgules")
     comp.add_argument("--sortie", default="comparaisons")
 
+    lan = commandes.add_parser("lancer", help="lancer tous les outils d'une facette sur une cible")
+    lan.add_argument("domaine", help="exemple.fr")
+    lan.add_argument("--facette", default="domaines", help="domaines, mails, ip, failles ou urls")
+    lan.add_argument("--outils", help="liste d'outils séparée par des virgules (sinon : tous)")
+    lan.add_argument("--delai", type=int, default=300, help="secondes avant d'abandonner un outil")
+    lan.add_argument("--sortie", default="sorties", help="dossier où écrire une sortie par outil")
+    lan.add_argument("--sans-banc", action="store_true", help="ne pas mesurer après le lancement")
+
     bn = commandes.add_parser("banc", help="mesurer quels outils apportent quoi (meilleur mélange)")
     bn.add_argument("--dossier", required=True,
                     help="dossier de sorties d'outils : un fichier par outil, nommé comme lui")
@@ -104,6 +112,56 @@ def main(arguments=None):
     commandes.add_parser("questionnaire", help="afficher le questionnaire assureur")
 
     args = analyseur.parse_args(arguments)
+
+    if args.commande == "lancer":
+        from . import banc, lanceur
+        try:
+            cible_domaine = nettoyer_domaine(args.domaine)
+        except ValueError as erreur:
+            raise SystemExit(str(erreur))
+        noms = ([n.strip() for n in args.outils.split(",") if n.strip()] if args.outils
+                else lanceur.pour_facette(args.facette))
+        if not noms:
+            raise SystemExit(f"Aucun outil déclaré pour la facette : {args.facette}")
+        manquants = [n for n in noms if not lanceur.installe(n)]
+        print(f"{len(noms)} outils déclarés pour « {args.facette} », "
+              f"{len(noms) - len(manquants)} installés.")
+        if manquants:
+            print("  absents (ignorés) : " + ", ".join(manquants))
+        comptes = lanceur.lancer_tous(noms, cible_domaine, args.sortie, args.delai)
+        lances = [c for c in comptes if c["lance"]]
+        if not lances:
+            raise SystemExit("\nAucun outil n'a pu être lancé. Installe-les d'abord : "
+                             "python3 -m vigie installer")
+        print(f"\n{len(lances)} outils lancés, sorties dans {args.sortie}/")
+        if args.sans_banc:
+            return
+        # Un outil sorti en erreur n'a rien mesuré : l'inclure ferait passer son message
+        # d'erreur (qui contient la cible) pour une trouvaille.
+        echoues = [c["outil"] for c in lances if c.get("echoue")]
+        exploitables = [c for c in lances if not c.get("echoue")]
+        if echoues:
+            print("  écartés de la mesure (sortis en erreur ou sans résultat) : "
+                  + ", ".join(echoues))
+        if not exploitables:
+            raise SystemExit("\nAucun outil n'a produit de résultat exploitable.")
+        sorties = {}
+        for compte in exploitables:
+            chemin = os.path.join(args.sortie, f"{compte['outil']}.txt")
+            with open(chemin, encoding="utf-8", errors="replace") as fichier:
+                sorties[compte["outil"]] = fichier.read()
+        mesure = banc.mesurer(sorties, args.facette, exclure=[cible_domaine])
+        melange = banc.meilleur_melange(mesure)
+        print("\n" + banc.en_texte(mesure, melange))
+        temps = lanceur.temps_par_outil(comptes)
+        print("\nTEMPS DE CHAQUE OUTIL (un outil lent qui apporte peu est un mauvais marché)")
+        for nom, secondes in sorted(temps.items(), key=lambda c: -c[1]):
+            if nom in mesure["uniques"]:
+                print(f"  {nom:18} {secondes:7} s   {len(mesure['uniques'][nom]):4} trouvailles "
+                      "qu'il est seul à voir")
+            else:
+                print(f"  {nom:18} {secondes:7} s   (écarté : aucun résultat)")
+        return
 
     if args.commande == "banc":
         from . import banc

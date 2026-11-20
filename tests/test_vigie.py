@@ -16,6 +16,7 @@ from http.server import ThreadingHTTPServer
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from vigie import (autorisation, banc, cli, comparaison, installeur,  # noqa: E402
+                   lanceur,
                    interface, outils, pdf, rapport, reseau, scenarios)
 from vigie.modeles import (CRITIQUE, IMPORTANT, INFO, OK, Cible, Constat,  # noqa: E402
                            ControleImpossible, fusionner, note)
@@ -414,6 +415,18 @@ class Banc(unittest.TestCase):
         self.assertEqual(banc.extraire("resultat.json config.yaml vrai.cible.fr", "domaines"),
                          {"vrai.cible.fr"})
 
+    def test_un_message_d_erreur_ne_compte_pas_comme_trouvaille(self):
+        # cas réel : dnsrecon échoue et affiche la cible dans son erreur.
+        erreur = "[*] std: Performing General Enumeration against: github.io...\n" \
+                 "[-] Could not resolve domain: github.io"
+        self.assertEqual(banc.extraire(erreur, "domaines", exclure=["github.io"]), set())
+        # sans exclusion, la cible remonterait à tort
+        self.assertIn("github.io", banc.extraire(erreur, "domaines"))
+
+    def test_la_cible_est_ecartee_des_trouvailles(self):
+        mesure = banc.mesurer({"o": "cible.fr www.cible.fr"}, "domaines", exclure=["cible.fr"])
+        self.assertEqual(mesure["union"], {"www.cible.fr"})
+
     def test_facette_inconnue_refusee(self):
         with self.assertRaises(ValueError):
             banc.extraire("texte", "licornes")
@@ -440,6 +453,62 @@ class Banc(unittest.TestCase):
         melange = banc.meilleur_melange(mesure)
         self.assertEqual([e["outil"] for e in melange["melange"]], ["seul"])
         self.assertEqual(melange["inutiles"], [])
+
+
+class Lanceur(unittest.TestCase):
+    def test_outils_par_facette(self):
+        domaines = lanceur.pour_facette("domaines")
+        self.assertIn("subfinder", domaines)
+        self.assertIn("amass", domaines)
+        self.assertNotIn("whatweb", domaines)        # whatweb répond aux urls
+        self.assertEqual(lanceur.pour_facette("licornes"), [])
+
+    def test_outil_non_declare_ecarte_sans_erreur(self):
+        resultat = lanceur.lancer_un("outil-qui-nexiste-pas", "ex.fr")
+        self.assertFalse(resultat["lance"])
+        self.assertEqual(resultat["raison"], "non déclaré")
+
+    def test_outil_absent_ecarte_sans_erreur(self):
+        vrai = lanceur.shutil.which
+        lanceur.shutil.which = lambda nom: None
+        try:
+            resultat = lanceur.lancer_un("subfinder", "ex.fr")
+        finally:
+            lanceur.shutil.which = vrai
+        self.assertFalse(resultat["lance"])
+        self.assertEqual(resultat["raison"], "pas installé")
+
+    def test_la_cible_est_bien_substituee(self):
+        ligne = lanceur.LANCEMENTS["subfinder"]
+        arguments = [a.replace("{cible}", "cible.fr") for a in ligne["arguments"]]
+        self.assertIn("cible.fr", arguments)
+        self.assertNotIn("{cible}", " ".join(arguments))
+
+    def test_outil_sans_resultat_est_marque_echoue(self):
+        lanceur.LANCEMENTS["vide-essai"] = {"commande": "true", "arguments": [],
+                                            "facettes": ["domaines"]}
+        try:
+            resultat = lanceur.lancer_un("vide-essai", "cible.fr")
+        finally:
+            del lanceur.LANCEMENTS["vide-essai"]
+        self.assertTrue(resultat["lance"])
+        self.assertTrue(resultat["echoue"])     # lancé, mais n'a rien produit
+
+    def test_lancement_reel_et_ecriture_des_sorties(self):
+        # on déclare un faux outil qui existe partout, pour vérifier la mécanique
+        lanceur.LANCEMENTS["echo-essai"] = {"commande": "echo",
+                                            "arguments": ["a.{cible} b.{cible}"],
+                                            "facettes": ["domaines"]}
+        try:
+            with tempfile.TemporaryDirectory() as dossier:
+                comptes = lanceur.lancer_tous(["echo-essai"], "cible.fr", dossier,
+                                              journal=lambda *a: None)
+                self.assertTrue(comptes[0]["lance"])
+                with open(os.path.join(dossier, "echo-essai.txt"), encoding="utf-8") as f:
+                    self.assertIn("a.cible.fr", f.read())
+            self.assertIn("echo-essai", lanceur.temps_par_outil(comptes))
+        finally:
+            del lanceur.LANCEMENTS["echo-essai"]
 
 
 class Installeur(unittest.TestCase):
