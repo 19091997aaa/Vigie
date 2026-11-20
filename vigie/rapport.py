@@ -55,6 +55,9 @@ def en_texte(rapport):
                         else "non calculée (aucun contrôle réalisé)"),
         "",
     ]
+    perimetre = _perimetre(rapport)
+    if perimetre:
+        lignes += [perimetre, ""]
     verdict = _verdict(rapport)
     if verdict:
         lignes += [f"Verdict : {verdict}", ""]
@@ -77,7 +80,8 @@ def en_texte(rapport):
             lignes.append(f"  {scenario['texte']}")
         lignes.append("")
     for nom, bloc in rapport["blocs"].items():
-        lignes += [f"=== {nom.upper()} : {bloc['note']} / 100 ===", ""]
+        lignes += [f"=== {nom.upper()} : {bloc['note']} / 100  (classe {_lettre(bloc['note'])}) ===",
+                   f"  {_strategie_bloc(bloc)}", ""]
         for numero, constat in enumerate(bloc["constats"], 1):
             lignes.append(f"{numero}. [{LIBELLES[constat['niveau']]}] {constat['titre']}")
             lignes.append(f"   {constat['explication']}")
@@ -189,6 +193,18 @@ h2 .scoreb { flex:none; font-size:12px; font-weight:800; letter-spacing:0; color
 .menace .cas p { margin:0; color:#43362f; font-size:14.5px; }
 footer { padding:22px 40px 30px; font-size:12.5px; color:var(--gris);
   border-top:1px solid var(--trait); background:#fbfcfe; }
+.perimetre { margin-top:16px; font-size:13px; color:#c3cede; }
+.perimetre b { color:#fff; font-weight:600; }
+.domaines { padding:26px 40px 8px; }
+.cartes { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; }
+.carte { border:1px solid var(--trait); border-radius:12px; padding:16px 18px;
+  display:flex; gap:14px; align-items:flex-start; }
+.carte .note-bloc { flex:none; width:38px; height:38px; border-radius:9px; color:#fff;
+  font-weight:800; font-size:19px; display:flex; align-items:center; justify-content:center; }
+.carte .infos { flex:1; min-width:0; }
+.carte .nom { font-size:15.5px; font-weight:700; margin:0 0 2px; }
+.carte .compte { font-size:12.5px; color:var(--gris); margin:0 0 7px; }
+.carte .strat { font-size:13.5px; color:#43494f; margin:0; }
 @media print { body{background:#fff;} main{box-shadow:none; margin:0; max-width:none; border-radius:0;} }
 """
 
@@ -275,6 +291,52 @@ def _menace(rapport):
             f'ouvert aujourd\'hui.</p>{cas}</section>')
 
 
+def _perimetre(rapport):
+    """Ce qui a été examiné et comment : le périmètre, en une phrase, pour la couverture."""
+    domaines = list(rapport["blocs"].keys())
+    if not domaines:
+        return ""
+    liste = ", ".join(domaines)
+    methode = ("à partir d'informations publiques, sans action sur vos machines"
+               if not rapport["autorisation"]
+               else "contrôles autorisés par le dirigeant")
+    return f"Périmètre : {liste} — {methode}."
+
+
+def _strategie_bloc(bloc):
+    """Une ligne de stratégie par domaine, déduite de ce qui a été trouvé (jamais inventée)."""
+    niveaux = {c["niveau"] for c in bloc["constats"]}
+    if CRITIQUE in niveaux:
+        return "Des points critiques à traiter ici en priorité."
+    if IMPORTANT in niveaux:
+        return "Pas de critique, mais des corrections importantes à planifier."
+    if INFO in niveaux:
+        return "Rien de grave ; quelques réglages à surveiller."
+    return "Domaine conforme, rien à faire."
+
+
+def _synthese_blocs(rapport):
+    """Le tableau de bord par domaine : une carte par bloc, note-lettre et stratégie."""
+    if not rapport["blocs"]:
+        return ""
+    e = html.escape
+    cartes = []
+    for nom, bloc in rapport["blocs"].items():
+        compte = {}
+        for c in bloc["constats"]:
+            compte[c["niveau"]] = compte.get(c["niveau"], 0) + 1
+        detail = ", ".join(f"{compte[n]} {LIBELLES[n].lower()}"
+                           for n in (CRITIQUE, IMPORTANT, INFO, OK) if n in compte) or "aucun constat"
+        lettre = _lettre(bloc["note"])
+        cartes.append(
+            f'<div class="carte"><div class="note-bloc grade note-{lettre}">{lettre}</div>'
+            f'<div class="infos"><p class="nom">{e(nom)}</p>'
+            f'<p class="compte">{bloc["note"]} / 100 · {e(detail)}</p>'
+            f'<p class="strat">{e(_strategie_bloc(bloc))}</p></div></div>')
+    return (f'<section class="domaines"><h2>Vue par domaine</h2>'
+            f'<div class="cartes">{"".join(cartes)}</div></section>')
+
+
 def en_html(rapport):
     e = html.escape
     compte = _compte(rapport)
@@ -316,11 +378,13 @@ def en_html(rapport):
 <div class="meta"><span>Société&nbsp;: <b>{e(rapport['societe'])}</b></span>
 <span>Cible&nbsp;: <b>{e(rapport['cible'])}</b></span>
 <span>Date&nbsp;: <b>{e(date_fr(rapport['date']))}</b></span></div>
+<p class="perimetre">{e(_perimetre(rapport))}</p>
 </div>
 <div class="synthese">
 <div class="score">{_jauge(note)}<div class="grade note-{_lettre(note)}">{_lettre(note)}</div></div>
 <div class="apercu"><p class="verdict">{e(_verdict(rapport))}</p>
 <div class="chips">{chips}</div></div></div>
+{_synthese_blocs(rapport)}
 {_menace(rapport)}
 {_feuille_route(rapport)}
 <div class="corps">{''.join(corps)}</div>
