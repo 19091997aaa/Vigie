@@ -718,12 +718,12 @@
   "nom": "PEASS-ng (WinPEAS/LinPEAS)",
   "lien": "https://github.com/peass-ng/PEASS-ng",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "privesc",
+  "install": "télécharger le script/binaire des releases (linpeas.sh, winPEASx64.exe) ; apt install peass-ng (Kali)",
+  "usage": "./linpeas.sh (hôte Linux) ; winPEASx64.exe (Windows) — énumère les chemins d'escalade de privilèges LOCAUX",
+  "annexes": "aucune. S'exécute SUR la machine cible après un accès local. Outil d'escalade de privilèges (post-exploitation / audit interne), PAS de diag externe.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Semgrep",
@@ -784,12 +784,12 @@
   "nom": "Kubescape",
   "lien": "https://github.com/kubescape/kubescape",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "kubernetes",
+  "install": "curl install.sh ; brew install kubescape ; apt/choco/scoop",
+  "usage": "kubescape scan  (cluster K8s contre les référentiels NSA/CISA) ; scan de fichiers YAML/repo",
+  "annexes": "pour auditer un cluster Kubernetes. Si la TPE n'a pas de K8s, inutile. DevOps/cloud.",
+  "cle_api": "non (compte SaaS optionnel)",
+  "statut": "lu"
  },
  {
   "nom": "Syft",
