@@ -63,6 +63,9 @@ class Base(unittest.TestCase):
         from vigie.modules import telephone
         self._sauve_tel = telephone._ouvrir
         telephone._ouvrir = pas_de_telechargement
+        from vigie.modules import bibliotheques
+        self._sauve_bib = bibliotheques._ouvrir
+        bibliotheques._ouvrir = pas_de_telechargement
         sousdomaines._CACHE.clear()
         archives._CACHE.clear()
 
@@ -71,6 +74,8 @@ class Base(unittest.TestCase):
          metadonnees._ouvrir) = self._sauve
         from vigie.modules import telephone
         telephone._ouvrir = self._sauve_tel
+        from vigie.modules import bibliotheques
+        bibliotheques._ouvrir = self._sauve_bib
 
     def site_propre(self):
         site._jours_certificat = lambda d: 80
@@ -1068,6 +1073,24 @@ class Poste(unittest.TestCase):
             for nom in ("apt_x.yar", "generic_anomalies.yar", "lisez.txt"):
                 open(os.path.join(d, "yara", nom), "w").close()
             self.assertEqual([os.path.basename(r) for r in poste.regles_yara(d)], ["apt_x.yar"])
+
+
+class Bibliotheques(Base):
+    def test_scripts_du_site_et_failles(self):
+        from vigie.modules import bibliotheques
+        page = ('<script src="/wp-includes/js/jquery/jquery.min.js?ver=1.12.4"></script>'
+                '<script src="https://cdn.pub.com/x.js"></script><script src="file://ex.fr/a.js">')
+        self.assertEqual(bibliotheques.scripts(page, "https://ex.fr/", "ex.fr"),
+                         ["https://ex.fr/wp-includes/js/jquery/jquery.min.js?ver=1.12.4"])
+        trouvees = bibliotheques.lire_sortie({"data": [{"results": [
+            {"component": "jquery", "version": "1.12.4",
+             "vulnerabilities": [{"severity": "medium"}, {"severity": "high"}]}]}]})
+        self.assertEqual(trouvees[0]["graves"], 1)
+
+    def test_site_illisible(self):
+        from vigie.modules import bibliotheques
+        with self.assertRaises(ControleImpossible):
+            bibliotheques.analyser(CIBLE)
 
 
 class Mandat(unittest.TestCase):

@@ -67,3 +67,30 @@ sources sur 4.
 Correction de la conclusion du lot 2 : dnsrecon voit **en plus** les réglages SRV de la
 messagerie (IMAP, envoi, configuration automatique chez OVH) et l'adresse IPv6. Ce ne
 sont pas des failles, mais de l'information que les autres ne montrent pas.
+
+## Lot 4 : outils qui lisent du code ou des fichiers
+
+**Mots de passe dans du code : Gitleaks contre TruffleHog.** Sur l'historique de Vigie
+(141 enregistrements) : rien pour les deux. Sur un dépôt témoin avec 3 faux secrets
+(jeton GitHub, jeton Slack, mot de passe en clair) : Gitleaks trouve GitHub et Slack,
+TruffleHog seulement GitHub ; **aucun ne voit le mot de passe en clair.** Gitleaks a
+plus de motifs ; TruffleHog sait vérifier si un jeton marche encore.
+
+**Logiciels troués : Grype contre Trivy** (dossier des outils Python installés par pipx).
+Trivy en mode « fs » ne voit RIEN (il cherche des fichiers de dépendances, pas les
+paquets installés) ; en mode « rootfs », il voit les mêmes 2 paquets que Grype :
+`cryptography` 46.0.7 (embarqué par SSLyze, qui l'épingle) et `soupsieve` 2.10 (Maigret).
+Les nombres de failles diffèrent surtout parce qu'une même faille a deux noms (CVE et GHSA).
+Risque faible : ce sont des outils lancés par Anass, pas des services exposés.
+
+**Chiffrement : tlsx contre SSLyze** (pavillon-noir.tech). Même verdict (TLS 1.2 seul,
+certificat Let's Encrypt). tlsx montre en plus que www a son propre certificat
+(vérifié : valide, sans alerte). SSLyze reste le seul à tester les vieilles versions.
+
+**Bibliothèques JavaScript : Retire.js** (scripts de l'accueil) : 1 script du thème,
+rien de connu. Branché dans le diagnostic (module `bibliotheques`).
+
+**Écartés pour une TPE :** Checkov (rien à analyser sans infrastructure décrite en code),
+searchsploit (sur « PHP 8.3 » ou « Apache », trop de bruit pour un rapport de patron).
+Syft (inventaire des logiciels) sert de base à Grype, pas de rapport à lui seul.
+Social Analyzer : 15 minutes sans résultat lisible.
