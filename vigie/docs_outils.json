@@ -861,12 +861,12 @@
   "nom": "PrivescCheck",
   "lien": "https://github.com/itm4n/PrivescCheck",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "privesc",
+  "install": "télécharger PrivescCheck.ps1 (fichier unique PowerShell)",
+  "usage": "powershell -ep bypass -c '. .\\\\PrivescCheck.ps1; Invoke-PrivescCheck -Report X -Format HTML'",
+  "annexes": "aucune. S'exécute SUR un hôte Windows. Post-exploitation / audit interne, PAS de diag externe.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "linux-smart-enumeration",
@@ -938,12 +938,12 @@
   "nom": "HardeningKitty",
   "lien": "https://github.com/scipag/HardeningKitty",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "durcissement",
+  "install": "module PowerShell (scipag/HardeningKitty)",
+  "usage": "Invoke-HardeningKitty -Mode Audit -Log -Report  (audit config Windows contre CIS/Microsoft baselines)",
+  "annexes": "aucune. Audite le durcissement d'un Windows LOCAL (modes Audit/Config/HailMary). Audit interne, pas diag externe.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "OpenSCAP",
