@@ -1037,12 +1037,12 @@
   "nom": "sqlmap",
   "lien": "https://github.com/sqlmapproject/sqlmap",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "sqli",
+  "install": "git clone --depth 1 sqlmapproject/sqlmap sqlmap-dev ; apt install sqlmap (Kali) ; Python",
+  "usage": "sqlmap -u {url} --dbs  (détecte ET exploite les injections SQL, prise de contrôle de BDD)",
+  "annexes": "aucune clé. Outil d'EXPLOITATION SQLi de référence : détecte ET exploite (dump de BDD, prise de contrôle). OFFENSIF — À GATER, jamais dans le pipeline auto ni le diag. Injection sans autorisation = délit.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Katana",
@@ -1070,12 +1070,12 @@
   "nom": "OWASP ZAP",
   "lien": "https://github.com/zaproxy/zaproxy",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "web-scanner",
+  "install": "apt install zaproxy (Kali) ; installeurs Win/Linux/macOS ; brew install --cask zap ; docker (Java 17+)",
+  "usage": "zap.sh ; proxy MITM + spider + scan passif + scan actif  (DAST : trouve les vuln d'une appli web)",
+  "annexes": "aucune clé. Scanner de sécurité web (DAST) OWASP. Mode PASSIF (analyse le trafic sans attaquer) ET mode ACTIF (attaque les pages). Le scan actif = audit (autorisation). Rapports HTML/JSON/SARIF.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "XSStrike",
