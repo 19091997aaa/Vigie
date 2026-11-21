@@ -1323,12 +1323,12 @@
   "nom": "Certipy",
   "lien": "https://github.com/ly4k/Certipy",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-ad",
+  "install": "pip3 install certipy-ad (Python 3.12+)",
+  "usage": "certipy find/req/auth/relay/forge/shadow... (boîte à outils offensive ET défensive d'énumération et d'abus d'AD Certificate Services / AD CS) : 'find' énumère modèles de certificats, CA et vulnérabilités (ESC1-ESC17) ; req (demande de cert), relay (NTLM relay vers AD CS, ESC8/11), forge (Golden Certificate), shadow credentials, auth, parse (offline)",
+  "annexes": "aucune clé (identifiants AD requis). Boîte à outils AD CS offensive ET défensive (ly4k, Python, MIT). 'find' = énumération/détection des vulns (ESC1 à ESC17). Exploitation : req, relay (ESC8/11), forge (Golden Certificate), shadow credentials. Génère des données pour BloodHound. /!\\ 'find' peut aider un AUDIT, mais les modules d'exploitation (req, relay, forge) sont OFFENSIFS — cible autorisée. Complémentaire de Locksmith (qui répare). AD CS = vecteur d'escalade majeur. GATE (exploitation) ; find en audit avec accord.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "BloodHound",
@@ -1389,12 +1389,12 @@
   "nom": "enum4linux-ng",
   "lien": "https://github.com/cddmp/enum4linux-ng",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-ad",
+  "install": "git clone cddmp/enum4linux-ng + pip install -r requirements.txt (venv) ; pip install enum4linux-ng ; apt (Kali) ; nécessite les outils Samba (smbclient, rpcclient, net, nmblookup)",
+  "usage": "enum4linux-ng.py -A <cible> (réécriture moderne d'enum4linux : énumère les infos de systèmes Windows/Samba via SMB/RPC/LDAP) : utilisateurs, groupes, partages, politique de mot de passe, OS, domaine ; énumération 'smart', export JSON/YAML",
+  "annexes": "aucune clé (session nulle ou identifiants). Réécriture moderne d'enum4linux (cddmp, GPL-3, Python). Énumère Windows/Samba via SMB/RPC/LDAP : utilisateurs, groupes, partages, politique de mdp, OS. Wrapper des outils Samba. Export JSON/YAML structuré. 'Smart', IPv6. /!\\ énumération active — session nulle (anonyme) ou identifiants. Repérage offensif MAIS peut servir un audit interne (session nulle autorisée = vulnérabilité). Cible autorisée. GATE prudent ; utile en audit AD avec accord.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Locksmith",
