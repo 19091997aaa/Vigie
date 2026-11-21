@@ -1686,12 +1686,12 @@
   "nom": "YARA",
   "lien": "https://github.com/VirusTotal/yara",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "detection-malware",
+  "install": "apt install yara / brew install yara ; pip install yara-python ; build depuis github.com/VirusTotal/yara (YARA-X = réécriture Rust)",
+  "usage": "yara regle.yar fichier/dossier (moteur de correspondance de motifs : des règles décrivent des familles de malware par chaînes/octets/regex ; scanne fichiers et processus pour classer/détecter un malware)",
+  "annexes": "aucune clé. Moteur de règles de détection de malware ('pattern matching'). Règles = chaînes, octets (jokers), regex + condition logique. Classe par famille. Scanne fichiers ET processus. Nombreuses règles publiques (GitHub). Pour chasse aux menaces, réponse à incident, analyse de malware. DÉFENSIF. S'intègre partout (Wazuh, Velociraptor). Nécessite d'écrire/récupérer des règles.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "ntopng (Community)",
@@ -1741,12 +1741,12 @@
   "nom": "Volatility 3",
   "lien": "https://github.com/volatilityfoundation/volatility3",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "forensic-memoire",
+  "install": "git clone volatilityfoundation/volatility3 + python3 vol.py ; pip install volatility3 (Python 3, venv recommandé)",
+  "usage": "python3 vol.py -f dump.mem windows.pslist (framework de forensic MÉMOIRE : analyse un dump RAM — processus, connexions réseau, DLL, modules noyau, clés... — artefacts qui ne touchent jamais le disque) ; plugins (malfind), intègre YARA",
+  "annexes": "aucune clé. Framework de forensic de la MÉMOIRE (RAM) de référence (réécriture Py3 de Volatility 2). Analyse un dump : processus, connexions, modules noyau, injections (malfind), clés. Architecture modulaire (plugins). Nécessite un dump RAM (LiME, snapshot VM, .vmem). Combine avec YARA (malware en mémoire). DÉFENSIF/DFIR — réponse à incident. Pertinent pour l'investigation après compromission.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Velociraptor",
