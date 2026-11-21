@@ -2082,23 +2082,23 @@
   "nom": "DevSec Hardening",
   "lien": "https://github.com/dev-sec/ansible-collection-hardening",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "durcissement",
+  "install": "collections Ansible/Chef/Puppet (ansible-galaxy install devsec.hardening) ; profils InSpec",
+  "usage": "automatise le durcissement des serveurs : OS Linux, SSH, SSL, nginx, MySQL, PostgreSQL, Apache, Docker, K8s ; baselines InSpec de conformité",
+  "annexes": "aucune clé. Framework de durcissement AUTOMATISÉ (origine Deutsche Telekom). S'intègre à Ansible/Chef/Puppet. Baselines testables (InSpec/cnspec). Durcir des serveurs à l'échelle (infra as code). Pertinent si gestion de plusieurs serveurs/clients (MSP). Requiert Ansible/Chef.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Harden-Windows-Security",
   "lien": "https://github.com/HotCakeX/Harden-Windows-Security",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "durcissement",
+  "install": "irm '.../Harden-Windows-Security.ps1' | iex ; Install-Module Harden-Windows-Security-Module (PowerShell Gallery)",
+  "usage": "Protect-WindowsSecurity (durcit) ; Confirm-SystemCompliance (audite + score) ; Unprotect-WindowsSecurity (annule)",
+  "annexes": "aucune clé. Durcissement Windows 10/11 par méthodes OFFICIELLES Microsoft (BitLocker, Defender, firewall, ASR, UAC, TLS). 3 fonctions : durcir, auditer (score), annuler. GUI dispo. Intune/GPO/local. Plus complet que hardentools. PERTINENT pour durcir les postes Windows TPE (avec audit).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "OPNsense",
