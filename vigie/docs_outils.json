@@ -102,34 +102,34 @@
   "nom": "Instaloader",
   "lien": "https://github.com/instaloader/instaloader",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "instagram",
+  "install": "pip3 install instaloader (ou pipx ; brew install instaloader ; apt install instaloader)",
+  "usage": "instaloader {profil}  (profil Instagram ; '#hashtag' ; --login=user pour les profils privés/stories)",
+  "annexes": "login Instagram requis pour contenu privé (stocke un cookie). ATTENTION : l'usage peut entraîner la PERTE du compte Instagram utilisé. Entrée = profil IG.",
+  "cle_api": "non (login IG pour le privé)",
+  "statut": "lu"
  },
  {
   "nom": "Recon-ng",
   "lien": "https://github.com/lanmaster53/recon-ng",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "multi",
+  "install": "sudo apt install recon-ng (Kali) ; brew install recon-ng ; git clone + pip install -r REQUIREMENTS",
+  "usage": "recon-ng (console interactive, façon Metasploit) ; ou recon-cli -w workspace -m module.",
+  "annexes": "FRAMEWORK : aucun module par défaut, 'marketplace install all' pour les charger ; beaucoup exigent des clés API. Pas une commande simple.",
+  "cle_api": "optionnelle (nombreux modules)",
+  "statut": "lu"
  },
  {
   "nom": "ExifTool",
   "lien": "https://github.com/exiftool/exiftool",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "metadonnees",
+  "install": "brew install exiftool ; sudo apt install libimage-exiftool-perl ; dnf install perl-Image-ExifTool",
+  "usage": "exiftool {fichier}  (lit EXIF/GPS/IPTC/XMP d'une image/audio/vidéo ; peut aussi écrire/supprimer)",
+  "annexes": "aucune. Entrée = FICHIER local, pas un domaine. Très utile pour les métadonnées de documents exposés.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Toutatis",
