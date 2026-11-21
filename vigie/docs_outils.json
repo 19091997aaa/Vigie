@@ -1004,12 +1004,12 @@
   "nom": "PSRule for Azure",
   "lien": "https://github.com/Azure/PSRule.Rules.Azure",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "iac",
+  "install": "Install-Module -Name PSRule.Rules.Azure",
+  "usage": "Assert-PSRule -Module 'PSRule.Rules.Azure' -InputPath 'out/templates/'  (valide des templates IaC Azure ARM/Bicep contre le Well-Architected Framework)",
+  "annexes": "scanne des TEMPLATES d'infrastructure Azure (ARM/Bicep) avant déploiement. DevOps/IaC. Pas un domaine ni un tenant live. Hors diag externe.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "mitmproxy",
