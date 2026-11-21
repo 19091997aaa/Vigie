@@ -1565,12 +1565,12 @@
   "nom": "hcxtools",
   "lien": "https://github.com/ZerBea/hcxtools",
   "categorie": "Sans fil",
-  "facette": "sans_fil",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-wifi",
+  "install": "git clone ZerBea/hcxtools + make + make install (Linux, Arch recommandé)",
+  "usage": "suite d'outils de CONVERSION et d'analyse des captures WiFi : hcxpcapngtool (convertit pcapng/pcap/cap en hash Hashcat/JtR, mode 22000 PMKID+EAPOL), hcxhashtool (filtre les hash), hcxpsktool (candidats PSK faibles), hcxeiutool (wordlists depuis ESSID), wlancap2wpasec (upload vers wpa-sec), whoismac (vendor/OUI)",
+  "annexes": "aucune clé. Suite compagnon de hcxdumptool (ZerBea). NE CAPTURE PAS : convertit et analyse les captures. But affiché : détecter les points faibles de SON PROPRE WiFi en vérifiant si la clé a été transmise en clair. Convertit vers le format hash 22000 pour Hashcat/John. /!\\ outil de SUPPORT à une attaque WPA hors-ligne (traitement des captures) → classé avec la chaîne offensive. Hors-ligne, pas d'interaction réseau = moins risqué que la capture. GATE (support chaîne WPA).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Kismet",
@@ -1587,23 +1587,23 @@
   "nom": "hcxdumptool",
   "lien": "https://github.com/ZerBea/hcxdumptool",
   "categorie": "Sans fil",
-  "facette": "sans_fil",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-wifi",
+  "install": "git clone ZerBea/hcxdumptool + make + make install (Linux, Arch recommandé) ; nécessite une carte WiFi compatible",
+  "usage": "hcxdumptool -i wlan0 -o output.pcapng (capture de trafic WLAN et tests contre WPA) : capture les PMKID des points d'accès (un seul suffit) et les handshakes EAPOL ; puis hcxpcapngtool (de hcxtools) convertit en format Hashcat/JtR (mode 22000)",
+  "annexes": "aucune clé (carte WiFi compatible). Outil de capture de paquets WLAN (ZerBea/ZeroBeat). Sert à découvrir les points faibles de SON PROPRE WiFi en lançant des attaques niveau 2 contre WPA. Capture PMKID + EAPOL. Chaîne : hcxdumptool -> hcxpcapngtool -> hcxhashtool -> hashcat/JtR. /!\\ actif (interagit avec les AP), attaque le protocole WPA → OFFENSIF. UNIQUEMENT son propre réseau. GATE strict. Le cassage se fait ensuite hors-ligne (Hashcat).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Reaver (fork t6x)",
   "lien": "https://github.com/t6x/reaver-wps-fork-t6x",
   "categorie": "Sans fil",
-  "facette": "sans_fil",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-wifi",
+  "install": "git clone t6x/reaver-wps-fork-t6x + cd src + ./configure + make + sudo make install ; apt install reaver (Kali) ; nécessite Pixiewps (Wiire) pour l'attaque Pixie Dust",
+  "usage": "reaver -i wlan0mon -b <BSSID> -vv (attaque WPS d'un AP) : brute-force en ligne du PIN WPS, ou -K/-Z pour l'attaque Pixie Dust HORS-LIGNE (exploite la faible entropie de certaines implémentations) ; 'wash' liste les AP vulnérables au WPS ; récupère le PIN puis la clé WPA/PSK",
+  "annexes": "aucune clé (carte WiFi injection + Pixiewps). Outil d'attaque WPS (Craig Heffner 2011, fork communautaire t6x 1.6.x). Deux attaques : brute-force PIN en ligne (long, bruyant) et Pixie Dust hors-ligne (rapide — Dominique Bongard). Récupère le PIN WPS → donne la clé WPA. /!\\ TRES OFFENSIF, attaque active contre un AP → UNIQUEMENT son propre réseau ou accord écrit. Pour un audit TPE : vérifier si le WPS est activé/vulnérable (à désactiver = conseil de sécurisation). GATE strict.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Wifite2",
