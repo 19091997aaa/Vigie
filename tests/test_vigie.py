@@ -588,6 +588,63 @@ class Installeur(unittest.TestCase):
         self.assertEqual(len(outils_catalogue), 222)
         self.assertEqual(sum(installeur.categories(outils_catalogue).values()), 222)
 
+    def test_binaires_lus_dans_la_sortie_de_pipx(self):
+        sortie = ("  installed package sherlock-project 0.15.0\n"
+                  "  These apps are now globally available\n"
+                  "    - sherlock\n    - sherlock-cli\ndone!\n")
+        self.assertEqual(installeur.binaires_poses("pipx (PyPI)", sortie, "x", "sherlock-project"),
+                         ["sherlock", "sherlock-cli"])
+        self.assertEqual(installeur.binaires_poses("go", "", "projectdiscovery", "subfinder"),
+                         ["subfinder"])
+
+    def test_un_binaire_absent_ne_repond_pas(self):
+        self.assertFalse(installeur.repond("outil-qui-nexiste-vraiment-pas"))
+
+    def test_installe_mais_muet_nest_pas_pret(self):
+        # une installation qui réussit mais dont le binaire ne démarre pas
+        vrai_lancer, vrai_repond = installeur._lancer, installeur.repond
+        installeur._lancer = lambda commande, delai=600: (True, "", "")
+        installeur.repond = lambda binaire, delai=25: False
+        try:
+            resultat = installeur.installer_un({"nom": "Coquille",
+                                                "lien": "https://github.com/x/coquille"})
+        finally:
+            installeur._lancer, installeur.repond = vrai_lancer, vrai_repond
+        self.assertTrue(resultat["installe"])
+        self.assertFalse(resultat["repond"])
+        self.assertIn("ne démarre pas", resultat["raison"])
+
+    def test_resume_distingue_prets_et_coquilles(self):
+        comptes = [{"nom": "a", "installe": True, "repond": True, "methode": "go", "raison": ""},
+                   {"nom": "b", "installe": True, "repond": False, "methode": "go", "raison": ""},
+                   {"nom": "c", "installe": False, "repond": False, "methode": "", "raison": "x"}]
+        bilan = installeur.resume(comptes)
+        self.assertEqual((bilan["prets"], bilan["coquilles"], bilan["echecs"]), (1, 1, 1))
+
+    def test_parallele_donne_le_meme_resultat_que_la_file(self):
+        outils_essai = [{"nom": f"o{n}", "lien": f"https://github.com/x/o{n}"} for n in range(6)]
+        vrai = installeur.installer_un
+        installeur.installer_un = lambda outil, a_blanc=False: {
+            "nom": outil["nom"], "installe": outil["nom"] != "o3",
+            "methode": "pipx (PyPI)", "raison": ""}
+        try:
+            file = installeur.installer(outils_essai, journal=lambda *a: None, parallele=1)
+            front = installeur.installer(outils_essai, journal=lambda *a: None, parallele=4)
+        finally:
+            installeur.installer_un = vrai
+        # mêmes outils, mêmes verdicts — seul l'ordre d'arrivée peut changer
+        self.assertEqual({c["nom"] for c in file}, {c["nom"] for c in front})
+        self.assertEqual(installeur.resume(file), installeur.resume(front))
+        self.assertEqual(len(front), 6)
+
+    def test_a_blanc_reste_sequentiel(self):
+        outils_essai = [{"nom": "a", "lien": "https://github.com/x/a"},
+                        {"nom": "b", "lien": "https://github.com/x/b"}]
+        comptes = installeur.installer(outils_essai, a_blanc=True,
+                                       journal=lambda *a: None, parallele=8)
+        self.assertEqual(len(comptes), 2)
+        self.assertTrue(all(not c["installe"] for c in comptes))
+
     def test_resume_compte_par_methode(self):
         comptes = [{"nom": "a", "installe": True, "methode": "pipx (PyPI)", "raison": ""},
                    {"nom": "b", "installe": True, "methode": "pipx (PyPI)", "raison": ""},

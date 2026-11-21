@@ -9,6 +9,7 @@ import argparse
 import datetime
 import os
 import re
+import time
 
 from . import __version__, autorisation, outils, rapport
 from .modeles import Cible, ControleImpossible
@@ -110,6 +111,8 @@ def main(arguments=None):
     inst.add_argument("--a-blanc", action="store_true",
                       help="n'installe rien : affiche ce qui serait tenté")
     inst.add_argument("--limite", type=int, help="s'arrêter après N outils (pour essayer)")
+    inst.add_argument("--parallele", type=int, default=8,
+                      help="nombre d'installations menées de front (8 par défaut, 1 = à la file)")
     inst.add_argument("--rapport", default="installation.json",
                       help="fichier où écrire le compte rendu")
 
@@ -239,17 +242,23 @@ def main(arguments=None):
         if args.limite:
             choisis = choisis[:args.limite]
         print(f"{len(choisis)} outils à traiter"
-              + (" (à blanc, rien ne sera installé)" if args.a_blanc else "") + "\n")
-        comptes = installeur.installer(choisis, args.a_blanc)
+              + (" (à blanc, rien ne sera installé)" if args.a_blanc else "")
+              + (f", {args.parallele} à la fois" if args.parallele > 1 and not args.a_blanc
+                 else "") + "\n")
+        debut = time.monotonic()
+        comptes = installeur.installer(choisis, args.a_blanc, parallele=args.parallele)
         bilan = installeur.resume(comptes)
         import json as _json
         with open(args.rapport, "w", encoding="utf-8") as fichier:
             _json.dump({"resume": bilan, "details": comptes}, fichier,
                        ensure_ascii=False, indent=2)
-        print(f"\nBilan : {bilan['installes']} installés, {bilan['echecs']} en échec "
-              f"sur {bilan['total']}.")
+        minutes = (time.monotonic() - debut) / 60
+        print(f"\nBilan sur {bilan['total']} outils, en {minutes:.0f} min :")
+        print(f"  {bilan['prets']:4}  prêts (installés ET ils démarrent)")
+        print(f"  {bilan['coquilles']:4}  installés mais ne démarrent pas")
+        print(f"  {bilan['echecs']:4}  pas installés du tout")
         for methode, nombre in bilan["par_methode"].items():
-            print(f"  {nombre:4}  via {methode}")
+            print(f"        dont {nombre} via {methode}")
         print(f"Compte rendu écrit : {args.rapport}")
         return
 
