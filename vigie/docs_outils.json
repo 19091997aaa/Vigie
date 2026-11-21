@@ -355,23 +355,23 @@
   "nom": "sitespeed.io",
   "lien": "https://github.com/sitespeedio/sitespeed.io",
   "categorie": "OSINT : ma société est-elle bien référencée ?",
-  "facette": "domaines",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "urls",
+  "install": "npm install -g sitespeed.io (ou docker run sitespeedio/sitespeed.io)",
+  "usage": "sitespeed.io {cible}",
+  "annexes": "REQUIERT Chrome/Firefox installé (l'image Docker les inclut). Mesure perf web, PAS la sécurité.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Unlighthouse",
   "lien": "https://github.com/harlan-zw/unlighthouse",
   "categorie": "OSINT : ma société est-elle bien référencée ?",
-  "facette": "domaines",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "urls",
+  "install": "npx unlighthouse --site {cible} (Node 18+) ; ou npm install -g unlighthouse",
+  "usage": "unlighthouse --site {cible}",
+  "annexes": "utilise le Chrome système, sinon télécharge Chromium (puppeteer). Scanne tout le site : perf/accessibilité/SEO, PAS la sécurité.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Pa11y",
