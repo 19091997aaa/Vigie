@@ -1367,12 +1367,12 @@
   "nom": "SMBMap",
   "lien": "https://github.com/ShawnDEvans/smbmap",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-ad",
+  "install": "pip3 install smbmap ; apt install smbmap (Kali) ; git clone ShawnDEvans/smbmap (Python 3, impacket)",
+  "usage": "smbmap -H <ip> -u user -p pass (énumère les partages Samba/SMB d'un hôte ou de tout un domaine) : liste les partages et permissions (READ/WRITE), parcours récursif, recherche de contenu/fichiers (regex + auto-download), détection de signature SMB, exécution de commandes (-x) ; session nulle possible",
+  "annexes": "aucune clé (session nulle ou identifiants). Énumérateur de partages Samba/SMB (Shawn Evans, Python). Liste partages et permissions (READ/WRITE/ADMIN) sur un hôte ou tout un domaine. Parcours récursif, recherche de contenu, détection de signature SMB, version OS. Exécution de commandes (-x) = offensif. /!\\ l'énumération des partages/permissions peut servir un AUDIT (partages exposés, signature SMB désactivée) MAIS l'exécution de commandes/téléchargement sont offensifs. Cible autorisée. GATE prudent ; énumération en audit avec accord.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "mitm6",
@@ -1411,12 +1411,12 @@
   "nom": "ldapdomaindump",
   "lien": "https://github.com/dirkjanm/ldapdomaindump",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-ad",
+  "install": "pip install ldapdomaindump ; git clone dirkjanm/ldapdomaindump + setup.py ; apt (Kali) (Python 3, ldap3, dnspython)",
+  "usage": "ldapdomaindump -u 'domaine\\\\user' -p pass <dc-ip> (extrait les infos d'un domaine AD via LDAP avec un simple utilisateur authentifié) : utilisateurs, ordinateurs, groupes, politiques, trusts, OS, appartenances ; sortie HTML, JSON et greppable ; utilitaires ldd2bloodhound, ldd2pretty",
+  "annexes": "aucune clé (identifiants d'un utilisateur du domaine). Extracteur d'infos AD via LDAP (dirkjanm, MIT, Python). Avec un SIMPLE utilisateur authentifié, dump : utilisateurs, ordinateurs, groupes, politiques, trusts, appartenances. Sortie HTML/JSON/greppable. Convertisseurs ldd2bloodhound, ldd2pretty. Montre ce qu'un utilisateur lambda peut lire dans l'AD (surface d'exposition). /!\\ recon authentifiée — avec accord. TRES UTILE en AUDIT pour cartographier l'AD et montrer l'exposition LDAP. Cible autorisée. GATE prudent.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "DPAT",
