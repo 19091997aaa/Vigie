@@ -1147,23 +1147,23 @@
   "nom": "Wfuzz",
   "lien": "https://github.com/xmendez/wfuzz",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "fuzzing",
+  "install": "pip install wfuzz ; apt install wfuzz (Kali) ; docker (Python)",
+  "usage": "wfuzz -z file,wordlist.txt --hc 404 http://cible/FUZZ  (fuzzer/brute-forcer web : chemins, params GET/POST, headers)",
+  "annexes": "aucune clé, wordlist requise. Fuzzer web ACTIF (alternative à Burp Intruder). Ancien mais flexible, extensible par plugins. Scan actif = autorisation. Offre AUDIT.",
+  "cle_api": "non (wordlist requise)",
+  "statut": "lu"
  },
  {
   "nom": "Arjun",
   "lien": "https://github.com/s0md3v/Arjun",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "params",
+  "install": "pipx install arjun ; pip3 install arjun ; apt install arjun (Kali) ; git clone (Python 3.4+)",
+  "usage": "arjun -u {url}  (découvre les paramètres HTTP cachés d'un endpoint ; ~26000 noms en 50-60 requêtes)",
+  "annexes": "aucune clé, wordlist intégrée (SecLists). Découverte de paramètres cachés (surface d'attaque cachée). ~50-60 requêtes à la cible = actif léger. Export Burp/JSON. Autorisation requise. Offre AUDIT/recon.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Commix",
