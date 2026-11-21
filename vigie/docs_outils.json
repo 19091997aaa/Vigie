@@ -531,12 +531,12 @@
   "nom": "RustScan",
   "lien": "https://github.com/bee-san/RustScan",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "ports",
+  "install": "binaire des releases ; brew install rustscan ; yay -S rustscan ; cargo build ; docker",
+  "usage": "rustscan -a {cible}  (scan de ports rapide, pipe les ports ouverts vers nmap pour l'analyse)",
+  "annexes": "aucune clé. Scanner moderne (65k ports en ~3s), moteur de scripts. ATTENTION : SCAN ACTIF = intrusion sans autorisation. Offre AUDIT, pas diag gratuit.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Bettercap",
@@ -597,12 +597,12 @@
   "nom": "Naabu",
   "lien": "https://github.com/projectdiscovery/naabu",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "ports",
+  "install": "go install projectdiscovery/naabu/v2/cmd/naabu@latest (libpcap requis) ; docker",
+  "usage": "naabu -host {cible} -top-ports 1000  (scan de ports rapide SYN/CONNECT/UDP) ; -nmap pour enchaîner nmap",
+  "annexes": "NUANCE : mode passif via Shodan InternetDB = découverte de ports SANS scan actif (OSINT, utilisable pour le diag EXTERNE). Le scan actif reste réservé à l'audit. Clé PDCP optionnelle pour le cloud.",
+  "cle_api": "non (PDCP optionnel ; InternetDB passif sans clé)",
+  "statut": "lu"
  },
  {
   "nom": "AutoRecon",
