@@ -822,6 +822,8 @@ class Installeur(unittest.TestCase):
 def ecrit_fichier(option, contenu, sortie=""):
     """Faux outil qui écrit son résultat dans le fichier donné après `option`."""
     def faux(nom, arguments, delai=0, dossier=None):
+        if not any(a == option or a.startswith(option + "=") for a in arguments):
+            return ""   # un autre outil appelé en passant (tlsx...) : rien à écrire
         chemin = next(a.split("=", 1)[1] for a in arguments if a.startswith(option + "=")) \
             if option.startswith("--output-path") else arguments[arguments.index(option) + 1]
         with open(chemin + (".json" if option == "-f" else ""), "w", encoding="utf-8") as f:
@@ -1153,6 +1155,27 @@ class Duel(unittest.TestCase):
     def test_familles_de_secrets_rapprochees(self):
         from vigie import duel
         self.assertEqual(duel._famille("github-pat"), duel._famille("Github"))
+
+
+class Complements(unittest.TestCase):
+    def test_dnsrecon_services_et_ipv6(self):
+        from vigie.modules import complements
+        infos = complements.lire_dnsrecon([
+            {"type": "SRV", "name": "_imaps._tcp.ex.fr"}, {"type": "SRV", "name": "_submission._tcp.ex.fr"},
+            {"type": "AAAA", "address": "2001:db8::1"}, {"type": "A", "address": "203.0.113.5"}])
+        self.assertEqual(infos["services"], ["lecture des mails (IMAP chiffré)", "envoi des mails"])
+        self.assertEqual(infos["ipv6"], ["2001:db8::1"])
+
+    def test_unlighthouse_pages_lentes(self):
+        from vigie.modules import complements
+        with tempfile.TemporaryDirectory() as d:
+            for chemin, ms in (("a", 5600), ("b/c", 1200)):
+                os.makedirs(os.path.join(d, chemin))
+                with open(os.path.join(d, chemin, "lighthouse.json"), "w") as f:
+                    json.dump({"finalUrl": "https://ex.fr/" + chemin, "audits": {
+                        "largest-contentful-paint": {"numericValue": ms}}}, f)
+            pages, lentes = complements.lire_unlighthouse(d)
+        self.assertEqual((pages, lentes), (2, [(5.6, "https://ex.fr/a")]))
 
 
 class Mandat(unittest.TestCase):

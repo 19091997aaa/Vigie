@@ -64,7 +64,7 @@ CATALOGUE = {
         "commande": "dnsrecon",
         "installation": "pipx install --python python3.13 dnsrecon (cassé sous 3.14)",
         "depot": "https://github.com/darkoperator/dnsrecon",
-        "licence": "GPL-2.0", "actif": False, "adaptateur": None,
+        "licence": "GPL-2.0", "actif": False, "adaptateur": "dns_complet",
     },
     "dnsx": {
         "role": "Réponses DNS des adresses de la société (alias oubliés)",
@@ -86,7 +86,7 @@ CATALOGUE = {
         "role": "Protections et vitesse de toutes les pages du site (2e avis)",
         "commande": "unlighthouse-ci", "installation": "npm install -g unlighthouse",
         "depot": "https://github.com/harlan-zw/unlighthouse",
-        "licence": "MIT", "actif": False, "adaptateur": None,
+        "licence": "MIT", "actif": False, "adaptateur": "toutes_pages",
     },
     "user-scanner": {
         "role": "Comptes publics ouverts sous un pseudo (3e avis, inclut Instagram et LinkedIn)",
@@ -133,7 +133,7 @@ CATALOGUE = {
     "tlsx": {"role": "Chiffrement et certificat d'un site (2e avis de SSLyze)",
              "commande": "tlsx", "installation": "brew install tlsx",
              "depot": "https://github.com/projectdiscovery/tlsx", "licence": "MIT",
-             "actif": False, "adaptateur": None},
+             "actif": False, "adaptateur": "chiffrement"},
     "linkchecker": {
         "role": "Liens cassés du site, et liens vers des domaines disparus",
         "commande": "linkchecker", "installation": "pipx install linkchecker",
