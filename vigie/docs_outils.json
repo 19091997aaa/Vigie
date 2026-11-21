@@ -795,23 +795,23 @@
   "nom": "Syft",
   "lien": "https://github.com/anchore/syft",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "sbom",
+  "install": "script install.sh ; brew install syft ; docker anchore/syft",
+  "usage": "syft {image} ; syft dir:/chemin  (génère un SBOM = inventaire des paquets)",
+  "annexes": "aucune. Génère un SBOM, ce n'est PAS un scanner de failles seul (se combine à Grype). Pas un domaine.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Checkov",
   "lien": "https://github.com/bridgecrewio/checkov",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "iac",
+  "install": "pip install checkov ; brew install checkov ; docker bridgecrew/checkov (Python 3.9+)",
+  "usage": "checkov -d {dossier}  (ou -f fichier.tf)  (analyse statique IaC : Terraform/CloudFormation/K8s)",
+  "annexes": "1000+ politiques CIS/PCI-DSS. Scanne du CODE d'infrastructure (IaC), PAS un domaine. --no-guide évite l'appel API Bridgecrew.",
+  "cle_api": "non (API optionnelle pour enrichir)",
+  "statut": "lu"
  },
  {
   "nom": "kube-bench",
