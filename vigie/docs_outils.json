@@ -652,12 +652,12 @@
   "nom": "nmap-vulners",
   "lien": "https://github.com/vulnersCom/nmap-vulners",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "failles",
+  "install": "git clone vulnersCom/nmap-vulners → copier vulners.nse dans scripts/ de nmap ; nmap --script-updatedb (déjà inclus dans nmap standard)",
+  "usage": "nmap -sV --script vulners {cible}  (liste les CVE connues des services/versions détectés via l'API Vulners.com)",
+  "annexes": "script NSE pour nmap. Interroge l'API distante Vulners.com (envoie juste nom+version). Dépend de -sV et de nmap. Scan ACTIF = autorisation. Déjà dans la biblio NSE standard.",
+  "cle_api": "non (API Vulners.com publique)",
+  "statut": "lu"
  },
  {
   "nom": "arp-scan",
@@ -685,12 +685,12 @@
   "nom": "Nerva",
   "lien": "https://github.com/praetorian-inc/nerva",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "fingerprinting",
+  "install": "go install github.com/praetorian-inc/nerva/cmd/nerva@latest ; binaire ; docker",
+  "usage": "nerva -t {host}:{port}  (fingerprinting rapide de services ; --json) ; se pipe depuis naabu",
+  "annexes": "aucune clé. CLI de fingerprinting de services (identifie le protocole sur un port). Récent (Praetorian, 2026). Se connecte au port (actif léger). À ne pas confondre avec NERVE (PaytmLabs, scanner de vuln continu).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Trivy",
