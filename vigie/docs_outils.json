@@ -1026,12 +1026,12 @@
   "nom": "Metasploit Framework",
   "lien": "https://github.com/rapid7/metasploit-framework",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "exploitation",
+  "install": "installeur omnibus (msfinstall) ; apt install metasploit-framework (Kali) ; ~580 Mo",
+  "usage": "msfconsole  (framework d'EXPLOITATION : modules exploits + payloads Meterpreter)",
+  "annexes": "aucune clé. Framework d'EXPLOITATION offensif de référence (Rapid7). Nécessite PostgreSQL. OUTIL D'ATTAQUE pur — À GATER ABSOLUMENT, jamais dans le pipeline auto ni le diag. Détecté comme malware par les AV.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "sqlmap",
@@ -1279,12 +1279,12 @@
   "nom": "WPProbe",
   "lien": "https://github.com/Chocapikk/wpprobe",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "wordpress",
+  "install": "go install github.com/Chocapikk/wpprobe@latest ; git clone + go build ; docker",
+  "usage": "wpprobe scan -u {url}  (détecte les plugins/thèmes WordPress et les mappe aux CVE Wordfence) ; update-db d'abord",
+  "annexes": "NUANCE : mode STEALTHY (défaut) = énumération via l'API REST publique (?rest_route), QUASI-PASSIF, faible bruit, anti-WAF. ~5000 plugins sans brute-force. Mode brute-force optionnel. Base Wordfence (update-db). PERTINENT pour le diag WordPress externe (beaucoup de TPE sous WP).",
+  "cle_api": "non (Wordfence/WPScan optionnelles)",
+  "statut": "lu"
  },
  {
   "nom": "Impacket",
