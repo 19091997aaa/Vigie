@@ -1576,12 +1576,12 @@
   "nom": "Kismet",
   "lien": "https://github.com/kismetwireless/kismet",
   "categorie": "Sans fil",
-  "facette": "sans_fil",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "audit-wifi",
+  "install": "apt install kismet (Kali) ; build/paquets depuis kismetwireless.net ; nécessite une carte WiFi en mode moniteur ; interface web",
+  "usage": "kismet -c wlan0 (détecteur de réseaux sans fil, sniffer et IDS pour 802.11) : fonctionne PASSIVEMENT (sans émettre de paquets) — détecte les points d'accès ET les clients, les associe, wardriving, cartographie (GPS), décloaking de SSID cachés ; détecte aussi d'autres sniffers et des attaques WiFi (WIDS) ; plugins DECT/Bluetooth",
+  "annexes": "aucune clé (carte WiFi en mode moniteur). Détecteur de réseaux/appareils sans fil, sniffer et IDS WiFi (Mike Kershaw, GPL, C++). Fonctionne PASSIVEMENT (n'émet rien → discret, peu intrusif). Détecte AP + clients, wardriving, cartographie GPS, SSID cachés. WIDS. Interface web. Logs compatibles Wireshark. Serveur + capteurs 'drones'. /!\\ écouter un WiFi tiers reste encadré, mais le mode PASSIF (pas d'injection) est bien moins risqué. DÉFENSIF possible : cartographier son propre WiFi, détecter des AP pirates (rogue AP), surveiller. PERTINENT pour audit/surveillance WiFi TPE. GATE léger (passif).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "hcxdumptool",
@@ -1609,12 +1609,12 @@
   "nom": "Wifite2",
   "lien": "https://github.com/kimocoder/wifite2",
   "categorie": "Sans fil",
-  "facette": "sans_fil",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-wifi",
+  "install": "git clone kimocoder/wifite2 (ou derv82/wifite2) + sudo python3 setup.py install ; apt install wifite (Kali) ; nécessite aircrack-ng, reaver, hcxdumptool... + carte WiFi injection",
+  "usage": "sudo wifite (outil d'audit WiFi AUTOMATISÉ : enchaîne les outils existants pour récupérer le mot de passe d'un AP) : attaques WPS (Pixie-Dust hors-ligne, brute-force PIN), capture de handshake WPA + PMKID, attaque par dictionnaire ; 'set it and forget it', commence par les attaques les plus rapides",
+  "annexes": "aucune clé (wordlist pour WPA ; carte WiFi injection). Auditeur WiFi AUTOMATISÉ (derv82, maintenu par kimocoder, Python, intégré à Kali). Orchestre aircrack-ng, reaver, hcxdumptool, hashcat (plus besoin de mémoriser les commandes). Enchaîne : WPS Pixie-Dust, brute-force PIN, handshake WPA, PMKID, dictionnaire. /!\\ TRES OFFENSIF et automatisé (deauth, WPS) — accessible aux 'script kiddies'. UNIQUEMENT son propre WiFi ou accord écrit. Automatise Aircrack-ng/Reaver. GATE strict.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Sparrow-WiFi",
