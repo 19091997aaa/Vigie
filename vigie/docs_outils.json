@@ -190,23 +190,23 @@
   "nom": "InVID-WeVerify",
   "lien": "https://github.com/AFP-Medialab/verification-plugin",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "verification",
+  "install": "EXTENSION NAVIGATEUR (Chrome/Firefox) via 'Add to Chrome' ; code sur github.com/AFP-Medialab/verification-plugin",
+  "usage": "dans le navigateur : vérification de vidéos/images (reverse image search Google/Bing/Yandex/TinEye, forensics, keyframes)",
+  "annexes": "EXTENSION de navigateur, PAS une CLI. Pour la vérification de désinformation (journalisme/fact-checking). Non branchable au pipeline.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Flowsint",
   "lien": "https://github.com/reconurge/flowsint",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "graphe",
+  "install": "git clone reconurge/flowsint + make prod (Docker + Make requis)",
+  "usage": "PLATEFORME WEB (Maltego open-source) sur http://localhost:5173 : graphe d'investigation OSINT, 30+ enrichers automatiques",
+  "annexes": "déploiement Docker complet, interface web. Pas une commande simple. Pour enquêtes graphiques reliant des entités.",
+  "cle_api": "selon les enrichers",
+  "statut": "lu"
  },
  {
   "nom": "Robin",
