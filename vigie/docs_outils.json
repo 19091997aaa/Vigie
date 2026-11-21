@@ -564,23 +564,23 @@
   "nom": "reconftw",
   "lien": "https://github.com/six2dez/reconftw",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "orchestrateur",
+  "install": "git clone six2dez/reconftw + ./install.sh ; docker six2dez/reconftw",
+  "usage": "./reconftw.sh -d {domaine} -r  (recon) ; -a mode YOLO (recon + attaques)",
+  "annexes": "ORCHESTRATEUR : enchaîne des dizaines d'outils (énum sous-domaines, dorks, scan vuln, XSS...). Mode -r = recon ; mode -a = inclut des ATTAQUES (à gater). Clés API optionnelles. Disclaimer : usage sans consentement = illégal.",
+  "cle_api": "clés API optionnelles (GitHub, theHarvester...)",
+  "statut": "lu"
  },
  {
   "nom": "Osmedeus",
   "lien": "https://github.com/j3ssie/osmedeus",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "orchestrateur",
+  "install": "bash install.sh (osmedeus-base) ; go install j3ssie/osmedeus@latest ; brew ; docker",
+  "usage": "osmedeus scan -f [flow] -t {cible}  (moteur de workflows YAML : recon + scan de vuln)",
+  "annexes": "MOTEUR DE WORKFLOWS (YAML) : orchestre plein d'outils, workers distribués, UI web, base d'assets. MODÈLE pour l'architecture Vigie (déclarations de lancement). Mélange recon passive et scan actif (à gater).",
+  "cle_api": "selon les outils des workflows",
+  "statut": "lu"
  },
  {
   "nom": "ZMap",
