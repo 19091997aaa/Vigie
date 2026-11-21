@@ -630,23 +630,23 @@
   "nom": "Angry IP Scanner",
   "lien": "https://github.com/angryip/ipscan",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "reseau",
+  "install": "télécharger ipscan (Windows/Linux/macOS, Java requis) ; portable, sans install",
+  "usage": "scanne une plage d'IP : ping, ports, hostname, MAC, serveur web (GUI + CLI)",
+  "annexes": "aucune clé. Scanner réseau simple et rapide (GUI), extensible par plugins Java. Pas de scan furtif (volontaire). Inventaire réseau LOCAL (audit sur site). Scan actif = autorisation requise.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "IVRE",
   "lien": "https://github.com/ivre/ivre",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "easm",
+  "install": "pip install ivre ; docker ; backend MongoDB/PostgreSQL/Elasticsearch",
+  "usage": "framework Python (biblio + UI web + CLI) : recon passive (p0f/Zeek) + active (via Nmap/Masscan/ZMap) ; importe aussi les XML Nmap/Masscan",
+  "annexes": "Framework FRANÇAIS (ANSSI/CEA). Permet de bâtir sa propre alternative auto-hébergée à Shodan/Censys/GreyNoise + un outil EASM sur mesure. Partie PASSIVE sans scan actif. Nécessite une base de données. Ships un serveur MCP. TRÈS PERTINENT pour un diag de surface d'attaque externe.",
+  "cle_api": "non (MaxMind pour la géoloc)",
+  "statut": "lu"
  },
  {
   "nom": "nmap-vulners",
