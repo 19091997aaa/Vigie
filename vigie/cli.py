@@ -149,6 +149,11 @@ def main(arguments=None):
     aut.add_argument("--contact", default="", help="contact du client en cas d'incident")
     aut.add_argument("--sortie", default="autorisations")
 
+    pst = commandes.add_parser("poste", help="vérifier cet ordinateur (virus, outils de pirates, réglages)")
+    pst.add_argument("--dossier", default="~", help="dossier à lire (par défaut : le dossier perso)")
+    pst.add_argument("--sans-mise-a-jour", action="store_true",
+                     help="ne pas mettre à jour la base de virus et les règles avant")
+
     man = commandes.add_parser("manuel", help="lancer un outil manuel (actif), sur autorisation")
     man.add_argument("--outil", required=True, help="nmap ou nuclei")
     man.add_argument("--cible", required=True)
@@ -328,6 +333,17 @@ def main(arguments=None):
         print(f"Autorisation n° {fiche['numero']} prête.")
         print(f"  À imprimer et faire signer : {page}")
         print(f"  Lue par Vigie              : {donnees}")
+        return 0
+
+    if args.commande == "poste":
+        from . import poste
+        if not args.sans_mise_a_jour:
+            poste.preparer()
+        try:
+            print(poste.en_texte(poste.verifier(args.dossier)))
+        except ValueError as erreur:
+            print(erreur)
+            return 2
         return 0
 
     if args.commande == "manuel":

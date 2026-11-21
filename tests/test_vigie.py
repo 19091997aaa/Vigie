@@ -1047,6 +1047,29 @@ class Personne(Base):
         self.assertEqual(len(brut["+33639980000"]["recherches"]), 1)
 
 
+class Poste(unittest.TestCase):
+    def test_lectures(self):
+        from vigie import poste
+        self.assertEqual(poste.lire_clamav("/a/b.exe: Win.Trojan.X FOUND\n/a/c: OK\n"),
+                         [("/a/b.exe", "Win.Trojan.X")])
+        self.assertEqual(poste.lire_yara("SUSP_Just_EICAR /tmp/eicar.txt\n"),
+                         [("/tmp/eicar.txt", "SUSP_Just_EICAR")])
+        lynis = poste.lire_lynis("  Hardening index : 72 [####]\n  ! Pas de pare-feu\n")
+        self.assertEqual((lynis["note"], lynis["alertes"]), (72, ["Pas de pare-feu"]))
+        texte = poste.en_texte({"dossier": "/x", "clamav": [], "yara": [("/x/a", "R")],
+                                "lynis": None})
+        self.assertIn("ClamAV (virus courants) : rien trouvé", texte)
+        self.assertIn("NE PAS les ouvrir", texte)
+
+    def test_regles_thor_ecartees(self):
+        from vigie import poste
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "yara"))
+            for nom in ("apt_x.yar", "generic_anomalies.yar", "lisez.txt"):
+                open(os.path.join(d, "yara", nom), "w").close()
+            self.assertEqual([os.path.basename(r) for r in poste.regles_yara(d)], ["apt_x.yar"])
+
+
 class Mandat(unittest.TestCase):
     def fiche(self, **k):
         from vigie import mandat
