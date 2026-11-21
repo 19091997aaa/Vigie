@@ -146,12 +146,12 @@
   "nom": "Exiv2",
   "lien": "https://github.com/exiv2/exiv2",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "metadonnees",
+  "install": "sudo apt install exiv2 ; brew install exiv2 ; dnf install exiv2",
+  "usage": "exiv2 {fichier}  (résumé des métadonnées ; -pa = tout ; -da = supprimer)",
+  "annexes": "aucune. Lit/écrit/supprime EXIF/IPTC/XMP. Entrée = FICHIER image, pas un domaine. Équivalent C++ d'ExifTool.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "auto-archiver",
@@ -179,12 +179,12 @@
   "nom": "Metagoofil",
   "lien": "https://github.com/opsdisk/metagoofil",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "domaines",
+  "install": "sudo apt install metagoofil (Kali) ; ou git clone opsdisk/metagoofil + pip install -r requirements.txt",
+  "usage": "metagoofil -d {cible} -t pdf,doc,xls -w  (cherche et télécharge les documents publics d'un domaine)",
+  "annexes": "utilise Google (peut être bloqué). Extrait users/logiciels/chemins/emails des documents. Entrée = DOMAINE. TRÈS pertinent pour l'exposition de documents.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "InVID-WeVerify",
