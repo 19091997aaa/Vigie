@@ -1851,12 +1851,12 @@
   "nom": "Uptime Kuma",
   "lien": "https://github.com/louislam/uptime-kuma",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "supervision",
+  "install": "docker louislam/uptime-kuma ; npm ; git clone (Node.js 18+)",
+  "usage": "outil de supervision auto-hébergé (type Uptime Robot) : surveille HTTP(s)/TCP/Ping/DNS/certificats ; UI web + notifications",
+  "annexes": "aucune clé. Supervision de disponibilité : alerte si un service tombe. Surveille aussi l'EXPIRATION des certificats TLS. Notifications (email/Telegram/Discord/webhook). Pages de statut. Léger. Utile TPE (savoir si le site est down, surveiller les certifs). Supervision plutôt que sécurité pure.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Vaultwarden",
@@ -1917,12 +1917,12 @@
   "nom": "Fail2ban",
   "lien": "https://github.com/fail2ban/fail2ban",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "ips",
+  "install": "apt install fail2ban ; déjà packagé sur la plupart des distros Linux ; git clone (Python 3.5+)",
+  "usage": "fail2ban-client ; surveille les logs (ex: /var/log/auth.log) et bannit les IP qui échouent trop de tentatives d'authentification",
+  "annexes": "aucune clé. IPS (prévention d'intrusion) : lit les logs, bannit les IP via iptables après X échecs. Jails configurables. Protège SSH/web. S'intègre à AbuseIPDB/blocklist.de. Léger. EXCELLENT pour durcir un serveur TPE exposé.",
+  "cle_api": "non (AbuseIPDB optionnel)",
+  "statut": "lu"
  },
  {
   "nom": "Wazuh",
