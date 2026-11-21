@@ -817,23 +817,23 @@
   "nom": "kube-bench",
   "lien": "https://github.com/aquasecurity/kube-bench",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "kubernetes",
+  "install": "brew install kube-bench ; .deb/binaire des releases ; docker aquasec/kube-bench",
+  "usage": "kube-bench run --targets master,node  (vérifie un cluster K8s contre le CIS Kubernetes Benchmark)",
+  "annexes": "s'exécute sur les nœuds du cluster. Pour auditer K8s. Hors diag TPE sans cluster.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "ScoutSuite",
   "lien": "https://github.com/nccgroup/ScoutSuite",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "cloud",
+  "install": "pip install scoutsuite ; git clone nccgroup/ScoutSuite",
+  "usage": "scout aws ; scout azure ; scout gcp  (audit de posture d'un compte cloud via ses API)",
+  "annexes": "REQUIERT des identifiants cloud en lecture (ReadOnlyAccess/SecurityAudit). Rapport HTML. Audite LE compte cloud du client, pas un domaine externe.",
+  "cle_api": "identifiants cloud requis",
+  "statut": "lu"
  },
  {
   "nom": "OWASP Dependency-Check",
