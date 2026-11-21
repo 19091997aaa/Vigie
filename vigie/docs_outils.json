@@ -916,23 +916,23 @@
   "nom": "MicroBurst",
   "lien": "https://github.com/NetSPI/MicroBurst",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "azure",
+  "install": "git clone NetSPI/MicroBurst (Windows) ; Import-Module .\\\\MicroBurst.psm1",
+  "usage": "Invoke-EnumerateAzureSubDomains, Invoke-EnumerateAzureBlobs, Get-AzurePasswords...  (découverte/énumération/post-exploitation Azure)",
+  "annexes": "NUANCE : certaines fonctions (EnumerateAzureSubDomains/Blobs) énumèrent de l'EXTÉRIEUR sans creds (OSINT Azure, utile pour le diag) ; d'autres (Get-AzurePasswords) sont offensives et exigent des creds. Windows seulement. Boîte à outils d'ATTAQUE Azure, à GATER.",
+  "cle_api": "non pour l'énumération externe ; creds pour le reste",
+  "statut": "lu"
  },
  {
   "nom": "Microsoft365DSC",
   "lien": "https://github.com/Microsoft365DSC/Microsoft365DSC",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "m365",
+  "install": "Install-Module Microsoft365DSC",
+  "usage": "exporte/déploie/surveille la config d'un tenant M365 en Configuration-as-Code (DSC) ; rapport HTML/Excel ; détection de dérive",
+  "annexes": "REQUIERT un accès admin au tenant. Outil d'ADMINISTRATION/conformité (config-as-code, détection de dérive), pas offensif. Compare aux bonnes pratiques. Audit interne.",
+  "cle_api": "accès admin tenant M365 requis",
+  "statut": "lu"
  },
  {
   "nom": "HardeningKitty",
