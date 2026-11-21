@@ -36,3 +36,35 @@ Quand plusieurs outils tournent sur la même cible, on garde le meilleur selon,
 4. **Rapidité**.
 
 (Code concerné : `vigie/banc.py`, `vigie/comparaison.py`.)
+
+## La marque (ne pas confondre)
+
+- **Vigie** = la marque commerciale : le produit, l'activité, et la **chaîne
+  YouTube + réseaux sociaux** d'Anass. **C'est la marque qui figure sur le PDF**
+  (logo Vigie + coordonnées).
+- **Pavillon Noir** (`pavillon-noir.tech`) = le **blog** cybersécurité d'Anass
+  (contenu / portfolio). À ne pas confondre avec la marque produit. C'est aussi
+  le domaine qui sert de **terrain de test** (il appartient à Anass).
+
+## Le ton du rapport
+
+- **Direct et cash sur le constat** : on nomme le danger sans enrober.
+- **Rassurant sur la solution** : « c'est réparable, voilà comment » → amène vers
+  l'offre payante.
+
+## Le parcours (le bouton)
+
+- **Un seul bouton = tout d'un coup** : scan → rapport prêt (pas d'étapes à cliquer).
+- **Arrêt obligatoire pour relecture** par Anass avant que le PDF parte au client
+  (règle d'or + évite d'envoyer une fausse alerte à un prospect).
+- **Saisie de départ (diag gratuit)** : le **domaine** + le **nom de la boîte**.
+  Rien d'autre n'est requis (100 % public, aucun accord).
+- Recherche sur une **personne** (pseudos du dirigeant…) : seulement si elle est
+  cliente et a **signé** (règle n°3).
+
+## La fin du PDF = outil de vente
+
+- **Marque Vigie** en tête (logo + coordonnées pour recontacter).
+- **Constat cash** au milieu, avec les **scénarios concrets** par trouvaille.
+- **Appel à l'action** en bas vers l'offre de **sécurisation** payante
+  (« ces failles, je te les corrige — appelle-moi »).
