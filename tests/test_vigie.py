@@ -4,6 +4,7 @@
 """
 import json
 import os
+import re
 import ssl
 import sys
 import tempfile
@@ -1053,6 +1054,56 @@ class OutilsManuels(Base):
                 with self.assertRaises(manuel.Refus):
                     manuel.lancer(nom, cible, f, s, conf, j, jour=quand)
             self.assertEqual([e["resultat"] for e in self.journal(d)], ["refusé"] * len(cas))
+
+
+class OngletManuel(Base):
+    def test_autorisation_puis_lancement_depuis_l_interface(self):
+        import datetime
+        from vigie import mandat
+        vrai = (interface.AUTORISATIONS, interface.JOURNAL)
+        outils.executer = lambda *a, **k: "<nmaprun/>"
+        with tempfile.TemporaryDirectory() as d:
+            interface.AUTORISATIONS, interface.JOURNAL = os.path.join(d, "a"), os.path.join(d, "j")
+            self.addCleanup(lambda: setattr(interface, "AUTORISATIONS", vrai[0]))
+            self.addCleanup(lambda: setattr(interface, "JOURNAL", vrai[1]))
+            serveur = ThreadingHTTPServer(("127.0.0.1", 0), interface.fabrique(d, ""))
+            threading.Thread(target=serveur.serve_forever, daemon=True).start()
+            self.addCleanup(serveur.shutdown)
+            self.addCleanup(serveur.server_close)
+            base = f"http://127.0.0.1:{serveur.server_address[1]}"
+            self.assertIn("Outils manuels", urllib.request.urlopen(base + "/manuel").read().decode())
+            aujourd_hui = datetime.date.today()
+            fin = aujourd_hui + datetime.timedelta(days=3)
+            corps = (f"societe=S&representant=Jean&cibles=ex.fr&debut={aujourd_hui}"
+                     f"&fin={fin}&tests=ports").encode()
+            page = urllib.request.urlopen(base + "/manuel/autorisation", data=corps).read().decode()
+            numero = re.search(r"/manuel/autorisation/([0-9a-f-]{15})", page).group(1)
+            self.assertIn("323-1", urllib.request.urlopen(
+                base + "/manuel/autorisation/" + numero).read().decode())
+            with open(os.path.join(d, "a", "signee.pdf"), "wb") as f:
+                f.write(b"%PDF")
+            fiche = f"autorisation_{numero}.json"
+            # sans confirmation : refusé, rien ne part
+            with self.assertRaises(urllib.error.HTTPError) as refus:
+                urllib.request.urlopen(base + "/manuel/lancer", data=(
+                    f"outil=nmap&cible=ex.fr&fiche={fiche}&signee=signee.pdf").encode())
+            self.assertEqual(refus.exception.code, 400)
+            reponse = urllib.request.urlopen(base + "/manuel/lancer", data=(
+                f"outil=nmap&cible=ex.fr&fiche={fiche}&signee=signee.pdf"
+                "&confirmation=ex.fr").encode())
+            for _ in range(100):
+                texte = urllib.request.urlopen(reponse.geturl()).read().decode()
+                if "En cours" not in texte:
+                    break
+                time.sleep(0.05)
+            self.assertIn("Terminé", texte)
+            self.assertIn("Aucun service ouvert", texte)
+            requete = urllib.request.Request(base + "/manuel/lancer", data=b"x=1",
+                                             headers={"Origin": "https://site-piege.fr"})
+            with self.assertRaises(urllib.error.HTTPError) as piege:
+                urllib.request.urlopen(requete)
+            self.assertEqual(piege.exception.code, 403)
+            self.assertTrue(mandat.lire(os.path.join(d, "a", fiche)))
 
 
 class Ports(unittest.TestCase):
