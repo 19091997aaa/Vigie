@@ -1422,23 +1422,23 @@
   "nom": "DPAT",
   "lien": "https://github.com/clr2of8/DPAT",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "audit-mdp",
+  "install": "git clone clr2of8/DPAT ; Python (MIT)",
+  "usage": "dpat.py -n customer.ntds -c hashcat.potfile -g 'Domain Admins.txt'... (génère des statistiques d'usage des mots de passe d'un domaine Windows) : à partir des hashes extraits du contrôleur de domaine (NTDS) + d'un fichier de mots de passe cassés (Hashcat/John), produit un RAPPORT HTML cliquable (longueurs, réutilisation, comptes privilégiés à mdp faible, hashes LM...)",
+  "annexes": "aucune clé. Outil d'AUDIT des mots de passe de domaine (clr2of8, Black Hills, Python). Prend les hashes NTDS (extraits du DC) + les mdp cassés (Hashcat/John) → statistiques : longueurs, réutilisation, comptes admin à mdp faible, partage de hash, LM. Rapport HTML cliquable. DÉFENSIF/audit (prouver la faiblesse des mdp). /!\\ nécessite l'extraction des hashes NTDS (intrusif/privilégié) + cassage → dans un AUDIT avec accord écrit, sur les données du client. Le RAPPORT est 100% défensif. Pertinent pour l'offre de sécurisation (audit de la politique de mdp). GATE (extraction NTDS) ; rapport = livrable défensif.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Group3r",
   "lien": "https://github.com/Group3r/Group3r",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-ad",
+  "install": "télécharger le binaire (.NET) ; build ; doit tourner depuis un poste joint au domaine avec un utilisateur du domaine (pas besoin d'admin)",
+  "usage": "group3r.exe -s (ou -f sortie.log) (énumère les paramètres de Group Policy — GPO — d'Active Directory et identifie les mauvaises configurations exploitables) : parcourt les GPO et met en évidence les réglages à risque",
+  "annexes": "aucune clé (utilisateur du domaine). Énumération des GPO (Group Policy) d'AD + détection de malconfigurations exploitables (Mike Loss, .NET ; successeur de Grouper2). Tourne depuis un poste joint au domaine (utilisateur simple). /!\\ L'auteur dit qu'il est 'encore plus orienté attaquant et encore moins outil d'audit' que ses prédécesseurs → OFFENSIF (red team). Peut révéler des GPO vulnérables (utile en audit). GPO = vecteur d'attaque/persistance majeur. AUDIT AD avec accord. GATE prudent ; sortie orientée attaquant.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "SecLists",
