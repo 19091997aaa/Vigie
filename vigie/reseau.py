@@ -8,6 +8,11 @@ from .modeles import ControleImpossible
 
 AGENT = "Vigie/0.1 (diagnostic de securite, avec accord du proprietaire)"
 RESOLVEURS = ["https://dns.google/resolve", "https://cloudflare-dns.com/dns-query"]
+# Les mêmes résolveurs publics, pour les outils externes (dnstwist, checkdmarc).
+# Sans eux, les outils passent par la box internet : elle met jusqu'à 2 secondes par
+# question et ne tient pas les milliers de questions de dnstwist (essai réel du
+# 21/11/2026 : plus de 10 minutes avec la box, 13 secondes avec ces résolveurs).
+SERVEURS_DNS = ["8.8.8.8", "1.1.1.1"]
 TYPES_DNS = {"TXT": 16, "MX": 15, "CNAME": 5, "A": 1}
 
 

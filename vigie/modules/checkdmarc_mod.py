@@ -9,7 +9,7 @@ pour que la convergence et la comparaison les rapprochent.
 """
 import json
 
-from .. import outils
+from .. import outils, reseau
 from ..modeles import CRITIQUE, IMPORTANT, INFO, OK, Constat, ControleImpossible
 
 BLOC = "Exposition"
@@ -28,8 +28,14 @@ def lire_sortie(texte):
         raise ControleImpossible("checkdmarc n'a pas renvoyé de résultat lisible")
 
 
+def arguments(domaine):
+    """Le domaine d'abord : l'option -n avale tout ce qui la suit. Résolveurs publics,
+    car la box internet laisse tomber des questions (essai réel du 21/11/2026)."""
+    return [domaine, "--format", "json", "-n"] + list(reseau.SERVEURS_DNS)
+
+
 def analyser(cible):
-    sortie = outils.executer("checkdmarc", ["--format", "json", cible.domaine], delai=120)
+    sortie = outils.executer("checkdmarc", arguments(cible.domaine), delai=120)
     data = lire_sortie(sortie)
     # Si tout échoue au réseau, ce n'est pas un défaut du domaine : contrôle non réalisé.
     if _erreur_reseau(data.get("spf")) and _erreur_reseau(data.get("dmarc")):
@@ -58,7 +64,15 @@ def analyser(cible):
         if politique == "reject":
             constats.append(Constat(BLOC, OK, "DMARC en blocage — vu par checkdmarc",
                                     "Les faux mails à votre nom sont refusés.", cle="dmarc"))
-        elif politique in ("quarantine", "none", ""):
+        elif politique == "quarantine":
+            # Même jugement que le module mail : les faux mails partent déjà en indésirables.
+            # (Avant : « important », soit 10 points de moins que le module mail pour la même
+            # réalité — vu sur un vrai diagnostic le 21/11/2026.)
+            constats.append(Constat(BLOC, INFO, "DMARC en quarantaine, pas encore en blocage — vu par checkdmarc",
+                                    "Les faux mails à votre nom partent en courrier indésirable, "
+                                    "mais ils arrivent quand même chez le destinataire.",
+                                    "Viser p=reject après lecture des rapports.", cle="dmarc"))
+        elif politique in ("none", ""):
             constats.append(Constat(BLOC, IMPORTANT, "DMARC présent mais pas en blocage — vu par checkdmarc",
                                     f"Politique actuelle : {politique or 'non précisée'}.",
                                     "Viser p=reject après lecture des rapports.", cle="dmarc"))

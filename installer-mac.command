@@ -18,9 +18,11 @@ python3 -m pip install --user --upgrade pip pipx >/dev/null 2>&1
 python3 -m pipx ensurepath >/dev/null 2>&1
 
 titre "Outils passifs (sans action sur les machines)"
-for p in sherlock-project dnstwist checkdmarc; do
+# dnstwist[full] : sans son module DNS, dnstwist refuse de démarrer avec des résolveurs publics.
+for p in sherlock-project "dnstwist[full]" checkdmarc; do
+  c="${p%-project}"; c="${c%%\[*}"
   if python3 -m pipx install "$p" >/dev/null 2>&1; then ok "$p"; else
-    command -v "${p%-project}" >/dev/null && ok "$p (déjà là)" || rate "$p"; fi
+    command -v "$c" >/dev/null && ok "$p (déjà là)" || rate "$p"; fi
 done
 
 titre "Outils de scan (sur autorisation signée seulement)"

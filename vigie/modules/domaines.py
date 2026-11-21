@@ -7,7 +7,7 @@ technique requis.
 """
 import json
 
-from .. import outils
+from .. import outils, reseau
 from ..modeles import IMPORTANT, INFO, OK, Constat, ControleImpossible
 
 BLOC = "Exposition"
@@ -34,9 +34,20 @@ def lire_sortie(texte):
     return imitateurs
 
 
+def arguments(domaine):
+    """dnstwist interroge des résolveurs publics, 32 questions à la fois : un nom de
+    domaine un peu long donne plus de 10 000 variantes à vérifier."""
+    return ["--format", "json", "--registered", "--threads", "32",
+            "--nameservers", ",".join(reseau.SERVEURS_DNS), domaine]
+
+
 def analyser(cible):
-    sortie = outils.executer(
-        "dnstwist", ["--format", "json", "--registered", cible.domaine], delai=600)
+    sortie = outils.executer("dnstwist", arguments(cible.domaine), delai=600)
+    if not (sortie or "").strip():
+        # Cas réel : dnstwist installé sans son module DNS refuse de démarrer.
+        raise ControleImpossible(
+            "dnstwist n'a rien renvoyé. Le réinstaller complet : "
+            "pipx install --force \"dnstwist[full]\"")
     imitateurs = lire_sortie(sortie)
     brut = {"imitateurs": imitateurs}
     if not imitateurs:

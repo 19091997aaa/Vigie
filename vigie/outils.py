@@ -37,9 +37,15 @@ CATALOGUE = {
     },
     "dnstwist": {
         "role": "Noms de domaine qui imitent celui de la société",
-        "commande": "dnstwist", "installation": "pipx install dnstwist",
+        "commande": "dnstwist", "installation": "pipx install \"dnstwist[full]\"",
         "depot": "https://github.com/elceef/dnstwist",
         "licence": "Apache-2.0", "actif": False, "adaptateur": "domaines",
+    },
+    "checkdmarc": {
+        "role": "Réglages mail, deuxième avis (SPF, DMARC, MTA-STS, DNSSEC)",
+        "commande": "checkdmarc", "installation": "pipx install checkdmarc",
+        "depot": "https://github.com/domainaware/checkdmarc",
+        "licence": "Apache-2.0", "actif": False, "adaptateur": "checkdmarc",
     },
     "theHarvester": {
         "role": "Adresses mail de la société visibles publiquement",

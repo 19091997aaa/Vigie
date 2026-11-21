@@ -76,6 +76,16 @@ class Mail(Base):
         self.assertEqual(niveaux.count(IMPORTANT), 2)
         self.assertTrue(any("2 enregistrements" in c.titre for c in constats))
 
+    def test_conseil_rapports_dmarc_survit_a_la_fusion(self):
+        # Vrai diagnostic du 21/11/2026 : « pas d'adresse de rapport » disparaissait,
+        # fondu dans la politique DMARC (même clé), et « quarantaine » aussi.
+        table = dict(BON_DNS)
+        table[("_dmarc.ex.fr", "TXT")] = ["v=DMARC1; p=quarantine"]
+        _, constats = self.niveaux(table)
+        titres = [c.titre for c in fusionner(constats)]
+        self.assertIn("DMARC en quarantaine", titres)
+        self.assertIn("Pas d'adresse de rapport DMARC", titres)
+
 
 class Site(Base):
     def test_site_propre(self):
@@ -179,6 +189,37 @@ class Domaines(Base):
         outils.executer = lambda *a, **k: "[]"
         constats, _ = domaines.analyser(CIBLE)
         self.assertEqual(constats[0].niveau, OK)
+
+    def test_resolveurs_publics_et_domaine_en_dernier(self):
+        # Essai réel du 21/11/2026 : par la box, plus de 10 minutes ; en public, 13 secondes.
+        args = domaines.arguments("ex.fr")
+        self.assertEqual(args[-1], "ex.fr")
+        self.assertEqual(args[args.index("--nameservers") + 1], ",".join(reseau.SERVEURS_DNS))
+
+    def test_sortie_vide_dit_comment_reparer(self):
+        # Cas réel : dnstwist installé sans son module DNS ne renvoie rien.
+        outils.executer = lambda *a, **k: ""
+        with self.assertRaises(ControleImpossible) as empechement:
+            domaines.analyser(CIBLE)
+        self.assertIn("dnstwist[full]", str(empechement.exception))
+
+
+class Catalogue(unittest.TestCase):
+    def test_chaque_outil_appele_par_un_module_est_au_catalogue(self):
+        # Cas réel du 21/11/2026 : checkdmarc était appelé mais absent du catalogue.
+        import re
+        dossier = os.path.join(os.path.dirname(__file__), "..", "vigie", "modules")
+        for nom_fichier in os.listdir(dossier):
+            if nom_fichier.endswith(".py"):
+                with open(os.path.join(dossier, nom_fichier), encoding="utf-8") as fichier:
+                    for outil in re.findall(r'outils\.executer\(\s*"([^"]+)"', fichier.read()):
+                        self.assertIn(outil, outils.CATALOGUE, f"{nom_fichier} appelle {outil}")
+
+    def test_checkdmarc_domaine_avant_les_resolveurs(self):
+        from vigie.modules import checkdmarc_mod
+        args = checkdmarc_mod.arguments("ex.fr")
+        self.assertEqual(args[0], "ex.fr")  # -n avale tout ce qui le suit
+        self.assertEqual(args[args.index("-n") + 1:], reseau.SERVEURS_DNS)
 
 
 class Convergence(unittest.TestCase):

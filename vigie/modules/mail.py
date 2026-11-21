@@ -102,7 +102,10 @@ def _dmarc(domaine):
         constats.append(_c(
             INFO, "Pas d'adresse de rapport DMARC",
             "Vous ne recevez aucun rapport sur les tentatives d'usurpation.",
-            "Ajouter une adresse rua= pour recevoir les rapports."))
+            "Ajouter une adresse rua= pour recevoir les rapports.",
+            # Clé à part : sinon ce conseil fusionne avec la politique DMARC et disparaît
+            # du rapport (constaté sur un vrai diagnostic le 21/11/2026).
+            cle="dmarc_rapports"))
     return dmarc, constats
 
 
@@ -132,7 +135,7 @@ def analyser(cible):
     for constat in c_spf:
         constat.cle = "spf"
     for constat in c_dmarc:
-        constat.cle = "dmarc"
+        constat.cle = constat.cle or "dmarc"
     for constat in c_dkim:
         constat.cle = "dkim"
     for constat in c_mx:
