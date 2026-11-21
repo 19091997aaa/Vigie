@@ -278,12 +278,12 @@
   "nom": "Lighthouse",
   "lien": "https://github.com/GoogleChrome/lighthouse",
   "categorie": "OSINT : ma société est-elle bien référencée ?",
-  "facette": "domaines",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "urls",
+  "install": "npm install -g lighthouse (Node 12+)",
+  "usage": "lighthouse {cible} --output=json --quiet --chrome-flags='--headless'",
+  "annexes": "REQUIERT Chrome/Chromium installé. Mesure perf/SEO/accessibilité, PAS la sécurité.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "TruffleHog",
@@ -377,12 +377,12 @@
   "nom": "Pa11y",
   "lien": "https://github.com/pa11y/pa11y",
   "categorie": "OSINT : ma société est-elle bien référencée ?",
-  "facette": "domaines",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "urls",
+  "install": "npm install -g pa11y (Node 8+)",
+  "usage": "pa11y {cible}  (-r json pour la sortie machine)",
+  "annexes": "Chrome headless (installé avec via puppeteer). Teste l'accessibilité (WCAG), PAS la sécurité.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "gowitness",
@@ -454,12 +454,12 @@
   "nom": "LinkChecker",
   "lien": "https://github.com/linkchecker/linkchecker",
   "categorie": "OSINT : ma société est-elle bien référencée ?",
-  "facette": "domaines",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "urls",
+  "install": "pip3 install linkchecker (ou pipx install linkchecker)",
+  "usage": "linkchecker {cible}",
+  "annexes": "aucune (bs4, dnspython, requests). Cherche les LIENS CASSÉS, pas des failles.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "checkdmarc",
