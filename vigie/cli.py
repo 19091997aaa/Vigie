@@ -75,6 +75,10 @@ def main(arguments=None):
                       help="liste séparée par des virgules, ou « tous »")
     diag.add_argument("--pseudo", action="append", default=[],
                       help="pseudo du dirigeant, donné par lui (répétable)")
+    diag.add_argument("--mail", action="append", default=[],
+                      help="adresse mail du dirigeant, donnée par lui (répétable)")
+    diag.add_argument("--telephone", action="append", default=[],
+                      help="numéro du dirigeant, donné par lui (répétable)")
     diag.add_argument("--accord-dirigeant", action="store_true",
                       help="le dirigeant a donné son accord écrit pour chercher ses comptes")
     diag.add_argument("--autorisation", help="autorisation signée du client (fichier)")
@@ -383,7 +387,8 @@ def main(arguments=None):
             raise SystemExit(f"Réponses illisibles : {erreur}")
         if "conformite" not in noms:
             noms.append("conformite")
-    cible = Cible(domaine, args.societe, args.pseudo, args.accord_dirigeant, reponses)
+    cible = Cible(domaine, args.societe, args.pseudo, args.accord_dirigeant, reponses,
+                  args.mail, args.telephone)
     resultat = lancer(cible, noms, args.autorisation)
     chemins = rapport.ecrire(resultat, dossier_rapport(args.sortie, resultat))
     print(rapport.en_texte(resultat))
