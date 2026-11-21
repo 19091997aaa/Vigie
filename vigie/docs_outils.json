@@ -763,11 +763,11 @@
   "lien": "https://github.com/projectdiscovery/nuclei-templates",
   "categorie": "Scan de vulnérabilités et audit de configuration",
   "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "install": "git clone projectdiscovery/nuclei-templates ; ou téléchargé/mis à jour auto par nuclei (nuclei -update-templates)",
+  "usage": "consommé par nuclei (nuclei -t cves/ ...) ; ce n'est PAS un outil autonome",
+  "annexes": "banque de ~10000 templates YAML (CVE, misconfig, exposures, secrets...). S'utilise AVEC nuclei. Pas de clé.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Grype",
