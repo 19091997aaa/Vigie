@@ -212,12 +212,12 @@
   "nom": "Robin",
   "lien": "https://github.com/apurvsinghgautam/robin",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "darkweb",
+  "install": "git clone + pip install -r requirements.txt (Python 3.10+) ; ou docker apurvsg/robin",
+  "usage": "python main.py cli -m gpt-4.1 -q 'requête' -t 12  (recherche OSINT dark web assistée par LLM)",
+  "annexes": "REQUIERT Tor + une clé API LLM (OpenAI...). Outil DARK WEB assisté IA, pas de l'exposition d'entreprise. Coûte des jetons LLM.",
+  "cle_api": "OUI (LLM + Tor requis)",
+  "statut": "lu"
  },
  {
   "nom": "geo-sleuth",
@@ -235,11 +235,11 @@
   "lien": "https://github.com/kaifcodec/user-scanner",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
   "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "install": "pip install user-scanner",
+  "usage": "user-scanner -u {username}  (ou -e email@... ; -f json/csv ; -m github ; -c dev)",
+  "annexes": "aucune, sans clé API. 290+ plateformes pseudo + 175+ email. CLI propre et léger, comme sherlock/maigret.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "OpenOSINT",
