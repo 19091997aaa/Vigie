@@ -18,13 +18,24 @@ Ce fichier grossit au fil des échanges — c'est la source de vérité sur
   **PDF final**.
 - Ouvrir un auto-diagnostic au client : **plus tard**, pas une priorité maintenant.
 
-## Ordre des accroches dans le PDF (du plus choc au moins)
+## Ordre des accroches dans le PDF
 
-1. **Email usurpable** — on peut envoyer un faux mail au nom du patron (SPF/DMARC).
-   C'est l'accroche n°1 : visuelle et parlante (montrer un faux mail à son nom).
-2. **Fuites de mots de passe** — comptes des salariés présents dans des fuites.
-3. **Données exposées** — infos publiques trouvables sur la boîte et ses gens.
-4. **Sous-domaines / serveurs oubliés** — visibles et laissés à l'abandon.
+> ⚠️ **Corrigé après l'étude juridique (voir `MARCHE.md` §2).** Le diag gratuit à
+> froid ne peut utiliser QUE la zone légalement sûre. La recherche de fuites, mise
+> ici en accroche au départ, en a été retirée : elle est interdite à froid.
+
+Dans le PDF gratuit (prospect à froid), du plus choc au moins :
+1. **Email usurpable** (SPF/DMARC) — zone sûre, et **plus de 9 boîtes sur 10 sont
+   usurpables**. Accroche n°1 : montrer un faux mail à son nom + le lien avec la
+   fraude au virement (485 M€ en France en 2025).
+2. **Domaines imitateurs** (typosquatting) — zone sûre (registres publics).
+3. **Exposition publique du site** — certificat, chiffrement, en-têtes. Zone sûre.
+
+**Hors du gratuit à froid** — seulement APRÈS accord du prospect + vérification de
+son domaine (donc dans l'offre payante) :
+- **Fuites de mots de passe** (HIBP, dark web) — interdit à froid par la CNIL
+  (réutilisation de données de fuite + recel). C'était une erreur de le mettre en
+  accroche gratuite ; déplacé ici.
 
 ## Critère pour garder un outil (le banc de comparaison)
 

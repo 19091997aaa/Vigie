@@ -7,6 +7,7 @@ un rapport (page imprimable, texte, données). Développeur : **Anass**, solo.
 > Ce fichier est le point d'entrée. Pour le détail technique et la feuille de route
 > semaine par semaine, voir **`LISEZMOI.md`**. Pour les décisions produit prises avec
 > Anass (format du livrable, accroches, critères de tri des outils), voir **`VISION.md`**.
+> Pour le marché, la cible et surtout le **cadre légal du diag gratuit**, voir **`MARCHE.md`**.
 
 ## Comment travailler ici (IMPORTANT)
 
@@ -62,6 +63,12 @@ Anass n'est pas développeur (il est TSSR). L'app doit respecter, sans compromis
 - Le **diag gratuit** n'utilise que des sources **publiques / passives**.
 - Les **outils offensifs** (famille GATE, voir plus bas) ne sont **jamais** dans un
   pipeline automatique ni dans le diag gratuit.
+- **Les fuites de données (HIBP, dark web) ne sont PAS dans le diag gratuit à froid.**
+  Chercher les adresses d'un prospect dans des fuites est interdit (CNIL : réutilisation
+  de données de fuite interdite ; recel art. 321-1) tant qu'il n'a pas prouvé qu'il
+  contrôle son domaine. → seulement **après son accord** et vérification de domaine
+  (offre payante). Le gratuit à froid se limite à : DNS/email usurpable, typosquatting,
+  exposition publique du site. Cadre complet : `MARCHE.md` §2.
 - Chaque rapport est **relu par un humain** avant envoi.
 
 ## Où en est le code (socle v0.1.0)
