@@ -223,12 +223,12 @@
   "nom": "geo-sleuth",
   "lien": "https://github.com/Oldcircle/geo-sleuth",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "geoloc",
+  "install": "npx skills add Oldcircle/geo-sleuth (Python 3.10+)",
+  "usage": "AGENT SKILL (SKILL.md pour Claude Code/Cursor/Gemini CLI) : 'trouve où cette photo a été prise'. PAS un CLI autonome.",
+  "annexes": "fonctionne avec un agent IA qui lit SKILL.md et lance des commandes. Géoloc de photos (OpenStreetMap/élévation/satellite). Non branchable au pipeline simple.",
+  "cle_api": "selon l'agent IA utilisé",
+  "statut": "lu"
  },
  {
   "nom": "user-scanner",
@@ -245,12 +245,12 @@
   "nom": "OpenOSINT",
   "lien": "https://github.com/OpenOSINT/OpenOSINT",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "multi",
+  "install": "pip install openosint",
+  "usage": "openosint username {pseudo} / email {email} / investigate {domaine|ip|tel} (mode DIRECT sans IA) ; openosint seul = REPL IA",
+  "annexes": "le mode IA exige une clé API (Anthropic/OpenAI) ou Ollama local. Le mode direct enveloppe sherlock/holehe (binaires externes requis dans le PATH). Expose aussi un serveur MCP.",
+  "cle_api": "pour le mode IA (le mode direct s'en passe)",
+  "statut": "lu"
  },
  {
   "nom": "Web-Check",
