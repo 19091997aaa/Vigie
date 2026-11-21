@@ -697,11 +697,11 @@
   "lien": "https://github.com/aquasecurity/trivy",
   "categorie": "Scan de vulnérabilités et audit de configuration",
   "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "install": "brew install trivy ; apt install trivy ; docker aquasec/trivy ; script install.sh",
+  "usage": "trivy image {image} ; trivy fs {dossier} ; trivy repo {repo} ; trivy config {dossier}  (vulnérabilités + mauvaises configs)",
+  "annexes": "télécharge sa base de vulnérabilités au 1er run (MAJ auto). Scanne IMAGES conteneurs/fichiers/repos/IaC, PAS un domaine. Surtout DevOps.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Nuclei",
@@ -729,23 +729,23 @@
   "nom": "Semgrep",
   "lien": "https://github.com/semgrep/semgrep",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "code",
+  "install": "pipx install semgrep ; brew install semgrep ; pip install semgrep (Python 3.9+)",
+  "usage": "semgrep scan --config auto  (analyse statique de CODE source : SAST)",
+  "annexes": "le mode local (Community) marche SANS compte. 2000+ règles. Scanne du CODE, pas un domaine. Compte Semgrep optionnel pour la plateforme.",
+  "cle_api": "non (compte optionnel)",
+  "statut": "lu"
  },
  {
   "nom": "Lynis",
   "lien": "https://github.com/CISOfy/lynis",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "durcissement",
+  "install": "apt install lynis ; brew install lynis ; dépôt CISOfy ; git clone CISOfy/lynis",
+  "usage": "sudo lynis audit system  (audit de durcissement de la MACHINE LOCALE Linux/macOS/BSD)",
+  "annexes": "aucune clé. Produit un indice de durcissement + suggestions. Audite la machine locale, PAS une cible distante. Nécessite un accès à la machine du client (offre audit, pas diag externe).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Prowler",
