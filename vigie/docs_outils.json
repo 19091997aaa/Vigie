@@ -2291,12 +2291,12 @@
   "nom": "Shannon",
   "lien": "https://github.com/KeygraphHQ/shannon",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-agent",
+  "install": "git clone KeygraphHQ/shannon + docker ; npx @keygraph/shannon ; docker pull keygraph/shannon (Docker requis, clé Anthropic recommandée)",
+  "usage": "./shannon start URL=... REPO=... (pentester IA autonome white-box pour applis web et API : recon, analyse de vulns en parallèle, exploitation, rapport ; gère 2FA/TOTP/SSO ; pipeline multi-agents, Claude Agent SDK)",
+  "annexes": "clé API LLM requise (Claude recommandé). Pentester IA AUTONOME white-box (AGPL-3.0, le plus étoilé sur GitHub). Nécessite l'ACCÈS AU CODE SOURCE (white-box). 96-98% au benchmark XBOW. ~50$ d'API/scan vs 10-50k$ pour un pentest humain. /!\\ EXÉCUTE DE VRAIS EXPLOITS — jamais en prod, cible qu'on contrôle. Limite : white-box, pas de logique métier. PERTINENT pour auditer SA PROPRE appli (CI/CD). NB : tourne sur le Claude Agent SDK. GATE.",
+  "cle_api": "LLM requis",
+  "statut": "lu"
  },
  {
   "nom": "PentAGI",
@@ -2368,12 +2368,12 @@
   "nom": "PentestAgent",
   "lien": "https://github.com/GH05TCREW/pentestagent",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-agent",
+  "install": "git clone GH05TCREW/pentestagent + setup.sh/ps1 (Python 3.10+) ; docker ghcr.io/gh05tcrew/pentestagent:kali (Metasploit, sqlmap, Hydra inclus)",
+  "usage": "framework d'agent IA de pentest black-box : pilote de vrais outils offensifs (Nmap, Metasploit, FFUF, SQLMap) via LLM, playbooks d'attaque préconstruits, intégration HexStrike, architecture MCP ; RAG local",
+  "annexes": "clé API LLM requise (LiteLLM : Claude, GPT...). Framework d'agent IA offensif (MIT). Black-box. Pilote Metasploit, Nmap, sqlmap, Hydra, FFUF via LLM. Playbooks + intégration HexStrike. Architecture MCP. Image Kali prête. /!\\ OFFENSIF (exploitation réelle, Metasploit) — cible autorisée uniquement. Pour bug bounty/red team. GATE.",
+  "cle_api": "LLM requis",
+  "statut": "lu"
  },
  {
   "nom": "mcp-scan",
