@@ -542,12 +542,12 @@
   "nom": "Bettercap",
   "lien": "https://github.com/bettercap/bettercap",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "mitm",
+  "install": "go install github.com/bettercap/bettercap ; apt install bettercap ; docker",
+  "usage": "sudo bettercap -iface eth0 ; modules net.recon, arp.spoof...  (recon + attaques MITM sur réseaux 802.11/BLE/IPv4/IPv6)",
+  "annexes": "aucune clé. Framework d'ATTAQUE réseau (MITM, ARP/DNS spoof, sniff de credentials, injection HID). OFFENSIF, réseau local. À GATER absolument, jamais dans le pipeline auto.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Nmap",
@@ -663,12 +663,12 @@
   "nom": "arp-scan",
   "lien": "https://github.com/royhills/arp-scan",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "reseau-local",
+  "install": "apt install arp-scan ; brew install arp-scan ; git clone royhills/arp-scan + build",
+  "usage": "sudo arp-scan --localnet  (découvre les hôtes IPv4 du réseau LOCAL via ARP, même ceux qui bloquent l'IP)",
+  "annexes": "nécessite root. Fonctionne SEULEMENT sur le réseau local (ARP non routable). Pour inventaire interne (audit sur site), PAS un diag externe.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "tlsx",
