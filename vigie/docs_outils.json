@@ -1246,12 +1246,12 @@
   "nom": "SSRFmap",
   "lien": "https://github.com/swisskyrepo/SSRFmap",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "ssrf",
+  "install": "git clone swisskyrepo/SSRFmap ; pip3 install -r requirements.txt ; docker (Python 3)",
+  "usage": "python3 ssrfmap.py -r request.txt -p url -m {modules}  (fuzzer/exploiteur SSRF automatique à partir d'une requête)",
+  "annexes": "aucune clé. Outil d'EXPLOITATION SSRF (modules : Redis RCE, FastCGI RCE, portscan interne, lecture de fichiers, MySQL/Postgres...). Prend une requête HTTP et exploite une SSRF. OFFENSIF — À GATER, jamais dans le pipeline auto ni le diag.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "sslscan",
