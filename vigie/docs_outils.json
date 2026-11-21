@@ -345,11 +345,11 @@
   "lien": "https://github.com/elceef/dnstwist",
   "categorie": "OSINT : ma société est-elle bien référencée ?",
   "facette": "domaines",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "install": "pipx install dnstwist (ou pip install dnstwist ; apt install dnstwist)",
+  "usage": "dnstwist {cible}  (positionnel ; --registered pour ne garder que les domaines déposés ; --format json)",
+  "annexes": "aucune. --mx teste si le domaine imitateur peut recevoir du mail ; option GeoIP demande une base.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "sitespeed.io",
@@ -487,12 +487,12 @@
   "nom": "Betterleaks",
   "lien": "https://github.com/betterleaks/betterleaks",
   "categorie": "OSINT : ma société est-elle bien référencée ?",
-  "facette": "domaines",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "secrets",
+  "install": "go install github.com/zricethezav/betterleaks@latest (ou brew install betterleaks ; docker ghcr.io/zricethezav/betterleaks)",
+  "usage": "betterleaks dir {chemin} ; betterleaks git {repo} ; betterleaks github https://github.com/org",
+  "annexes": "règles intégrées (succésseur de Gitleaks, même auteur). SCANNE code/secrets, pas un domaine.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Xingrin",
@@ -501,9 +501,9 @@
   "facette": "domaines",
   "install": "",
   "usage": "",
-  "annexes": "",
+  "annexes": "INTROUVABLE via recherche web (yyhuni/xingrin) — outil obscur. À vérifier manuellement sur le dépôt.",
   "cle_api": "",
-  "statut": "à lire"
+  "statut": "introuvable"
  },
  {
   "nom": "ARL-Next",
@@ -512,9 +512,9 @@
   "facette": "domaines",
   "install": "",
   "usage": "",
-  "annexes": "",
+  "annexes": "Probablement un fork de ARL (灯塔 Asset Reconnaissance Lighthouse), une PLATEFORME WEB de recon d'actifs (install Docker + interface web), pas un CLI. À vérifier sur owl234/ARL-Next.",
   "cle_api": "",
-  "statut": "à lire"
+  "statut": "introuvable"
  },
  {
   "nom": "Masscan",
