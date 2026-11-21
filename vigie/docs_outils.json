@@ -1884,12 +1884,12 @@
   "nom": "AdGuard Home",
   "lien": "https://github.com/AdguardTeam/AdGuardHome",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "dns",
+  "install": "git clone AdguardTeam/AdGuardHome + make ; snap ; docker ; binaire",
+  "usage": "serveur DNS filtrant réseau (comme Pi-hole) : bloque pubs/traqueurs/domaines malveillants ; interface web ; DoH/DoT/DoQ",
+  "annexes": "aucune clé. DNS sinkhole réseau (très proche de Pi-hole). Bloque pubs/traqueurs/phishing/malwares via listes. Supporte DNS CHIFFRÉ (DoH/DoT/DoQ), contrôle parental, safe browsing. UI web. Léger (Go). Alternative à Pi-hole plus moderne. Utile TPE.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "KeePassXC",
@@ -2071,12 +2071,12 @@
   "nom": "pfSense CE",
   "lien": "https://github.com/pfsense/pfsense",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "pare-feu",
+  "install": "flasher l'ISO sur USB + installer (prend toute la machine, FreeBSD, x86 64-bit) ; VM",
+  "usage": "pare-feu + routeur (stateful firewall pf) : règles firewall, NAT, VPN (IPsec/OpenVPN/WireGuard), DHCP, DNS, proxy ; interface web",
+  "annexes": "aucune clé. Distribution pare-feu/routeur FreeBSD (Netgate). CE gratuite. NGFW via paquets (Snort, Suricata). VPN, VLAN, haute dispo. Remplace la box opérateur. Nécessite une machine dédiée (mini-PC). ATTENTION : CE <2.9.0 a des CVE RCE (CERT-FR AVI-1022) — tenir à jour.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "DevSec Hardening",
