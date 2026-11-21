@@ -256,12 +256,12 @@
   "nom": "Web-Check",
   "lien": "https://github.com/Lissy93/web-check",
   "categorie": "OSINT : ma société est-elle bien référencée ?",
-  "facette": "domaines",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "urls",
+  "install": "docker pull lissy93/web-check (recommandé) ; ou git clone + npm install (Node 18+)",
+  "usage": "APPLI WEB, pas un CLI : on ouvre l'interface et on saisit une URL. Inadapté au pipeline 'une commande = une sortie'.",
+  "annexes": "Node.js 18+. Certaines fonctions appellent des API tierces. V1 maintenue sous xray-web/web-check-free.",
+  "cle_api": "optionnelle",
+  "statut": "lu"
  },
  {
   "nom": "Gitleaks",
@@ -410,12 +410,12 @@
   "nom": "uncover",
   "lien": "https://github.com/projectdiscovery/uncover",
   "categorie": "OSINT : ma société est-elle bien référencée ?",
-  "facette": "domaines",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "ip",
+  "install": "go install -v github.com/projectdiscovery/uncover/cmd/uncover@latest",
+  "usage": "uncover -q 'nom-ou-dork' -f ip   (interroge Shodan/Censys/Fofa... pour trouver des hôtes exposés)",
+  "annexes": "CLÉS API OBLIGATOIRES (Shodan/Censys/Fofa) dans ~/.config/uncover/provider-config.yaml. Sans clé, ne renvoie rien.",
+  "cle_api": "OUI, obligatoire",
+  "statut": "lu"
  },
  {
   "nom": "dnsrecon",
@@ -443,12 +443,12 @@
   "nom": "cloud_enum",
   "lien": "https://github.com/initstring/cloud_enum",
   "categorie": "OSINT : ma société est-elle bien référencée ?",
-  "facette": "domaines",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "cloud",
+  "install": "git clone + pip3 install -r requirements.txt (ou sudo apt install cloud-enum ; pipx)",
+  "usage": "cloud_enum -k {mot-cle}  (NOM de société/marque, PAS un domaine ; -k acme -k acme.io)",
+  "annexes": "wordlist de mutations (fuzz.txt incluse). Trouve des buckets S3/Azure/GCP publics. Très pertinent pour l'exposition.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "LinkChecker",
