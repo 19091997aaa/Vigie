@@ -8,6 +8,8 @@ un rapport (page imprimable, texte, données). Développeur : **Anass**, solo.
 > semaine par semaine, voir **`LISEZMOI.md`**. Pour les décisions produit prises avec
 > Anass (format du livrable, accroches, critères de tri des outils), voir **`VISION.md`**.
 > Pour le marché, la cible et surtout le **cadre légal du diag gratuit**, voir **`MARCHE.md`**.
+> Pour le positionnement (« le cyber accessible, comme un plombier ») et la première
+> niche (cabinets comptables), voir **`POSITIONNEMENT.md`**.
 
 ## Comment travailler ici (IMPORTANT)
 
