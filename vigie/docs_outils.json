@@ -1092,12 +1092,12 @@
   "nom": "dirsearch",
   "lien": "https://github.com/maurosoria/dirsearch",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "bruteforce",
+  "install": "git clone maurosoria/dirsearch ; pip3 install dirsearch ; apt install dirsearch (Kali) ; docker (Python 3.9+)",
+  "usage": "dirsearch -u {url} -e php,html  (brute-force de chemins web : répertoires/fichiers cachés)",
+  "annexes": "aucune clé, nécessite une WORDLIST. Brute-force ACTIF de chemins (comme Gobuster/ffuf/feroxbuster). Récursif, filtres, proxy. Scan actif = autorisation. Offre AUDIT.",
+  "cle_api": "non (wordlist requise)",
+  "statut": "lu"
  },
  {
   "nom": "Gobuster",
@@ -1136,12 +1136,12 @@
   "nom": "jwt_tool",
   "lien": "https://github.com/ticarpi/jwt_tool",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "jwt",
+  "install": "git clone ticarpi/jwt_tool ; docker ticarpi/jwt_tool ; pip (Python 3)",
+  "usage": "python3 jwt_tool.py {JWT}  (analyse/altère/casse les jetons JWT : vérifie, teste les faiblesses de signature/claims)",
+  "annexes": "aucune clé. Test des JSON Web Tokens (attaques : none alg, confusion de clé RS256→HS256, injection JWKS...). L'analyse LOCALE d'un token est sûre ; le test contre une appli (-t) = offensif/audit.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Wfuzz",
