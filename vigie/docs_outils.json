@@ -586,12 +586,12 @@
   "nom": "ZMap",
   "lien": "https://github.com/zmap/zmap",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "ports",
+  "install": "build depuis source (INSTALL) ; apt/brew ; docker (Linux/macOS/BSD)",
+  "usage": "zmap -p 443 {plage}  (scanner stateless mono-paquet, balaye tout l'IPv4 en ~45min)",
+  "annexes": "aucune clé. Scanner à l'échelle Internet (recherche/mesure). ATTENTION : peut causer un DoS si mal géré. SCAN ACTIF massif = intrusion sans autorisation. Recherche/audit, pas un diag TPE.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Naabu",
@@ -674,12 +674,12 @@
   "nom": "tlsx",
   "lien": "https://github.com/projectdiscovery/tlsx",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "tls",
+  "install": "go install projectdiscovery/tlsx/cmd/tlsx@latest (Go 1.21) ; binaire ; docker",
+  "usage": "tlsx -u {host} -san -cn  (récupère/analyse les certificats TLS) ; -ex -ss -mm -re détecte expiré/auto-signé/mismatch/révoqué",
+  "annexes": "aucune clé. Analyse les certificats SSL/TLS d'un service exposé (expiration, auto-signé, cipher faible, mauvais nom). Se connecte au port 443 (connexion active légère, comme un navigateur). PERTINENT pour le diag TLS externe.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Nerva",
