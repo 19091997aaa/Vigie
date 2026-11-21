@@ -968,6 +968,43 @@ class LotDeux(Base):
         self.assertEqual(accessibilite.analyser(CIBLE)[0][0].niveau, OK)
 
 
+class Mandat(unittest.TestCase):
+    def fiche(self, **k):
+        from vigie import mandat
+        valeurs = dict(societe="Société <Test>", representant="Jean Patron",
+                       cibles=["Ex.fr ", "203.0.113.5"], debut="2026-12-01", fin="2026-12-15")
+        valeurs.update(k)
+        return mandat.creer(**valeurs)
+
+    def test_document_et_fiche(self):
+        from vigie import mandat
+        fiche = self.fiche()
+        self.assertEqual(fiche["cibles"], ["ex.fr", "203.0.113.5"])
+        page = mandat.en_html(fiche)
+        self.assertIn("Société &lt;Test&gt;", page)                     # échappé
+        self.assertIn("323-1", page)
+        self.assertIn("partagé", page)                                 # hébergement mutualisé
+        with tempfile.TemporaryDirectory() as dossier:
+            _, chemin_json = mandat.ecrire(fiche, dossier)
+            self.assertEqual(mandat.lire(chemin_json)["numero"], fiche["numero"])
+
+    def test_dates_et_tests_verifies(self):
+        with self.assertRaises(ValueError):
+            self.fiche(debut="2026-12-15", fin="2026-12-01")
+        with self.assertRaises(ValueError):
+            self.fiche(tests=["tout"])
+
+    def test_couverture(self):
+        import datetime
+        from vigie import mandat
+        fiche = self.fiche()
+        dans = datetime.date(2026, 12, 5)
+        self.assertEqual(mandat.couvre(fiche, "EX.fr", "ports", dans), "")
+        self.assertIn("périmètre", mandat.couvre(fiche, "autre.fr", "ports", dans))
+        self.assertIn("pas autorisé", mandat.couvre(fiche, "ex.fr", "manuels", dans))
+        self.assertIn("période", mandat.couvre(fiche, "ex.fr", "ports", datetime.date(2027, 1, 1)))
+
+
 class Ports(unittest.TestCase):
     XML = """<?xml version="1.0"?><nmaprun><host><status state="up"/>
       <address addr="192.168.1.20" addrtype="ipv4"/><hostnames><hostname name="pc-bureau"/></hostnames>

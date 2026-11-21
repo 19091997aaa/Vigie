@@ -132,6 +132,19 @@ def main(arguments=None):
     commandes.add_parser("outils", help="lister les outils externes")
     commandes.add_parser("questionnaire", help="afficher le questionnaire assureur")
 
+    aut = commandes.add_parser("autorisation",
+                               help="préparer l'autorisation de tests à faire signer au client")
+    aut.add_argument("--societe", required=True)
+    aut.add_argument("--representant", required=True, help="la personne qui signe pour la société")
+    aut.add_argument("--cible", action="append", required=True,
+                     help="domaine ou adresse IP autorisés (répétable)")
+    aut.add_argument("--debut", required=True, help="AAAA-MM-JJ")
+    aut.add_argument("--fin", required=True, help="AAAA-MM-JJ")
+    aut.add_argument("--tests", default="ports,failles", help="ports, failles, manuels")
+    aut.add_argument("--prestataire", default="")
+    aut.add_argument("--contact", default="", help="contact du client en cas d'incident")
+    aut.add_argument("--sortie", default="autorisations")
+
     args = analyseur.parse_args(arguments)
 
     if args.commande == "decouvrir":
@@ -289,6 +302,21 @@ def main(arguments=None):
             print(f"{outil['nom']:13} {etat}  {branche:10}  {genre:6}  {outil['role']}")
             print(f"{'':13} licence : {outil['licence']} | installation : {outil['installation']}")
         return
+
+    if args.commande == "autorisation":
+        from . import mandat
+        try:
+            fiche = mandat.creer(args.societe, args.representant, args.cible, args.debut,
+                                 args.fin, [t.strip() for t in args.tests.split(",") if t.strip()],
+                                 args.prestataire, args.contact)
+        except ValueError as erreur:
+            print(f"Autorisation non créée : {erreur}")
+            return 2
+        page, donnees = mandat.ecrire(fiche, args.sortie)
+        print(f"Autorisation n° {fiche['numero']} prête.")
+        print(f"  À imprimer et faire signer : {page}")
+        print(f"  Lue par Vigie              : {donnees}")
+        return 0
 
     if args.commande == "questionnaire":
         from . import questionnaire
