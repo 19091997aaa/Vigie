@@ -107,4 +107,28 @@ def analyser(cible):
                                 "Vous n'êtes pas alerté si la livraison chiffrée de vos mails échoue.",
                                 "Publier un enregistrement TLS-RPT.", cle="tls_rpt"))
 
+    constats += _avertissements(data)
     return constats, {"checkdmarc": data}
+
+
+def _avertissements(data):
+    """Les remarques de checkdmarc qu'aucun autre outil ne fait (comparaison du 21/11/2026).
+    Ce ne sont pas des failles : elles ne retirent pas de points."""
+    constats = []
+    spf = [a for a in (data.get("spf") or {}).get("warnings") or [] if "ptr mechanism" in a]
+    if spf:
+        constats.append(Constat(
+            BLOC, INFO, "La règle anti-usurpation (SPF) passe par un réglage déconseillé — vu par checkdmarc",
+            "Une partie de la règle, souvent fournie par l'hébergeur du mail, utilise un "
+            "mécanisme (« ptr ») que les normes déconseillent : certaines messageries "
+            "l'ignorent, ce qui peut envoyer vos vrais mails en indésirables.",
+            "Demander à l'hébergeur du mail une règle SPF sans « ptr », ou lister vos "
+            "serveurs d'envoi directement.", cle="spf_ptr", hors_note=True))
+    dmarc = [a for a in (data.get("dmarc") or {}).get("warnings") or [] if "pct" in a]
+    if dmarc:
+        constats.append(Constat(
+            BLOC, INFO, "La règle DMARC contient une option abandonnée (pct) — vu par checkdmarc",
+            "L'option « pct » n'est plus prise en compte par la nouvelle version de la "
+            "norme DMARC. Elle ne gêne pas aujourd'hui, mais elle ne sert plus à rien.",
+            "Retirer « pct=... » de l'enregistrement DMARC.", cle="dmarc_pct", hors_note=True))
+    return constats

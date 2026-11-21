@@ -147,6 +147,10 @@ class Pseudos(Base):
         comptes = pseudos.lire_sortie(self.SORTIE)
         self.assertEqual([c["site"] for c in comptes], ["GitHub", "Reddit"])
 
+    def test_base_de_fuites_ecartee(self):
+        sortie = self.SORTIE + "[+] HudsonRock: https://cavalier.hudsonrock.com/x?username=jdupont\n"
+        self.assertEqual([c["site"] for c in pseudos.lire_sortie(sortie)], ["GitHub", "Reddit"])
+
     def test_refus_sans_accord(self):
         with self.assertRaises(ControleImpossible):
             pseudos.analyser(Cible("ex.fr", pseudos=["jdupont"]))
@@ -228,6 +232,16 @@ class Catalogue(unittest.TestCase):
                 with open(os.path.join(dossier, nom_fichier), encoding="utf-8") as fichier:
                     for outil in re.findall(r'outils\.executer\(\s*"([^"]+)"', fichier.read()):
                         self.assertIn(outil, outils.CATALOGUE, f"{nom_fichier} appelle {outil}")
+
+    def test_checkdmarc_remarques_ptr_et_pct(self):
+        from vigie.modules import checkdmarc_mod
+        data = {"spf": {"record": "v=spf1 include:mx.ovh.com -all", "warnings": [
+                    "Error when processing mail-out.ovh.net: The ptr mechanism should not be used"]},
+                "dmarc": {"record": "v=DMARC1; p=quarantine; pct=100", "warnings": [
+                    "Support for the pct tag was removed"], "tags": {"p": {"value": "quarantine"}}}}
+        cles = {c.cle: c for c in checkdmarc_mod._avertissements(data)}
+        self.assertTrue(cles["spf_ptr"].hors_note and cles["dmarc_pct"].hors_note)
+        self.assertEqual(checkdmarc_mod._avertissements({}), [])
 
     def test_checkdmarc_domaine_avant_les_resolveurs(self):
         from vigie.modules import checkdmarc_mod
