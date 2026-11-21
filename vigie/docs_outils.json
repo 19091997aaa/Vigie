@@ -1840,12 +1840,12 @@
   "nom": "Outils Zimmerman",
   "lien": "https://github.com/EricZimmerman/Get-ZimmermanTools",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "dfir-artefacts",
+  "install": "exécuter Get-ZimmermanTools.ps1 (PowerShell) qui télécharge et extrait toute la suite ; ou chocolatey ; .NET 6 requis ; Windows",
+  "usage": "suite d'outils CLI et GUI de forensic Windows (standard DFIR mondial) : parse les artefacts Windows — MFTECmd ($MFT), PECmd (prefetch), AmcacheParser, Registry Explorer/RECmd (registre), LECmd (LNK), JLECmd (jump lists), Timeline Explorer (visualisation CSV)... ; reconstruit la chronologie d'exécution et l'activité",
+  "annexes": "aucune clé. Suite de forensic Windows d'Eric Zimmerman (ex-FBI, SANS) — standard mondial DFIR, gratuits, .NET. Get-ZimmermanTools.ps1 télécharge toute la suite. Parse les artefacts Windows : MFT (MFTECmd), prefetch (PECmd), registre (Registry Explorer/RECmd), Amcache, Shimcache, LNK, jump lists. Timeline Explorer pour visualiser. Scriptables, rapides. Associés à KAPE (collecte). DÉFENSIF/DFIR. TRÈS pertinent pour l'investigation Windows (preuves d'exécution, ransomware). Windows uniquement.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Uptime Kuma",
