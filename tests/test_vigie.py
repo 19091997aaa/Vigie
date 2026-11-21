@@ -933,6 +933,38 @@ class LotDix(Base):
         self.assertIn(os.path.expanduser("~/go/bin"), outils.chemin_recherche())
 
 
+class LotDeux(Base):
+    LINKCHECKER = (
+        "# LinkChecker CSV\n"
+        "urlname;parentname;base;result;warningstring;infostring;valid;url\n"
+        "https://ex.fr/services/;https://ex.fr/article/;;404 Not Found;;;False;x\n"
+        "https://vieux-partenaire.fr/;https://ex.fr/;;ConnectionError: nodename nor servname "
+        "provided;;;False;x\n"
+        "https://ex.fr/;;;200 OK;;;True;x\n")
+
+    def test_liens_casses_et_domaine_mort(self):
+        from vigie.modules import liens
+        outils.executer = lambda *a, **k: self.LINKCHECKER
+        constats, brut = liens.analyser(CIBLE)
+        par_cle = {c.cle: c for c in constats}
+        self.assertEqual(par_cle["liens_domaines_morts"].niveau, IMPORTANT)
+        self.assertIn("vieux-partenaire.fr", par_cle["liens_domaines_morts"].explication)
+        self.assertTrue(par_cle["liens_casses"].hors_note)          # page perdue : pas une faille
+        self.assertIn("ex.fr/services/", par_cle["liens_casses"].explication)
+
+    def test_accessibilite(self):
+        from vigie.modules import accessibilite
+        outils.executer = lambda *a, **k: json.dumps([{"type": "error", "code": "x"},
+                                                      {"type": "notice", "code": "y"}])
+        if not pdf.trouver_navigateur():
+            self.skipTest("pas de Chrome ici")
+        constats, _ = accessibilite.analyser(CIBLE)
+        self.assertIn("1 défaut d'accessibilité", constats[0].titre)
+        self.assertTrue(constats[0].hors_note)
+        outils.executer = lambda *a, **k: "[]"
+        self.assertEqual(accessibilite.analyser(CIBLE)[0][0].niveau, OK)
+
+
 class Ports(unittest.TestCase):
     XML = """<?xml version="1.0"?><nmaprun><host><status state="up"/>
       <address addr="192.168.1.20" addrtype="ipv4"/><hostnames><hostname name="pc-bureau"/></hostnames>
