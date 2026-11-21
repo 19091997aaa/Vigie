@@ -1895,12 +1895,12 @@
   "nom": "KeePassXC",
   "lien": "https://github.com/keepassxreboot/keepassxc",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "mdp",
+  "install": "télécharger depuis keepassxc.org (Win/macOS/Linux) ; apt install keepassxc ; brew install keepassxc",
+  "usage": "gestionnaire de mots de passe LOCAL : base .kdbx chiffrée (AES-256) ; CLI keepassxc-cli ; auto-type",
+  "annexes": "aucune clé, 100% OFFLINE (pas de serveur, base locale). AES-256. Générateur de mdp, TOTP, YubiKey, vérification de fuites (Have I Been Pwned). Alternative à Vaultwarden quand on ne veut pas de serveur (TPE sans infra). Simple.",
+  "cle_api": "non (HIBP optionnel)",
+  "statut": "lu"
  },
  {
   "nom": "osquery",
@@ -1928,12 +1928,12 @@
   "nom": "Wazuh",
   "lien": "https://github.com/wazuh/wazuh",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "siem",
+  "install": "installeur officiel (indexer+server+dashboard) ; docker ; ansible",
+  "usage": "plateforme XDR+SIEM : agents sur les endpoints → détection de menaces, analyse de logs, FIM, détection de vulnérabilités, conformité (PCI-DSS, MITRE ATT&CK)",
+  "annexes": "aucune clé. Plateforme complète (SIEM+XDR) : HIDS, logs, intégrité de fichiers, détection de vulns, conformité, réponse. LOURD (plusieurs composants, indexer OpenSearch). Ambitieux pour une TPE (plutôt PME/MSP) : LA pièce d'une offre de surveillance managée (SOC). Intègre VirusTotal.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "CrowdSec",
