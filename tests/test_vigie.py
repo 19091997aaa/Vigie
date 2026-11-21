@@ -1005,6 +1005,56 @@ class Mandat(unittest.TestCase):
         self.assertIn("période", mandat.couvre(fiche, "ex.fr", "ports", datetime.date(2027, 1, 1)))
 
 
+class OutilsManuels(Base):
+    def preparer(self, dossier):
+        from vigie import mandat
+        fiche = mandat.creer("S", "Jean", ["ex.fr"], "2026-12-01", "2026-12-15", ["ports"])
+        _, chemin = mandat.ecrire(fiche, dossier)
+        signee = os.path.join(dossier, "signee.pdf")
+        with open(signee, "wb") as f:
+            f.write(b"%PDF signe")
+        return chemin, signee
+
+    def journal(self, dossier):
+        with open(os.path.join(dossier, "j", "lancements.jsonl"), encoding="utf-8") as f:
+            return [json.loads(l) for l in f]
+
+    def test_lancement_en_regle_et_journal(self):
+        import datetime
+        from vigie import manuel
+        appels = []
+        outils.executer = lambda nom, args, **k: appels.append((nom, args)) or "<nmaprun/>"
+        with tempfile.TemporaryDirectory() as d:
+            fiche, signee = self.preparer(d)
+            sortie = manuel.lancer("nmap", "ex.fr", fiche, signee, "ex.fr",
+                                   os.path.join(d, "j"), jour=datetime.date(2026, 12, 2))
+            self.assertTrue(os.path.exists(sortie))
+            self.assertEqual(appels[0][1][-1], "ex.fr")
+            etapes = [e["resultat"] for e in self.journal(d)]
+            self.assertEqual(etapes, ["lancé", "fini"])
+            self.assertEqual(len(self.journal(d)[0]["empreinte_sha256"]), 64)
+
+    def test_refus_tous_journalises(self):
+        import datetime
+        from vigie import manuel
+        outils.executer = lambda *a, **k: self.fail("l'outil ne doit jamais partir")
+        jour = datetime.date(2026, 12, 2)
+        with tempfile.TemporaryDirectory() as d:
+            fiche, signee = self.preparer(d)
+            j = os.path.join(d, "j")
+            cas = [("sqlmap", "ex.fr", fiche, signee, "ex.fr", jour),     # pas un outil manuel
+                   ("nmap", "-oN/etc/x", fiche, signee, "-oN/etc/x", jour),  # injection d'option
+                   ("nmap", "autre.fr", fiche, signee, "autre.fr", jour),  # hors périmètre
+                   ("nuclei", "ex.fr", fiche, signee, "ex.fr", jour),     # test non signé
+                   ("nmap", "ex.fr", fiche, signee, "ex.fr", datetime.date(2027, 1, 1)),
+                   ("nmap", "ex.fr", fiche, os.path.join(d, "absent.pdf"), "ex.fr", jour),
+                   ("nmap", "ex.fr", fiche, signee, "", jour)]              # pas de confirmation
+            for nom, cible, f, s, conf, quand in cas:
+                with self.assertRaises(manuel.Refus):
+                    manuel.lancer(nom, cible, f, s, conf, j, jour=quand)
+            self.assertEqual([e["resultat"] for e in self.journal(d)], ["refusé"] * len(cas))
+
+
 class Ports(unittest.TestCase):
     XML = """<?xml version="1.0"?><nmaprun><host><status state="up"/>
       <address addr="192.168.1.20" addrtype="ipv4"/><hostnames><hostname name="pc-bureau"/></hostnames>

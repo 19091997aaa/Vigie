@@ -145,6 +145,14 @@ def main(arguments=None):
     aut.add_argument("--contact", default="", help="contact du client en cas d'incident")
     aut.add_argument("--sortie", default="autorisations")
 
+    man = commandes.add_parser("manuel", help="lancer un outil manuel (actif), sur autorisation")
+    man.add_argument("--outil", required=True, help="nmap ou nuclei")
+    man.add_argument("--cible", required=True)
+    man.add_argument("--fiche", required=True, help="autorisation_<n°>.json préparée par Vigie")
+    man.add_argument("--signee", required=True, help="l'autorisation signée (scan ou PDF)")
+    man.add_argument("--confirmer", default="", help="retaper la cible pour confirmer")
+    man.add_argument("--journal", default="journal")
+
     args = analyseur.parse_args(arguments)
 
     if args.commande == "decouvrir":
@@ -316,6 +324,17 @@ def main(arguments=None):
         print(f"Autorisation n° {fiche['numero']} prête.")
         print(f"  À imprimer et faire signer : {page}")
         print(f"  Lue par Vigie              : {donnees}")
+        return 0
+
+    if args.commande == "manuel":
+        from . import manuel
+        try:
+            chemin = manuel.lancer(args.outil, args.cible, args.fiche, args.signee,
+                                   args.confirmer, args.journal)
+        except manuel.Refus as refus:
+            print(f"Lancement refusé : {refus}")
+            return 2
+        print(f"Fini. Sortie de l'outil : {chemin} (lancement inscrit au journal)")
         return 0
 
     if args.commande == "questionnaire":
