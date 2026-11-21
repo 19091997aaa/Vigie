@@ -58,12 +58,12 @@
   "nom": "GHunt",
   "lien": "https://github.com/mxrch/GHunt",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "email",
+  "install": "pipx install ghunt (Python 3.10+)",
+  "usage": "ghunt login (UNE FOIS, obligatoire) puis ghunt email {email} ; aussi gaia/drive/geolocate",
+  "annexes": "EXIGE une authentification à un compte Google (ghunt login) avant toute recherche. Extension navigateur pour faciliter le login. Entrée = email/compte Google.",
+  "cle_api": "non (mais compte Google requis)",
+  "statut": "lu"
  },
  {
   "nom": "PhoneInfoga",
@@ -80,12 +80,12 @@
   "nom": "theHarvester",
   "lien": "https://github.com/laramies/theHarvester",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "domaines",
+  "install": "sudo apt install theharvester (Kali) ; ou git clone + pip3 install -r requirements/base.txt ; ou uv sync",
+  "usage": "theHarvester -d {cible} -l 500 -b duckduckgo  (cible = domaine ; -b = source)",
+  "annexes": "beaucoup de sources exigent des clés API (shodan, hunter, censys). duckduckgo marche sans clé. Trouve emails/sous-domaines/noms.",
+  "cle_api": "optionnelle (nombreuses sources)",
+  "statut": "lu"
  },
  {
   "nom": "Holehe",
