@@ -25,12 +25,19 @@ def nettoyer_domaine(texte):
     return domaine
 
 
-def lancer(cible, noms_modules, chemin_autorisation=None, date=None):
-    """Lance les modules demandés sur la cible et renvoie le rapport (dictionnaire)."""
+def lancer(cible, noms_modules, chemin_autorisation=None, date=None, suivi=None):
+    """Lance les modules demandés sur la cible et renvoie le rapport (dictionnaire).
+
+    suivi (facultatif) : fonction appelée à chaque étape, pour l'affichage en direct.
+    suivi(nom_du_module, etat, detail) avec etat = "en_cours", "fini",
+    "non_realise" (contrôle impossible, raison dans detail) ou "echec" (plantage).
+    """
     date = date or datetime.date.today().isoformat()
+    suivi = suivi or (lambda *_: None)
     constats, brut, non_realises, trace = [], {}, [], None
     for nom in noms_modules:
         module = MODULES[nom]
+        suivi(nom, "en_cours", "")
         try:
             if module["actif"]:
                 trace = autorisation.verifier(chemin_autorisation)
@@ -40,9 +47,14 @@ def lancer(cible, noms_modules, chemin_autorisation=None, date=None):
                     constat.sources = [module["nom"]]
         except ControleImpossible as empechement:
             non_realises.append({"module": module["nom"], "raison": str(empechement)})
+            suivi(nom, "non_realise", str(empechement))
             continue
+        except Exception as erreur:
+            suivi(nom, "echec", str(erreur))
+            raise
         constats += trouves
         brut[nom] = donnees
+        suivi(nom, "fini", f"{len(trouves)} point(s) relevé(s)")
     return rapport.construire(cible.societe or cible.domaine, cible.domaine, date,
                               constats, brut, non_realises, trace)
 

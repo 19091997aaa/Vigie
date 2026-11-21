@@ -8,9 +8,11 @@ import ssl
 import sys
 import tempfile
 import threading
+import time
 import unittest
 import urllib.error
 import urllib.request
+from unittest import mock
 from http.server import ThreadingHTTPServer
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -21,7 +23,7 @@ from vigie import (autorisation, banc, cli, comparaison, decouverte,  # noqa: E4
                    interface, outils, pdf, rapport, reseau, scenarios)
 from vigie.modeles import (CRITIQUE, IMPORTANT, INFO, OK, Cible, Constat,  # noqa: E402
                            ControleImpossible, fusionner, note)
-from vigie.modules import MODULES, conformite, domaines, mail, pseudos, site  # noqa: E402
+from vigie.modules import MODULES, PAR_DEFAUT, conformite, domaines, mail, pseudos, site  # noqa: E402
 
 CIBLE = Cible("ex.fr", "Société <Test>")
 BON_DNS = {
@@ -375,8 +377,19 @@ class Interface(Base):
             self.assertIn("Nouveau diagnostic", accueil)
             reponse = urllib.request.urlopen(base + "/diagnostic",
                                              data=b"domaine=ex.fr&societe=Essai")
-            page = reponse.read().decode()
-            self.assertIn("/rapport/ex_fr_", reponse.geturl())
+            suivi = reponse.geturl()
+            self.assertIn("/suivi/", suivi)
+            self.assertIn("Diagnostic en cours", reponse.read().decode())
+            for _ in range(100):  # le diagnostic tourne en arrière-plan
+                etat = json.loads(urllib.request.urlopen(suivi + "/etat").read())
+                if etat["etat"] != "en_cours":
+                    break
+                time.sleep(0.05)
+            self.assertEqual(etat["etat"], "fini", etat)
+            self.assertEqual([e["etat"] for e in etat["etapes"]], ["fini"] * len(PAR_DEFAUT))
+            self.assertEqual(etat["etapes"][0]["libelle"], "Réglages mail (usurpation)")
+            page = urllib.request.urlopen(base + "/rapport/" + etat["rapport"]).read().decode()
+            self.assertTrue(etat["rapport"].startswith("ex_fr_"))
             self.assertIn("100<small>", page)
             with self.assertRaises(urllib.error.HTTPError) as refus:
                 urllib.request.urlopen(base + "/diagnostic", data=b"domaine=%3Bls")
@@ -384,6 +397,25 @@ class Interface(Base):
             with self.assertRaises(urllib.error.HTTPError) as absent:
                 urllib.request.urlopen(base + "/rapport/..%2F..%2Fetc")
             self.assertEqual(absent.exception.code, 404)
+
+    def test_suivi_signale_echec_et_controle_impossible(self):
+        def plante(cible):
+            raise RuntimeError("outil introuvable")
+
+        def impossible(cible):
+            raise ControleImpossible("pas de réseau")
+
+        modules = {"a": {"fonction": impossible, "actif": False, "nom": "Contrôle A"},
+                   "b": {"fonction": plante, "actif": False, "nom": "Contrôle B"}}
+        with mock.patch.dict(cli.MODULES, modules), \
+                mock.patch.dict(interface.MODULES, modules):
+            ident = interface.nouveau_suivi(Cible("ex.fr"), ["a", "b"])
+            interface.executer_suivi(ident, Cible("ex.fr"), ["a", "b"], "inutile")
+        etat = interface.etat_suivi(ident)
+        self.assertEqual(etat["etat"], "erreur")
+        self.assertEqual([e["etat"] for e in etat["etapes"]], ["non_realise", "echec"])
+        self.assertEqual(etat["etapes"][0]["detail"], "pas de réseau")
+        self.assertIn("outil introuvable", etat["erreur"])
 
     def test_code_obligatoire_en_reseau_local(self):
         with tempfile.TemporaryDirectory() as sortie:
