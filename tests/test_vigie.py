@@ -24,6 +24,8 @@ from vigie import (autorisation, banc, cli, comparaison, decouverte,  # noqa: E4
 from vigie.modeles import (CRITIQUE, IMPORTANT, INFO, OK, Cible, Constat,  # noqa: E402
                            ControleImpossible, fusionner, note)
 from vigie.modules import MODULES, PAR_DEFAUT, conformite, domaines, mail, pseudos, site  # noqa: E402
+from vigie.modules import (adresses, apercu, archives, chiffrement, metadonnees,  # noqa: E402
+                           qualite_site, sousdomaines, technos)
 
 CIBLE = Cible("ex.fr", "Société <Test>")
 BON_DNS = {
@@ -46,12 +48,23 @@ def reseau_coupe(nom, typ):
     raise reseau.ErreurReseau("pas d'internet")
 
 
+def pas_de_telechargement(*a, **k):
+    raise OSError("pas d'internet pendant les essais")
+
+
 class Base(unittest.TestCase):
     def setUp(self):
-        self._sauve = (reseau.dns, site._ouvrir, site._jours_certificat, outils.executer)
+        self._sauve = (reseau.dns, site._ouvrir, site._jours_certificat, outils.executer,
+                       metadonnees._ouvrir)
+        # Aucun essai ne télécharge pour de vrai, et aucun résultat d'un essai ne
+        # resserre dans le suivant (les modules gardent 10 minutes ce qu'ils ont trouvé).
+        metadonnees._ouvrir = pas_de_telechargement
+        sousdomaines._CACHE.clear()
+        archives._CACHE.clear()
 
     def tearDown(self):
-        reseau.dns, site._ouvrir, site._jours_certificat, outils.executer = self._sauve
+        (reseau.dns, site._ouvrir, site._jours_certificat, outils.executer,
+         metadonnees._ouvrir) = self._sauve
 
     def site_propre(self):
         site._jours_certificat = lambda d: 80
@@ -427,7 +440,12 @@ class Interface(Base):
                     break
                 time.sleep(0.05)
             self.assertEqual(etat["etat"], "fini", etat)
-            self.assertEqual([e["etat"] for e in etat["etapes"]], ["fini"] * len(PAR_DEFAUT))
+            # Sans les vrais outils, leurs contrôles sont « non réalisés », jamais en échec.
+            etats = {e["nom"]: e["etat"] for e in etat["etapes"]}
+            self.assertEqual(list(etats), PAR_DEFAUT)
+            self.assertTrue(set(etats.values()) <= {"fini", "non_realise"}, etats)
+            self.assertEqual((etats["mail"], etats["site"], etats["domaines"]),
+                             ("fini", "fini", "fini"))
             self.assertEqual(etat["etapes"][0]["libelle"], "Réglages mail (usurpation)")
             page = urllib.request.urlopen(base + "/rapport/" + etat["rapport"]).read().decode()
             self.assertTrue(etat["rapport"].startswith("ex_fr_"))
@@ -646,15 +664,44 @@ class Installeur(unittest.TestCase):
 
     def test_methodes_essayees_dans_l_ordre(self):
         outil = {"nom": "Maigret", "lien": "https://github.com/soxoj/maigret"}
-        libelles = [libelle for libelle, _ in installeur.methodes(outil)]
-        self.assertEqual(libelles, ["pipx (PyPI)", "pipx (dépôt)", "go", "npm"])
+        essais = installeur.methodes(outil, install="pipx install maigret (ou pip3 install "
+                                                    "maigret ; brew install maigret ; docker)")
+        self.assertEqual([libelle for libelle, _ in essais],
+                         ["brew (documenté)", "pipx (documenté)", "pipx (dépôt)", "go (dépôt)"])
         self.assertEqual(installeur.methodes({"nom": "X", "lien": ""}), [])
+
+    def test_jamais_un_paquet_choisi_sur_son_seul_nom(self):
+        # Cas réel du 21/11/2026 : « npm install -g subfinder » a posé un téléchargeur de
+        # sous-titres. Sans documentation, seul le dépôt exact de l'outil est essayé.
+        outil = {"nom": "Subfinder", "lien": "https://github.com/projectdiscovery/subfinder"}
+        commandes = [c for _, c in installeur.methodes(outil, install="")]
+        self.assertEqual(commandes, [
+            ["pipx", "install", "git+https://github.com/projectdiscovery/subfinder"],
+            ["go", "install", "github.com/projectdiscovery/subfinder@latest"]])
+        documente = installeur.methodes(outil, install=(
+            "go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest "
+            "(ou brew install subfinder)"))
+        self.assertEqual(documente[0], ("brew (documenté)", ["brew", "install", "subfinder"]))
+        self.assertIn(("go (documenté)", ["go", "install",
+                                          "github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"]),
+                      documente)
+        self.assertFalse(any(c[0] == "npm" for _, c in documente))
+        # « pip install -r requirements.txt » n'est pas un nom de paquet
+        self.assertEqual(len(installeur.methodes(outil, install="pip3 install -r req.txt")), 2)
+
+    def test_binaire_go_lu_dans_le_module(self):
+        commande = ["go", "install", "github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"]
+        self.assertEqual(installeur.binaires_poses("go (documenté)", "", "p", "subfinder", commande),
+                         ["subfinder"])
+        self.assertEqual(installeur.binaires_poses(
+            "go (dépôt)", "", "s", "gowitness", ["go", "install", "github.com/s/gowitness@latest"]),
+            ["gowitness"])
 
     def test_a_blanc_n_installe_rien(self):
         outil = {"nom": "Maigret", "lien": "https://github.com/soxoj/maigret"}
         resultat = installeur.installer_un(outil, a_blanc=True)
         self.assertFalse(resultat["installe"])
-        self.assertIn("pipx install maigret", resultat["raison"])
+        self.assertIn("install maigret", resultat["raison"])  # commande documentée
 
     def test_catalogue_complet_et_categorise(self):
         outils_catalogue = installeur.charger()
@@ -725,6 +772,154 @@ class Installeur(unittest.TestCase):
         bilan = installeur.resume(comptes)
         self.assertEqual((bilan["total"], bilan["installes"], bilan["echecs"]), (3, 2, 1))
         self.assertEqual(bilan["par_methode"], {"pipx (PyPI)": 2})
+
+
+def ecrit_fichier(option, contenu, sortie=""):
+    """Faux outil qui écrit son résultat dans le fichier donné après `option`."""
+    def faux(nom, arguments, delai=0, dossier=None):
+        chemin = next(a.split("=", 1)[1] for a in arguments if a.startswith(option + "=")) \
+            if option.startswith("--output-path") else arguments[arguments.index(option) + 1]
+        with open(chemin + (".json" if option == "-f" else ""), "w", encoding="utf-8") as f:
+            f.write(json.dumps(contenu))
+        return sortie
+    return faux
+
+
+class LotDix(Base):
+    """Les outils du premier lot, avec des sorties relevées sur pavillon-noir.tech le 21/11/2026."""
+    HTTPX = "\n".join(json.dumps(d) for d in [
+        {"input": "ex.fr", "url": "https://ex.fr", "status_code": 200, "title": "Accueil",
+         "webserver": "Apache", "tech": ["Apache HTTP Server", "MySQL", "PHP:8.3", "WordPress"],
+         "scheme": "https"},
+        {"input": "www.ex.fr", "url": "https://www.ex.fr", "final_url": "https://ex.fr/",
+         "status_code": 200, "title": "Accueil", "tech": ["WordPress"], "scheme": "https"},
+        {"input": "test.ex.fr", "url": "http://test.ex.fr", "status_code": 200,
+         "title": "Site de test", "tech": [], "scheme": "http"},
+    ])
+
+    def test_sous_domaines_jamais_un_tiers(self):
+        sortie = "\n".join(json.dumps({"host": h}) for h in
+                           ["www.ex.fr", "*.mail.ex.fr", "ex.fr.pirate.com", "autre.fr"])
+        self.assertEqual(sousdomaines.lire_sortie(sortie, "ex.fr"), ["mail.ex.fr", "www.ex.fr"])
+
+    def test_sous_domaines_seulement_www(self):
+        outils.executer = lambda *a, **k: json.dumps({"host": "www.ex.fr"})
+        constats, brut = sousdomaines.analyser(CIBLE)
+        self.assertEqual(constats[0].niveau, OK)
+        self.assertEqual(brut["sous_domaines"], ["www.ex.fr"])
+
+    def test_technos_wordpress_versions_et_site_en_clair(self):
+        outils.executer = lambda nom, *a, **k: (self.HTTPX if nom == "httpx"
+                                                else json.dumps({"host": "test.ex.fr"}))
+        constats, _ = technos.analyser(CIBLE)
+        par_cle = {c.cle: c for c in constats}
+        self.assertIn("WordPress", par_cle["cms"].titre)
+        self.assertIn("PHP 8.3", par_cle["versions_visibles"].explication)
+        self.assertIn("test.ex.fr", par_cle["sites_annexes"].explication)  # www = redirection
+        self.assertTrue(any(c.niveau == IMPORTANT and "test.ex.fr" in c.titre for c in constats))
+
+    SSLYZE = {"server_scan_results": [{"connectivity_status": "COMPLETED", "scan_result": {
+        "tls_1_0_cipher_suites": {"result": {"accepted_cipher_suites": []}},
+        "tls_1_2_cipher_suites": {"result": {"accepted_cipher_suites": [
+            {"cipher_suite": {"name": "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"}}]}},
+        "tls_1_3_cipher_suites": {"result": {"accepted_cipher_suites": []}},
+        "certificate_info": {"result": {"certificate_deployments": [{
+            "path_validation_results": [{"was_validation_successful": True}],
+            "received_certificate_chain": [{"not_valid_after": "2027-02-09T21:13:35Z",
+                                            "issuer": {"rfc4514_string":
+                                                       "CN=YE2,O=Let's Encrypt,C=US"}}]}]}}}}]}
+
+    def test_chiffrement_comme_sur_pavillon_noir(self):
+        outils.executer = ecrit_fichier("--json_out", self.SSLYZE)
+        constats, brut = chiffrement.analyser(CIBLE)
+        par_cle = {c.cle: c for c in constats}
+        self.assertEqual(par_cle["protocoles_anciens"].niveau, OK)
+        self.assertEqual(par_cle["tls13"].niveau, INFO)          # TLS 1.3 absent
+        self.assertIn("Let's Encrypt", par_cle["certificat"].explication)
+        self.assertEqual(brut["chiffrement"]["versions"], ["TLS 1.2"])
+
+    def test_chiffrement_depasse_et_site_injoignable(self):
+        data = json.loads(json.dumps(self.SSLYZE))
+        data["server_scan_results"][0]["scan_result"]["tls_1_0_cipher_suites"]["result"][
+            "accepted_cipher_suites"] = [{"cipher_suite": {"name": "TLS_RSA_WITH_3DES_EDE_CBC_SHA"}}]
+        outils.executer = ecrit_fichier("--json_out", data)
+        niveaux = {c.cle: c.niveau for c in chiffrement.analyser(CIBLE)[0]}
+        self.assertEqual(niveaux["protocoles_anciens"], IMPORTANT)
+        self.assertEqual(niveaux["chiffrements_faibles"], IMPORTANT)
+        with self.assertRaises(ControleImpossible):
+            chiffrement.lire_sortie({"server_scan_results": [
+                {"connectivity_status": "ERROR"}]})
+
+    def test_lighthouse_lit_le_detail_pas_la_note(self):
+        # Le piège réel : score 1 (« réussi ») alors que la protection manque.
+        audits = {nom: {"score": 1, "scoreDisplayMode": "informative", "details": {"items": [
+            {"severity": "High", "description": "absent"}]}} for nom in qualite_site.PROTECTIONS}
+        audits["is-on-https"] = {"score": 1}
+        audits["largest-contentful-paint"] = {"numericValue": 5800}
+        outils.executer = ecrit_fichier("--output-path", {"audits": audits, "categories": {}})
+        constats, _ = qualite_site.analyser(CIBLE)
+        cles = {c.cle for c in constats}
+        self.assertTrue({"hsts", "csp", "cadre", "coop", "lenteur"} <= cles, cles)
+        self.assertIn("5.8 secondes", next(c.titre for c in constats if c.cle == "lenteur"))
+
+    def test_archives_fichier_sensible_et_documents(self):
+        outils.executer = lambda *a, **k: "\n".join([
+            "https://ex.fr/backup/base.sql", "https://ex.fr/tarifs.pdf", "https://ex.fr/",
+            "https://autre.fr/secret.sql"])  # un tiers : ignoré
+        constats, brut = archives.analyser(CIBLE)
+        niveaux = {c.cle: c.niveau for c in constats}
+        self.assertEqual(niveaux["archives_sensibles"], IMPORTANT)
+        self.assertEqual(niveaux["archives_documents"], INFO)
+        self.assertEqual(brut["archives"]["total"], 3)
+
+    def test_archives_vides(self):
+        outils.executer = lambda *a, **k: ""
+        self.assertEqual(archives.analyser(CIBLE)[0][0].niveau, OK)
+
+    def test_metadonnees_liens_du_domaine_seulement(self):
+        page = ('<img src="/wp-content/a.jpg" srcset="/b-600.jpg 600w, /b-1200.jpg 1200w">'
+                '<a href="https://ex.fr/doc/tarifs.pdf">t</a><img src="https://cdn.autre.fr/c.jpg">')
+        liens = metadonnees.liens_fichiers(page, "https://ex.fr/", "ex.fr")
+        self.assertEqual(len(liens), 4)
+        self.assertFalse(any("autre.fr" in l for l in liens))
+
+    def test_metadonnees_noms_comptes_jamais_gardes(self):
+        sortie = json.dumps([
+            {"SourceFile": "a.pdf", "PDF:Author": "Julie Martin", "PDF:Creator": "Microsoft Word"},
+            {"SourceFile": "b.jpg", "EXIF:Artist": "julie martin", "EXIF:GPSLatitude": 48.8},
+        ])
+        resultat = metadonnees.lire_sortie(sortie)
+        self.assertEqual((resultat["noms"], resultat["avec_gps"]), (1, 1))
+        self.assertEqual(resultat["logiciels"], ["Microsoft Word"])  # Creator PDF = logiciel
+        self.assertNotIn("Julie", json.dumps(resultat))
+
+    def test_harvester_sans_source_de_fuite_et_sans_liste(self):
+        self.assertFalse(set(adresses.SOURCES) & set(adresses.INTERDITES))
+        appels = []
+        faux = ecrit_fichier("-f", {"emails": ["contact@ex.fr", "jean.dupont@ex.fr",
+                                               "autre@gmail.com"], "people": ["Jean Dupont"]})
+
+        def espion(nom, arguments, **k):
+            appels.append(arguments)
+            return faux(nom, arguments, **k)
+        outils.executer = espion
+        constats, brut = adresses.analyser(CIBLE)
+        sources = appels[0][appels[0].index("-b") + 1].split(",")
+        self.assertFalse(set(sources) & set(adresses.INTERDITES))
+        self.assertEqual(brut["adresses"]["adresses"], 2)       # gmail : pas la société
+        self.assertNotIn("@", constats[0].titre + constats[0].explication)
+        self.assertNotIn("dupont", json.dumps(brut).lower())
+
+    def test_capture_dans_le_rapport_html(self):
+        reseau.dns = faux_dns(BON_DNS)
+        resultat = rapport.construire("S", "ex.fr", "2026-11-21", [], {
+            "apercu": {"apercu": {"type": "image/jpeg", "image_base64": "QUJD"}}}, [], None)
+        self.assertIn("data:image/jpeg;base64,QUJD", rapport.en_html(resultat))
+        sans = rapport.construire("S", "ex.fr", "2026-11-21", [], {}, [], None)
+        self.assertNotIn("<figure", rapport.en_html(sans))
+
+    def test_outils_cherches_aussi_hors_du_path(self):
+        self.assertIn(os.path.expanduser("~/go/bin"), outils.chemin_recherche())
 
 
 class Pdf(unittest.TestCase):

@@ -23,9 +23,12 @@ def _erreur_reseau(champ):
 
 def lire_sortie(texte):
     try:
-        return json.loads(texte)
+        data = json.loads(texte)
     except (json.JSONDecodeError, TypeError):
         raise ControleImpossible("checkdmarc n'a pas renvoyé de résultat lisible")
+    if not isinstance(data, dict):  # une liste ou un texte : pas le résultat attendu
+        raise ControleImpossible("checkdmarc n'a pas renvoyé de résultat lisible")
+    return data
 
 
 def arguments(domaine):

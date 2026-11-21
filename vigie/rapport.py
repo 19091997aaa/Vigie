@@ -209,6 +209,10 @@ footer { padding:22px 40px 30px; font-size:12.5px; color:var(--gris);
   border-top:1px solid var(--trait); background:#fbfcfe; }
 .perimetre { margin-top:16px; font-size:13px; color:#c3cede; }
 .perimetre b { color:#fff; font-weight:600; }
+.capture { margin:0; padding:24px 40px 0; }
+.capture img { width:100%; max-height:260px; object-fit:cover; object-position:top;
+  border-radius:10px; border:1px solid #d6dde8; display:block; }
+.capture figcaption { font-size:12px; color:#5b6b82; margin-top:6px; }
 .doctype { margin-left:auto; align-self:center; font-size:11px; font-weight:700;
   letter-spacing:.1em; text-transform:uppercase; color:var(--or);
   border:1px solid rgba(224,164,59,.55); border-radius:999px; padding:5px 13px; }
@@ -309,6 +313,18 @@ def _menace(rapport):
             f'<p class="sous">Scénarios réels, rendus possibles par ce qui a été trouvé '
             f'ci-dessous. Rien ne dit qu\'une attaque est en cours — c\'est ce qui est '
             f'ouvert aujourd\'hui.</p>{cas}</section>')
+
+
+def _capture(rapport):
+    """La page d'accueil telle que la voit un visiteur (module apercu), si elle a été prise."""
+    apercu = (rapport.get("brut") or {}).get("apercu", {}).get("apercu") or {}
+    if not apercu.get("image_base64"):
+        return ""
+    type_image = "image/png" if apercu.get("type") == "image/png" else "image/jpeg"
+    return (f'<figure class="capture"><img alt="Page d\'accueil du site" '
+            f'src="data:{type_image};base64,{apercu["image_base64"]}">'
+            f'<figcaption>Votre page d\'accueil, telle que la voit un visiteur le '
+            f'{html.escape(date_fr(rapport["date"]))}.</figcaption></figure>')
 
 
 def _perimetre(rapport):
@@ -418,6 +434,7 @@ def en_html(rapport, public="technique"):
 <span>Date&nbsp;: <b>{e(date_fr(rapport['date']))}</b></span></div>
 <p class="perimetre">{e(_perimetre(rapport))}</p>
 </div>
+{_capture(rapport)}
 <div class="synthese">
 <div class="score">{_jauge(note)}<div class="grade note-{_lettre(note)}">{_lettre(note)}</div></div>
 <div class="apercu"><p class="verdict">{e(_verdict(rapport))}</p>

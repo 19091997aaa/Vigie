@@ -43,7 +43,10 @@ REGLES = [
         "id": "interception_echanges",
         "titre": "Ce que tapent vos visiteurs peut être lu",
         "gravite": IMPORTANT,
-        "declenche": lambda cs: _presence(cs, "chiffrement", IMPORTANT),
+        # Une clé par problème depuis le 21/11/2026 (certificat, https, redirection) ;
+        # « chiffrement » reste lu pour les anciens rapports.
+        "declenche": lambda cs: any(_presence(cs, cle, IMPORTANT) for cle in
+                                    ("certificat", "https", "redirection_https", "chiffrement")),
         "texte": ("Sans connexion correctement chiffrée, ce que vos visiteurs saisissent sur "
                   "votre site (formulaire, identifiants) peut être lu ou modifié sur un réseau "
                   "public — une borne Wi-Fi d'hôtel ou de gare, par exemple."),
