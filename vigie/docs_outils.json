@@ -1620,23 +1620,23 @@
   "nom": "Sparrow-WiFi",
   "lien": "https://github.com/ghostop14/sparrow-wifi",
   "categorie": "Sans fil",
-  "facette": "sans_fil",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "audit-wifi",
+  "install": "git clone ghostop14/sparrow-wifi (ou kimocoder/sparrow-wifi) + pip3 install gps3 python-dateutil requests pyqt5 pyqtchart numpy matplotlib + sudo ./sparrow-wifi.py ; apt install sparrow-wifi (Kali) ; Python3 + Qt5 ; root (pour 'iw')",
+  "usage": "sudo ./sparrow-wifi.py (analyseur graphique WiFi + Bluetooth nouvelle génération pour Linux) : scan et identification des SSID (2,4 et 5 GHz), vue spectre, écoute du Bluetooth LE (advertisements, iBeacons), GPS (gpsd) pour cartographier les réseaux (war-flying/wardriving sur drone/Raspberry Pi) ; agent distant (sparrowwifiagent.py, port 8020)",
+  "annexes": "aucune clé (carte WiFi ; en option HackRF/Ubertooth pour le spectre SDR, GPS). Analyseur graphique WiFi + Bluetooth (ghostop14, GPLv3, Python3/Qt5). Remplace inSSIDer/linssid. Intègre WiFi, SDR (HackRF), Bluetooth (Ubertooth), GPS (gpsd) et GPS drone (mavlink). Vue spectre 2,4/5 GHz, cartographie Google Maps des SSID/Bluetooth. PASSIF/reconnaissance (observe, ne casse rien). DÉFENSIF possible : survey WiFi, repérage de rogue AP, cartographie spectre (dépannage). Moins risqué que les outils d'attaque. GATE léger (reconnaissance passive).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Wifit3",
   "lien": "https://github.com/derv82/wifit3",
   "categorie": "Sans fil",
-  "facette": "sans_fil",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-wifi",
+  "install": "exécutable standalone depuis les Releases GitHub (wifit3-windows-x64.exe, wifit3-linux-x64, macOS) — autonome, sans sudo sur Linux ; port Termux sans root (OliverRhyme) ; Python",
+  "usage": "./wifit3-linux-x64 (auditeur WiFi USB autonome pour Linux, Windows et macOS) : successeur de wifite, embarque des ports Python légers de drivers noyau qui pilotent directement les cartes WiFi en USB (bulk/control transfers) — plus besoin d'installer les drivers moniteur/injection ; sélecteur d'adaptateur graphique",
+  "annexes": "aucune clé (carte WiFi USB compatible). Auditeur WiFi USB autonome (derv82, successeur de wifite/wifite2, GPLv3). Nouveauté : embarque ses propres ports Python de drivers noyau → contrôle direct des cartes WiFi en USB, multi-OS, exécutable unique sans dépendances. But = attaques WiFi (comme wifite). /!\\ OFFENSIF, abaisse encore la barrière technique (pas de setup driver, tourne sous Windows). UNIQUEMENT son propre réseau ou accord écrit. GATE strict.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Ghidra",
