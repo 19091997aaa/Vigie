@@ -2269,12 +2269,12 @@
   "nom": "Nebula",
   "lien": "https://github.com/berylliumsec/nebula",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-assistant",
+  "install": "sudo pip install nebula-ai ; docker pull berylliumsec/nebula:latest ; puis sudo nebula",
+  "usage": "assistant de pentest IA dans le terminal : automatise la reconnaissance, la prise de notes et l'analyse de vulnérabilités (modèles Nmap/Nuclei) ; intègre les outils via pseudo-terminal (pexpect)",
+  "annexes": "modèles IA locaux (téléchargés) ou LLM. Assistant de pentest IA en CLI (open source, BSD). Automatise recon, notes, analyse de vulns en langage naturel. S'intègre aux outils existants (Nmap, Nuclei). L'open gère l'assistance ; mode autonome + analyse de code = Nebula Pro (payant). /!\\ offensif — cible autorisée. ASSISTANT plus qu'agent autonome. GATE (recon = passif possible, exploitation = accord).",
+  "cle_api": "modèles locaux / LLM",
+  "statut": "lu"
  },
  {
   "nom": "Strix",
@@ -2302,12 +2302,12 @@
   "nom": "PentAGI",
   "lien": "https://github.com/vxcontrol/pentagi",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-agent",
+  "install": "docker compose up (docker-compose.yml + .env avec clés LLM) ; self-hosted",
+  "usage": "système multi-agents IA ENTIÈREMENT AUTONOME de pentest : planifie, recherche et exécute un test d'intrusion avec un minimum d'intervention ; Docker isolé ; UI web + observabilité (Grafana, Langfuse)",
+  "annexes": "clés API LLM requises (OpenAI/Anthropic/Ollama/Bedrock/Gemini). Système multi-agents de pentest AUTONOME (VXControl, Dubaï). Planifie et exécute dans un Docker isolé. Graphe de connaissances (Graphiti/Neo4j), 20+ outils pro. Mode autonome OU assistant. MIT (cloud VXControl payant). /!\\ OFFENSIF puissant — environnement isolé + autorisation. Lourd. GATE.",
+  "cle_api": "LLM requis",
+  "statut": "lu"
  },
  {
   "nom": "SkillSpector",
