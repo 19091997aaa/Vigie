@@ -56,6 +56,33 @@ CATALOGUE = {
         "depot": "https://github.com/exiftool/exiftool",
         "licence": "Artistic ou GPL (comme Perl)", "actif": False, "adaptateur": "metadonnees",
     },
+    # Lot 2 (21/11/2026). dnsrecon et dnsx : rien de plus que mail/checkdmarc sur
+    # pavillon-noir.tech, gardés pour le banc. Exiv2 : doublon d'ExifTool.
+    "dnsrecon": {
+        "role": "Fiche DNS complète du domaine (2e avis)",
+        "commande": "dnsrecon",
+        "installation": "pipx install --python python3.13 dnsrecon (cassé sous 3.14)",
+        "depot": "https://github.com/darkoperator/dnsrecon",
+        "licence": "GPL-2.0", "actif": False, "adaptateur": None,
+    },
+    "dnsx": {
+        "role": "Réponses DNS des adresses de la société (alias oubliés)",
+        "commande": "dnsx", "installation": "brew install dnsx",
+        "depot": "https://github.com/projectdiscovery/dnsx",
+        "licence": "MIT", "actif": False, "adaptateur": None,
+    },
+    "linkchecker": {
+        "role": "Liens cassés du site, et liens vers des domaines disparus",
+        "commande": "linkchecker", "installation": "pipx install linkchecker",
+        "depot": "https://github.com/linkchecker/linkchecker",
+        "licence": "GPL-2.0", "actif": False, "adaptateur": "liens",
+    },
+    "pa11y": {
+        "role": "Accessibilité de la page d'accueil (WCAG 2 AA)",
+        "commande": "pa11y", "installation": "npm install -g pa11y",
+        "depot": "https://github.com/pa11y/pa11y",
+        "licence": "LGPL-3.0", "actif": False, "adaptateur": "accessibilite",
+    },
     # Les quatre suivants lisent ce que le site publie à un visiteur (page d'accueil,
     # poignée de main du chiffrement) : zone sûre du cadre légal (MARCHE.md §2).
     # Aucune recherche de faille : Vigie ne leur passe que ces réglages-là.
