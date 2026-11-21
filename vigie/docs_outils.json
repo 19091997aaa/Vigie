@@ -1961,12 +1961,12 @@
   "nom": "Atomic Red Team",
   "lien": "https://github.com/redcanaryco/atomic-red-team",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-test",
+  "install": "git clone redcanaryco/atomic-red-team ; framework Invoke-AtomicRedTeam (PowerShell)",
+  "usage": "bibliothèque de tests d'attaque 'atomiques' mappés MITRE ATT&CK : exécute des techniques d'adversaire pour VÉRIFIER que la détection/défense les repère",
+  "annexes": "aucune clé. OUTIL DE TEST OFFENSIF/ÉMULATION (purple team). Exécute de vraies techniques d'attaque (200+) pour valider la détection. MITRE ATT&CK. /!\\ exécute des commandes d'attaque — À N'UTILISER QUE sur un système autorisé/test, JAMAIS chez un client sans accord écrit. Pas dans le diag auto ni gratuit. Sert à TESTER une défense déployée. GATE.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "VeraCrypt",
@@ -2148,12 +2148,12 @@
   "nom": "sysmon-modular",
   "lien": "https://github.com/olafhartong/sysmon-modular",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "journalisation",
+  "install": "git clone olafhartong/sysmon-modular + Merge-SysmonXml.ps1 (PowerShell) ; puis Sysmon64.exe -c config.xml (Sysmon de Microsoft requis)",
+  "usage": "config modulaire pour Sysmon (Microsoft) : génère un sysmonconfig.xml détaillé, mappé MITRE ATT&CK, pour journaliser finement l'activité Windows (processus, réseau, fichiers)",
+  "annexes": "aucune clé. Config MODULAIRE pour Sysmon (journalisation Microsoft Sysinternals). PAS autonome : fournit le XML (il faut installer Sysmon). Mappé MITRE ATT&CK. Détection fine Windows (alimente un SIEM comme Wazuh). PERTINENT pour outiller la surveillance Windows d'une TPE (avec Wazuh). Nécessite Sysmon.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "OpenCanary",
