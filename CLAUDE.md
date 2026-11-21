@@ -103,6 +103,15 @@ Règles apprises sur le premier vrai scan (21/11/2026) :
 - **theHarvester** : uniquement `adresses.SOURCES` (aucune source de fuite) ;
   ExifTool et theHarvester **comptent** les noms, ne les listent jamais.
 
+**Audits sur autorisation (21/11/2026)** : `vigie/mandat.py` prépare l'autorisation à
+faire signer (`python3 -m vigie autorisation ...`) ; `vigie/manuel.py` lance un outil
+actif (nmap, nuclei) seulement si la fiche couvre cible + test + date, avec le scan
+signé et la cible retapée, et note tout dans `journal/lancements.jsonl` ;
+`vigie/interface_manuel.py` = l'onglet « Outils manuels » de l'interface. Aucun outil
+GATE branché : ils attendent le serveur d'entraînement d'Anass (à louer plus tard).
+`vigie/ports.py` traduit un scan Nmap en français ; `essais/scanner-ma-maison.command`
+scanne le réseau privé d'Anass, lancé par lui.
+
 Brique de **sélection d'outils** — le cœur de la méthode d'Anass : lancer plusieurs
 dépôts GitHub sur une même cible, comparer les sorties en chiffres, garder les
 meilleurs. Fichiers : `vigie/lanceur.py`, `vigie/banc.py`, `vigie/comparaison.py`,
