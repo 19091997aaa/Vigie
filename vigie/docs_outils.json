@@ -1015,12 +1015,12 @@
   "nom": "mitmproxy",
   "lien": "https://github.com/mitmproxy/mitmproxy",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "proxy",
+  "install": "pip install mitmproxy ; apt install mitmproxy ; binaires ; docker",
+  "usage": "mitmproxy (console) ; mitmdump (CLI) ; mitmweb (UI web)  (proxy HTTP/HTTPS interceptant : inspecte/modifie/rejoue le trafic)",
+  "annexes": "aucune clé. Proxy MITM TLS. Génère ses certificats à la volée (à installer sur le client). Outil d'analyse/debug + test, scriptable en Python. Nécessite le contrôle du client/réseau. PAS un diag externe (proxy local).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Metasploit Framework",
@@ -1059,12 +1059,12 @@
   "nom": "ffuf",
   "lien": "https://github.com/ffuf/ffuf",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "fuzzing",
+  "install": "go install github.com/ffuf/ffuf/v2@latest ; apt install ffuf (Kali) ; binaire ; brew install ffuf",
+  "usage": "ffuf -u http://cible/FUZZ -w wordlist.txt  (fuzzer web : découverte répertoires/paramètres/vhosts via le mot-clé FUZZ)",
+  "annexes": "aucune clé, nécessite une WORDLIST (SecLists). Fuzzer web ACTIF rapide (comme Gobuster/Wfuzz). Fuzze URL, headers, POST, paramètres. Scan actif = autorisation. Offre AUDIT.",
+  "cle_api": "non (wordlist requise)",
+  "statut": "lu"
  },
  {
   "nom": "OWASP ZAP",
