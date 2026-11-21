@@ -100,6 +100,15 @@ def main(arguments=None):
                       help="outils à comparer, séparés par des virgules")
     comp.add_argument("--sortie", default="comparaisons")
 
+    duel = commandes.add_parser("duel", help="banc de comparaison : une question, plusieurs outils")
+    duel.add_argument("question", help="sous_domaines, comptes_pseudo, protections_site, mail, "
+                                       "chiffrement, logiciels_troues, secrets")
+    duel.add_argument("--cible", default="", help="nom de domaine")
+    duel.add_argument("--pseudo", default="", help="pseudo du dirigeant, donné par lui")
+    duel.add_argument("--accord-dirigeant", action="store_true")
+    duel.add_argument("--dossier", default="", help="dossier à lire (logiciels, secrets)")
+    duel.add_argument("--sortie", default="comparaisons")
+
     dec = commandes.add_parser("decouvrir",
                                help="lire l'aide des outils installés pour deviner leur lancement")
     dec.add_argument("--outils", help="commandes séparées par des virgules (sinon : le catalogue)")
@@ -344,6 +353,19 @@ def main(arguments=None):
         except ValueError as erreur:
             print(erreur)
             return 2
+        return 0
+
+    if args.commande == "duel":
+        from . import duel as banc_duel
+        cible = {"domaine": nettoyer_domaine(args.cible) if args.cible else "",
+                 "pseudo": args.pseudo, "accord": args.accord_dirigeant, "dossier": args.dossier}
+        try:
+            resultat = banc_duel.comparer(args.question, cible)
+        except ValueError as erreur:
+            print(erreur)
+            return 2
+        print(banc_duel.en_texte(resultat))
+        print("\nTableau côte à côte : " + banc_duel.ecrire(resultat, args.sortie))
         return 0
 
     if args.commande == "manuel":

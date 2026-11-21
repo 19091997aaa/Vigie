@@ -1093,6 +1093,68 @@ class Bibliotheques(Base):
             bibliotheques.analyser(CIBLE)
 
 
+class Duel(unittest.TestCase):
+    def test_recommandations(self):
+        from vigie import duel
+        self.assertIn("Garder A", duel.recommander({"A": {1, 2}, "B": {1}}, {"A": 3, "B": 1}))
+        self.assertIn("B n'apporte rien", duel.recommander({"A": {1, 2}, "B": {1}}, {}))
+        texte = duel.recommander({"A": {1, 2}, "B": {2, 3}, "C": {2}}, {})
+        self.assertIn("A et B", texte)
+        self.assertIn("C n'apporte rien", texte)
+        self.assertIn("Aucun outil ne trouve", duel.recommander({"A": set(), "B": set()},
+                                                                {"A": 5, "B": 2}))
+
+    def test_comparaison_cote_a_cote(self):
+        from vigie import duel
+        vrai = dict(duel.QUESTIONS)
+        duel.QUESTIONS["essai"] = {"titre": "t", "besoin": "domaine", "candidats": {
+            "Un": (None, lambda c, d: {"a.ex.fr", "b.ex.fr"}),
+            "Deux": (None, lambda c, d: {"b.ex.fr", "c.ex.fr"}),
+            "Casse": (None, lambda c, d: (_ for _ in ()).throw(ControleImpossible("hors ligne"))),
+            "Absent": ("outil-qui-nexiste-pas", lambda c, d: set())}}
+        try:
+            r = duel.comparer("essai", {"domaine": "ex.fr"})
+        finally:
+            duel.QUESTIONS.clear()
+            duel.QUESTIONS.update(vrai)
+        self.assertEqual(r["communs"], ["b.ex.fr"])
+        self.assertEqual(r["seuls"]["Un"], ["a.ex.fr"])
+        self.assertEqual(r["outils"]["Casse"]["echec"], "hors ligne")
+        self.assertEqual(r["outils"]["Absent"]["echec"], "pas installé")
+        self.assertIn("Un et Deux", r["recommandation"])
+        self.assertIn("✓", duel.en_html(r))
+        with self.assertRaises(ValueError):
+            duel.comparer("secrets", {"dossier": "/dossier/qui/nexiste/pas"})
+
+    def test_page_comparer(self):
+        from vigie import duel
+        vrai = dict(duel.QUESTIONS)
+        duel.QUESTIONS.clear()
+        duel.QUESTIONS["essai"] = {"titre": "Question d'essai", "besoin": "domaine", "candidats": {
+            "Un": (None, lambda c, d: {"x"}), "Deux": (None, lambda c, d: {"x", "y"})}}
+        self.addCleanup(lambda: (duel.QUESTIONS.clear(), duel.QUESTIONS.update(vrai)))
+        with tempfile.TemporaryDirectory() as d:
+            serveur = ThreadingHTTPServer(("127.0.0.1", 0), interface.fabrique(d, ""))
+            threading.Thread(target=serveur.serve_forever, daemon=True).start()
+            self.addCleanup(serveur.shutdown)
+            self.addCleanup(serveur.server_close)
+            base = f"http://127.0.0.1:{serveur.server_address[1]}"
+            self.assertIn("Question d&#x27;essai", urllib.request.urlopen(base + "/comparer").read().decode())
+            with self.assertRaises(urllib.error.HTTPError):
+                urllib.request.urlopen(base + "/comparer", data=b"question=essai")  # pas de domaine
+            reponse = urllib.request.urlopen(base + "/comparer", data=b"question=essai&domaine=ex.fr")
+            for _ in range(100):
+                texte = urllib.request.urlopen(reponse.geturl()).read().decode()
+                if "en cours" not in texte:
+                    break
+                time.sleep(0.05)
+            self.assertIn("Garder Deux", texte)
+
+    def test_familles_de_secrets_rapprochees(self):
+        from vigie import duel
+        self.assertEqual(duel._famille("github-pat"), duel._famille("Github"))
+
+
 class Mandat(unittest.TestCase):
     def fiche(self, **k):
         from vigie import mandat
