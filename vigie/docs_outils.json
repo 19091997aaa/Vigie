@@ -1345,12 +1345,12 @@
   "nom": "kerbrute",
   "lien": "https://github.com/ropnop/kerbrute",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-ad",
+  "install": "télécharger le binaire des Releases (Win/Linux/Mac, Go) ; go install github.com/ropnop/kerbrute ; make all",
+  "usage": "kerbrute userenum -d domaine users.txt (énumération d'utilisateurs AD valides via la pré-authentification Kerberos — SANS verrouiller les comptes et sans Event ID 4625) ; passwordspray (test d'un mdp sur une liste) ; bruteuser ; fait aussi de l'AS-REP roasting",
+  "annexes": "aucune clé (accès réseau à un contrôleur de domaine). Énumération rapide d'utilisateurs AD + bruteforce via pré-auth Kerberos (ropnop, Go, Apache-2.0). L'ÉNUMÉRATION (userenum) ne verrouille PAS les comptes et ne génère pas l'Event 4625 (discret). /!\\ passwordspray/bruteuser génère des échecs (Event 4768/4771) et PEUT VERROUILLER des comptes. AS-REP roasting. /!\\ OFFENSIF (recon/bruteforce AD) — cible autorisée. Interne (accès au DC). GATE.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Adalanche",
@@ -1378,12 +1378,12 @@
   "nom": "mitm6",
   "lien": "https://github.com/dirkjanm/mitm6",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-ad",
+  "install": "pip install mitm6 ; git clone dirkjanm/mitm6 + pip install . ; apt (Kali) (Python)",
+  "usage": "sudo mitm6 -d domaine.local (exploite la préférence par défaut de Windows pour IPv6 : répond aux requêtes DHCPv6, se fait passer pour le serveur DNS → 'DNS takeover') ; conçu pour être combiné à ntlmrelayx (Impacket) pour relayer les identifiants NTLM vers AD (WPAD)",
+  "annexes": "aucune clé (accès au segment réseau local). Attaque 'pwning IPv4 via IPv6' (Fox-IT/dirkjanm, GPL-2, Python). Exploite la préférence Windows pour IPv6 + l'auto-config DHCPv6 → prise de contrôle du DNS. MITRE ATT&CK T1557/T1040. Conçu avec ntlmrelayx (Impacket) → compromission de domaine. Réversible (TTL courts). /!\\ TRES OFFENSIF et intrusif (MITM actif) — cible autorisée, jamais en diag/gratuit. Détection : signatures Snort/Suricata (Fox-IT). Remédiation : désactiver IPv6 si inutilisé, DHCPv6 guard. GATE strict.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "enum4linux-ng",
