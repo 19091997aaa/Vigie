@@ -1719,23 +1719,23 @@
   "nom": "Arkime",
   "lien": "https://github.com/arkime/arkime",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "capture-reseau",
+  "install": "paquets .deb/.rpm (arkime.com) ; config /opt/arkime/etc/config.ini ; nécessite Elasticsearch/OpenSearch ; 3 composants (capture, viewer, DB)",
+  "usage": "système de capture de paquets COMPLÈTE (full packet capture) à grande échelle, indexée : capture et stocke tout le trafic en PCAP, l'indexe (Elasticsearch/OpenSearch), interface web pour chercher et analyser les sessions ; enrichissement WISE",
+  "annexes": "aucune clé. Capture de paquets COMPLÈTE (FPC) open source à grande échelle (ex-Moloch, AOL 2012, Apache-2.0). Stocke TOUT le trafic en PCAP + indexe (Elasticsearch/OpenSearch). Interface web (sessions, recherche). Gère des Gbit/s. 3 composants. Chiffrement PCAP possible. DÉFENSIF/forensic réseau (analyse rétrospective). Utilisé par des CERT. Lourd (infra Elasticsearch, stockage important). Pour une grosse supervision (MSP/entreprise), pas un petit diag.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "GRR Rapid Response",
   "lien": "https://github.com/google/grr",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "dfir-endpoint",
+  "install": "agent Python installé sur les postes cibles + infrastructure serveur Python ; docker/quickstart ; UI admin web",
+  "usage": "framework de forensic LIVE à distance et chasse aux menaces à grande échelle : un agent interroge les postes à distance (accès fichiers brut via The Sleuth Kit, mémoire, disque), lance des 'hunts' sur une flotte entière, collecte des artefacts, surveille la conso du client",
+  "annexes": "aucune clé (agent + serveur à déployer). Framework DFIR de forensic live à distance (Google, Apache-2.0, Python). Agent sur les postes + serveur. Accès fichiers brut (via TSK), mémoire, disque à distance. 'Hunts' sur une flotte (enterprise hunting). UI admin web. DÉFENSIF/DFIR à l'échelle. Comme Velociraptor (concurrent, plus ancien/lourd). Pour une entreprise avec une flotte (MSP), pas un petit diag TPE. Déploiement plus complexe que Velociraptor.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Volatility 3",
