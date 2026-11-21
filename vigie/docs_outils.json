@@ -1862,23 +1862,23 @@
   "nom": "Vaultwarden",
   "lien": "https://github.com/dani-garcia/vaultwarden",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "mdp",
+  "install": "docker vaultwarden/server ; binaire Rust",
+  "usage": "serveur de gestionnaire de mots de passe (API Bitwarden) auto-hébergé ; compatible avec les clients/apps Bitwarden officiels",
+  "annexes": "aucune clé. Implémentation légère (Rust) du serveur Bitwarden (~20-50 Mo RAM vs 2 Go). Zero-knowledge (le serveur ne peut pas récupérer le mot de passe maître). Nécessite HTTPS. EXCELLENT pour une TPE (gestion des mdp d'équipe, auto-hébergé, gratuit). Guide de durcissement dispo.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Pi-hole",
   "lien": "https://github.com/pi-hole/pi-hole",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "dns",
+  "install": "curl -sSL https://install.pi-hole.net | bash ; docker pihole/pihole",
+  "usage": "serveur DNS filtrant réseau (bloque pubs/traqueurs/domaines malveillants pour tous les appareils) ; interface web d'admin",
+  "annexes": "aucune clé. DNS sinkhole : bloque les domaines indésirables au niveau réseau (une install protège tous les appareils). Bloque aussi malwares/phishing via listes. Léger (tourne sur un Raspberry Pi). Utile TPE (filtrage DNS = couche réseau simple et gratuite).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "AdGuard Home",
