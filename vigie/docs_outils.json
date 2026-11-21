@@ -1994,12 +1994,12 @@
   "nom": "Falco",
   "lien": "https://github.com/falcosecurity/falco",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "runtime",
+  "install": "paquets deb/rpm, binaire, ou via falcoctl ; conteneur (CNCF)",
+  "usage": "sécurité runtime : surveille les appels système du noyau (eBPF) et alerte en temps réel sur un comportement anormal (shell inattendu, élévation de privilèges)",
+  "annexes": "aucune clé. Sécurité runtime cloud-native (CNCF graduated, créé par Sysdig). Surveille les syscalls (eBPF) et alerte selon des règles. Détecte les comportements anormaux à l'exécution (conteneurs, Linux, K8s). 'Antivirus comportemental' pour serveurs. Plutôt serveurs/conteneurs (DevOps), moins un poste TPE classique.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "ClamAV",
@@ -2115,12 +2115,12 @@
   "nom": "Coraza WAF",
   "lien": "https://github.com/corazawaf/coraza",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "waf",
+  "install": "s'intègre à Caddy (xcaddy build --with github.com/corazawaf/coraza-caddy), Nginx, Envoy (proxy-wasm) ; ou bibliothèque Go",
+  "usage": "pare-feu applicatif web (WAF) : filtre les requêtes HTTP malveillantes selon des règles SecLang, compatible OWASP CRS v4",
+  "annexes": "aucune clé. WAF open source en Go (projet OWASP). Compatible ModSecurity (SecLang) et OWASP CRS v4. S'embarque dans Caddy/Nginx/Envoy ou comme lib. Successeur open source de ModSecurity. PERTINENT avec OWASP CRS pour protéger le site/l'appli d'une TPE. Moderne et performant.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Snort 3",
