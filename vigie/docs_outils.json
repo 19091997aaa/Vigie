@@ -608,23 +608,23 @@
   "nom": "AutoRecon",
   "lien": "https://github.com/AutoRecon/AutoRecon",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "orchestrateur",
+  "install": "pipx install git+Tib3rius/AutoRecon.git (Python 3.8+) ; docker",
+  "usage": "autorecon {IP ou CIDR}  (énumération multi-thread des services : lance nmap puis les outils d'énum adaptés par service)",
+  "annexes": "aucune clé. Orchestrateur de RECON RÉSEAU (surtout OSCP/pentest : scan de ports + énum). Lance des scans ACTIFS (nmap, UDP). À gater (audit sur autorisation).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "OWASP Nettacker",
   "lien": "https://github.com/OWASP/Nettacker",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "orchestrateur",
+  "install": "git clone OWASP/Nettacker ; docker owasp/nettacker ; pip",
+  "usage": "nettacker -i {cible} -m {modules}  (framework automatisé recon + scan de vuln, modules YAML, UI web)",
+  "annexes": "~106 modules YAML (recon, scan de vuln). UI web. SUPPORTE LE FRANÇAIS (-L fr). Modulaire comme Osmedeus. Disclaimer : ne pas cibler sans autorisation. Mélange recon et scan actif (à gater).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Angry IP Scanner",
