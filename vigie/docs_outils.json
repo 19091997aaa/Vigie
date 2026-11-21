@@ -1906,12 +1906,12 @@
   "nom": "osquery",
   "lien": "https://github.com/osquery/osquery",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "edr",
+  "install": "installeurs officiels (osquery.io) Linux/macOS/Windows ; apt/yum/choco",
+  "usage": "osqueryi (shell interactif) ; osqueryd (démon)  (interroge l'OS comme une base SQL : processus, connexions, utilisateurs, fichiers...)",
+  "annexes": "aucune clé. Framework d'instrumentation/monitoring de l'OS via SQL (Linux/macOS/Windows). Interroge l'état d'une machine comme une base relationnelle. Brique pour un EDR/HIDS (souvent géré via Fleet). Audit/surveillance interne.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Fail2ban",
@@ -1939,12 +1939,12 @@
   "nom": "CrowdSec",
   "lien": "https://github.com/crowdsecurity/crowdsec",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "ips",
+  "install": "wizard.sh -i ; apt/yum install crowdsec ; docker ; sources Go",
+  "usage": "moteur de détection de comportement + réseau de réputation IP ; analyse les logs (Grok/YAML), détecte brute-force/scans et bloque via des 'bouncers'",
+  "annexes": "aucune clé (console optionnelle). Successeur moderne de Fail2ban (60x plus rapide, IPv6). Collaboratif : base de réputation IP mondiale (CTI). Détection découplée de la remédiation. Entreprise FRANÇAISE. EXCELLENT pour durcir un serveur TPE exposé (meilleur que Fail2ban). Install assistée.",
+  "cle_api": "non (console optionnelle)",
+  "statut": "lu"
  },
  {
   "nom": "Gophish",
