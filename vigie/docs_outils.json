@@ -2126,23 +2126,23 @@
   "nom": "Snort 3",
   "lien": "https://github.com/snort3/snort3",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "ids",
+  "install": "git clone snort3/snort3 + build (CMake, LibDAQ 3.x, g++ C++17) ; apt (certaines distros)",
+  "usage": "snort -c snort.lua -r traffic.pcap (IDS, analyse de logs) ; mode inline (IPS, bloque)  (IDS/IPS réseau Cisco Talos, basé sur signatures)",
+  "annexes": "aucune clé, nécessite un RULESET (règles Talos). IDS/IPS réseau de référence (Cisco Talos, créé en 1998). Nouvelle génération (Snort++, multi-thread). Compatible règles Snort 2. Concurrent de Suricata. Nécessite un point de capture réseau. TPE : surveillance réseau (via MSP).",
+  "cle_api": "non (ruleset requis)",
+  "statut": "lu"
  },
  {
   "nom": "OWASP CRS",
   "lien": "https://github.com/coreruleset/coreruleset",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "waf",
+  "install": "télécharger depuis coreruleset/coreruleset ; s'utilise AVEC un WAF (ModSecurity, Coraza, Nginx WAF)",
+  "usage": "jeu de règles génériques de détection d'attaques web pour WAF : bloque SQLi, XSS, RCE, LFI... (1re ligne de défense)",
+  "annexes": "aucune clé. Jeu de règles OWASP pour WAF compatible ModSecurity/Coraza. PAS un outil autonome (c'est le ruleset, il faut un moteur WAF). Bloque les attaques web génériques. Projet phare OWASP. Protège une appli web (devant le site d'une TPE). S'utilise avec Coraza/ModSecurity.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "sysmon-modular",
