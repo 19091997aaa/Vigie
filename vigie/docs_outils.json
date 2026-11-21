@@ -1983,12 +1983,12 @@
   "nom": "Sigma",
   "lien": "https://github.com/SigmaHQ/sigma",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "detection",
+  "install": "règles depuis SigmaHQ/sigma ; Sigma CLI (pip install sigma-cli) ; pySigma",
+  "usage": "format de signature générique pour SIEM : décrit des événements de logs suspects en YAML, converti vers n'importe quel SIEM/EDR",
+  "annexes": "aucune clé. Format OUVERT et agnostique de règles de détection (comme YARA pour les logs). ~2100+ règles communautaires. Se convertit vers Splunk/Elastic/QRadar/Wazuh. S'intègre à MISP. Référentiel de règles + convertisseur, pas un outil autonome. Avancé (offre SOC/managée).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Falco",
@@ -2060,12 +2060,12 @@
   "nom": "MISP",
   "lien": "https://github.com/MISP/MISP",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "cti",
+  "install": "installeur/VM officiels (PHP) ; docker ; AGPLv3",
+  "usage": "plateforme de partage de renseignement sur les menaces (CTI) : stocke/structure/partage les IoC, événements, acteurs ; API + synchro entre instances",
+  "annexes": "aucune clé (communautés sur demande, ex: CIRCL Luxembourg). Plateforme CTI de référence (projet européen). Galaxies (MITRE ATT&CK, acteurs). Partage entre organisations/CERT. S'intègre aux SIEM. Avancé/SOC (pour un MSP/CERT surveillant plusieurs clients, pas une TPE directe).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "pfSense CE",
