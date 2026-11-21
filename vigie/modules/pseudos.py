@@ -15,12 +15,19 @@ LIGNE = re.compile(r"^\[\+\]\s*(.+?):\s*(https?://\S+)\s*$")
 MAXIMUM_AFFICHE = 25
 
 
+# Sherlock interroge aussi des bases de FUITES (vu le 21/11/2026 : « HudsonRock », base de
+# mots de passe volés). Interdit hors offre payante avec vérification du domaine
+# (MARCHE.md §2) : ces réponses sont écartées, jamais montrées ni gardées.
+SOURCES_FUITES = ("hudsonrock", "haveibeenpwned", "dehashed", "leakcheck", "intelx")
+
+
 def lire_sortie(texte):
-    """Extrait les comptes trouvés de ce que Sherlock affiche."""
+    """Extrait les comptes trouvés de ce que Sherlock affiche (hors bases de fuites)."""
     comptes = []
     for ligne in texte.splitlines():
         trouve = LIGNE.match(ligne.strip())
-        if trouve:
+        if trouve and not any(f in trouve.group(1).lower().replace(" ", "")
+                              for f in SOURCES_FUITES):
             comptes.append({"site": trouve.group(1), "adresse": trouve.group(2)})
     return comptes
 

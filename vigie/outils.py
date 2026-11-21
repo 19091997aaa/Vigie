@@ -56,8 +56,9 @@ CATALOGUE = {
         "depot": "https://github.com/exiftool/exiftool",
         "licence": "Artistic ou GPL (comme Perl)", "actif": False, "adaptateur": "metadonnees",
     },
-    # Lot 2 (21/11/2026). dnsrecon et dnsx : rien de plus que mail/checkdmarc sur
-    # pavillon-noir.tech, gardés pour le banc. Exiv2 : doublon d'ExifTool.
+    # Lot 2 (21/11/2026), comparés point par point (chantier/comparaisons_2026-11-21.md).
+    # dnsrecon voit EN PLUS les réglages SRV de la messagerie et l'IPv6 : pas des failles,
+    # mais de l'information. dnsx : rien de plus. Exiv2 : moins complet qu'ExifTool.
     "dnsrecon": {
         "role": "Fiche DNS complète du domaine (2e avis)",
         "commande": "dnsrecon",
