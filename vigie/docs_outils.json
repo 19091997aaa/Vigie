@@ -872,23 +872,23 @@
   "nom": "linux-smart-enumeration",
   "lien": "https://github.com/diego-treitos/linux-smart-enumeration",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "privesc",
+  "install": "télécharger lse.sh (wget/curl depuis le dépôt)",
+  "usage": "./lse.sh -l1  (énumère failles/privesc d'un système Linux LOCAL, niveaux de verbosité -l0/-l1/-l2)",
+  "annexes": "aucune. S'exécute SUR l'hôte Linux. Pentest/CTF/privesc, audit interne.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "ComplianceAsCode",
   "lien": "https://github.com/ComplianceAsCode/content",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "conformite",
+  "install": "dnf install scap-security-guide ; ou git clone ComplianceAsCode/content + build",
+  "usage": "fournit les PROFILS SCAP (CIS/STIG/ANSSI...) consommés par OpenSCAP ; pas un outil autonome",
+  "annexes": "banque de règles/profils de durcissement, s'utilise AVEC OpenSCAP. Contient les profils ANSSI — pertinent pour l'offre audit/conformité.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "ScubaGear",
@@ -949,12 +949,12 @@
   "nom": "OpenSCAP",
   "lien": "https://github.com/OpenSCAP/openscap",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "conformite",
+  "install": "dnf install openscap-scanner (RHEL/Fedora) ; apt install openscap-scanner (Debian/Ubuntu)",
+  "usage": "oscap xccdf eval --profile stig --report report.html {contenu-scap}  (scan de conformité système contre CIS/STIG)",
+  "annexes": "nécessite du CONTENU SCAP (scap-security-guide/ComplianceAsCode). Scan de conformité/durcissement d'une machine LOCALE. Audit interne.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "AADInternals",
