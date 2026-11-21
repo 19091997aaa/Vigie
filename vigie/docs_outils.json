@@ -2203,12 +2203,12 @@
   "nom": "Sigwood",
   "lien": "https://github.com/helixmap/sigwood",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "threat-hunting",
+  "install": "git clone helixmap/sigwood + python3 (apt pour dépendances) ; local-first",
+  "usage": "outil de threat-hunting CLI, local-first, pour auto-hébergeurs : analyse les logs ('entre grep et un SIEM') pour trouver des traces de compromission ; sortie HTML",
+  "annexes": "aucune clé. Threat-hunting LOCAL (sans cloud), en CLI, pour auto-hébergeurs. 'Entre grep et un SIEM'. Analyse les logs à la recherche de compromission. Générateur de corpus de démo inclus. Sortie HTML. Jeune projet. Léger — pourrait convenir à une TPE/petit serveur sans gros SIEM.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "promptfoo",
@@ -2236,12 +2236,12 @@
   "nom": "garak",
   "lien": "https://github.com/NVIDIA/garak",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "llm-scan",
+  "install": "python -m pip install garak ; ou git clone NVIDIA/garak + pip install -e . (conda, Python 3.10-3.12)",
+  "usage": "python3 -m garak --model_type ... --probes ... (scanner de vulns pour LLM : sonde hallucination, fuite de données, injection de prompt, jailbreak, toxicité — 'le nmap/Metasploit des LLM')",
+  "annexes": "clé API selon la cible (OpenAI, HF, Anthropic Claude, REST...). Scanner de vulns pour LLM/IA (NVIDIA). Teste si un LLM peut être détourné (injection de prompt, jailbreak, fuite). Logs JSONL + hitlog. CLI. PERTINENT si audit d'un chatbot/IA cliente (marché émergent). Teste un modèle, pas un réseau.",
+  "cle_api": "selon la cible",
+  "statut": "lu"
  },
  {
   "nom": "Vulnhuntr",
