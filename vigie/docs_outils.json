@@ -1455,23 +1455,23 @@
   "nom": "Hashcat",
   "lien": "https://github.com/hashcat/hashcat",
   "categorie": "Mots de passe et audit d'authentification",
-  "facette": "mots_de_passe",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "audit-mdp",
+  "install": "apt install hashcat (Kali) ; télécharger depuis hashcat.net ; multi-plateforme (CPU/GPU)",
+  "usage": "hashcat -a 0 -m <type> hashes.txt wordlist.txt (casseur de mots de passe HORS-LIGNE accéléré par GPU) : attaques par dictionnaire (-a 0), par masque/brute-force (-a 3), avec règles (-r) ; 300+ algorithmes de hash",
+  "annexes": "aucune clé. Casseur de mdp hors-ligne de référence (atom, MIT, CPU/GPU). 300+ algos de hash, 5 modes d'attaque. Très rapide (GPU, distribuable). Travaille sur des HASHES déjà obtenus → ne touche PAS la cible (pas de verrouillage). DÉFENSIF/AUDIT : évaluer la robustesse des mdp d'un domaine (avec DPAT pour le rapport). Utilise des wordlists (SecLists/rockyou). /!\\ hashes obtenus LÉGALEMENT (audit avec accord). Cassage hors-ligne/défensif. GATE léger.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "John the Ripper",
   "lien": "https://github.com/openwall/john",
   "categorie": "Mots de passe et audit d'authentification",
-  "facette": "mots_de_passe",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "audit-mdp",
+  "install": "apt install john (Kali) ; télécharger depuis openwall.com (version 'jumbo' communautaire recommandée) ; snap ; multi-plateforme",
+  "usage": "john hashes.txt (ou john --wordlist=...) (casseur de mots de passe HORS-LIGNE) : auto-détecte le type de hash, modes single/wordlist/incremental ; scripts *2john pour extraire les hashes de fichiers protégés (ZIP, RAR, PDF, Office, BitLocker...) ; audite les mdp Unix/Windows faibles",
+  "annexes": "aucune clé. Casseur de mdp hors-ligne historique (Openwall, 1996, GPL). Auto-détecte le type de hash. Modes single, wordlist (+ règles), incremental. Version 'jumbo' = des centaines de formats. Scripts *2john (zip2john, rar2john...) pour extraire les hashes de fichiers protégés. Travaille HORS-LIGNE → ne touche pas la cible. DÉFENSIF/AUDIT (mdp faibles). Alternative/complément de Hashcat (plus CPU, portable). /!\\ hashes obtenus en audit autorisé. GATE léger.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "THC-Hydra",
