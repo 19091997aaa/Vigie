@@ -1048,12 +1048,12 @@
   "nom": "Katana",
   "lien": "https://github.com/projectdiscovery/katana",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "crawl",
+  "install": "go install github.com/projectdiscovery/katana/cmd/katana@latest (Go 1.18, Chrome pour headless) ; docker",
+  "usage": "katana -u {url}  (crawler web : découvre les endpoints/URLs en parcourant le site ; mode headless + parsing JS)",
+  "annexes": "aucune clé. Crawler ACTIF (parcourt le site cible, parse le JS, remplit les formulaires). Cartographie la surface web. Scan actif = autorisation. Complément de gau (passif) pour un crawl live.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "ffuf",
@@ -1103,12 +1103,12 @@
   "nom": "Gobuster",
   "lien": "https://github.com/OJ/gobuster",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "bruteforce",
+  "install": "go install github.com/OJ/gobuster/v3@latest (Go 1.24) ; apt install gobuster",
+  "usage": "gobuster dir -u {url} -w {wordlist}  (brute-force de répertoires/fichiers) ; modes dns, vhost, s3, gcs",
+  "annexes": "aucune clé, mais nécessite une WORDLIST (ex: SecLists). Brute-force ACTIF (teste des milliers de chemins = bruyant). Modes : dir, dns (sous-domaines), vhost, buckets S3/GCS. Scan actif = autorisation. Offre AUDIT.",
+  "cle_api": "non (wordlist requise)",
+  "statut": "lu"
  },
  {
   "nom": "Nikto",
