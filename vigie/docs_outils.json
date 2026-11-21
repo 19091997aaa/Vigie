@@ -2379,12 +2379,12 @@
   "nom": "mcp-scan",
   "lien": "https://github.com/snyk/agent-scan",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "ia-supply-chain",
+  "install": "uvx snyk-agent-scan@latest ; brew install snyk-agent-scan (anciennement mcp-scan ; token Snyk requis)",
+  "usage": "snyk-agent-scan (scanne la supply-chain des agents IA : serveurs MCP, outils, prompts, ressources, skills — détecte injections de prompt, tool poisoning, malwares) ; découvre auto les configs Claude Code/Desktop, Cursor, Gemini CLI, Windsurf ; sortie SARIF/JSON",
+  "annexes": "token Snyk requis (SNYK_TOKEN). Scanner de SÉCURITÉ de la supply-chain des agents IA (Snyk, Apache-2.0, ex-'mcp-scan' d'Invariant Labs). Détecte 15+ risques (injection de prompt, tool poisoning) dans serveurs MCP/outils/skills. Découvre auto les configs. SARIF (onglet GitHub Security). DÉFENSIF. TRÈS PERTINENT pour Anass (vérifier ses propres serveurs MCP et skills). Pas d'attaque.",
+  "cle_api": "token Snyk",
+  "statut": "lu"
  },
  {
   "nom": "open-kritt",
@@ -2423,12 +2423,12 @@
   "nom": "Xalgorix",
   "lien": "https://github.com/xalgorix/xalgorix",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-agent",
+  "install": "git clone xalgord/xalgorix + make build (Go 1.25+, Node.js) ; self-hosted ; GitHub App '@xalgorix review'",
+  "usage": "pentester IA autonome self-hosted (méthodologie en 22 phases) : un agent LLM découvre les vulns web/API, puis un VÉRIFICATEUR INDÉPENDANT re-exploite chaque trouvaille (phase 20) pour ne rapporter que du prouvé ; 70-85+ outils, UI web, rapports PDF",
+  "annexes": "clé API LLM requise (LLM que l'on contrôle). Pentester IA autonome self-hosted (Apache-2.0/MIT, freemium). Point fort : VÉRIFICATION d'exploit — un vérificateur indépendant reproduit chaque trouvaille (phase 20) → faux positifs réduits, résultats 'prouvés' avec preuve. Méthodo 22 phases. 70-85+ outils, automation navigateur. GitHub App pour revoir les PR. /!\\ OFFENSIF — 'systèmes qu'on possède ou autorisé à tester'. GATE.",
+  "cle_api": "LLM requis",
+  "statut": "lu"
  },
  {
   "nom": "DorkAgent",
