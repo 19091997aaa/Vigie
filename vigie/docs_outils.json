@@ -2181,23 +2181,23 @@
   "nom": "Stratus Red Team",
   "lien": "https://github.com/DataDog/stratus-red-team",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif",
+  "install": "binaire Go (go install github.com/datadog/stratus-red-team) ; brew ; docker ghcr.io/datadog/stratus-red-team",
+  "usage": "stratus detonate <technique> ('Atomic Red Team pour le cloud') : exécute des techniques d'attaque cloud (AWS/Azure/GCP/K8s/EKS) pour VALIDER la détection",
+  "annexes": "aucune clé API (utilise les identifiants cloud configurés). OUTIL OFFENSIF cloud ('Atomic Red Team for the cloud', DataDog). Détone des attaques cloud réelles (vol d'identifiants IAM, backdoor) mappées ATT&CK. /!\\ agit sur un VRAI environnement cloud — autorisation requise. Peu pertinent pour une TPE sans cloud. GATE.",
+  "cle_api": "identifiants cloud",
+  "statut": "lu"
  },
  {
   "nom": "Caddy WAF",
   "lien": "https://github.com/fabriziosalmi/caddy-waf",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "serveur-web",
+  "install": "binaire unique (Windows/Mac/Linux/BSD) ; apt/dnf ; docker ; go ; xcaddy (pour modules comme Coraza)",
+  "usage": "serveur web / reverse proxy moderne (Go) : HTTPS automatique (certificats Let's Encrypt auto-renouvelés), reverse proxy, répartition de charge ; config Caddyfile simple",
+  "annexes": "aucune clé. Serveur web / reverse proxy en Go. HTTPS AUTOMATIQUE par défaut (Let's Encrypt, 0 config) = atout majeur. HTTP/2, HTTP/3, load balancing. Peut embarquer un WAF (module Coraza). PERTINENT pour héberger/sécuriser le site d'une TPE (HTTPS auto + WAF). Alternative à Nginx plus simple.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Sigwood",
