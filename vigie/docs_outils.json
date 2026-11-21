@@ -1697,12 +1697,12 @@
   "nom": "ntopng (Community)",
   "lien": "https://github.com/ntop/ntopng",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "supervision-reseau",
+  "install": "paquets ntop (apt/dnf depuis le dépôt ntop) ; docker ; build (basé sur libpcap/PF_RING) ; interface web",
+  "usage": "ntopng -i eth0 (sonde de trafic réseau web : visibilité 360° — hôtes actifs, 'top talkers', protocoles applicatifs via nDPI (YouTube, BitTorrent...), bande passante, IPv4/IPv6, L2/ARP) ; collecte aussi des flux NetFlow/sFlow/IPFIX, SNMP ; détection de trafic suspect ; passif",
+  "annexes": "aucune clé (édition Community gratuite ; versions payantes pour plus). Sonde/analyseur de trafic réseau web (ntop). Visibilité temps réel : hôtes, top talkers, protocoles L7 (nDPI), bande passante. Capture directe (mirror) OU collecte de flux (NetFlow/sFlow/IPFIX) + SNMP. PASSIF. Interface web, historique, alertes. DÉFENSIF/supervision. Pertinent pour superviser le réseau d'une TPE (qui consomme quoi, trafic anormal), offre de sécurisation/MSP. Édition Community limitée.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Zeek",
@@ -1807,12 +1807,12 @@
   "nom": "The Sleuth Kit",
   "lien": "https://github.com/sleuthkit/sleuthkit",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "forensic-disque",
+  "install": "apt install sleuthkit / dnf install sleuthkit / brew ; build (make + make install) ; bibliothèque C embarquable",
+  "usage": "collection d'outils CLI UNIX de forensic de systèmes de fichiers et volumes : analyse une image disque (mmls partitions, fsstat, fls/ils/icat fichiers alloués/supprimés, mactime timeline) ; supporte NTFS, FAT, EXT... ; base d'Autopsy",
+  "annexes": "aucune clé. Collection d'outils CLI de forensic disque/systèmes de fichiers (Brian Carrier). Base d'Autopsy (interface graphique) et de Plaso. ~21 utilitaires. Analyse une image disque : partitions, fichiers supprimés, métadonnées, timeline MAC (mactime). Multi-FS (NTFS, FAT, EXT). Scriptable (triage automatisé). DÉFENSIF/forensic disque. Pour l'investigation fine en CLI (plus technique qu'Autopsy). Nécessite une image disque.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Plaso (log2timeline)",
