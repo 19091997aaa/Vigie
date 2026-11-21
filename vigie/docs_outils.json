@@ -520,12 +520,12 @@
   "nom": "Masscan",
   "lien": "https://github.com/robertdavidgraham/masscan",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "ports",
+  "install": "git clone robertdavidgraham/masscan + make ; brew install masscan ; apt install masscan",
+  "usage": "masscan -p80,443 {plage} --rate 1000  (scanner de ports ultra-rapide, échelle Internet)",
+  "annexes": "aucune clé. Pile TCP/IP propre. ATTENTION : SCAN ACTIF massif = intrusion sans autorisation (art. 323-1). Réservé à l'offre AUDIT. Souvent combiné à nmap.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "RustScan",
@@ -553,12 +553,12 @@
   "nom": "Nmap",
   "lien": "https://github.com/nmap/nmap",
   "categorie": "Reconnaissance et scan réseau",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "ports",
+  "install": "apt install nmap ; brew install nmap ; dnf install nmap ; pacman -S nmap",
+  "usage": "nmap -sV -p- {cible}  (scan de ports + détection services/versions) ; -sn ping ; -A agressif ; moteur de scripts NSE",
+  "annexes": "aucune clé. Scanner de ports de référence. ATTENTION : SCAN ACTIF = intrusion sans autorisation (art. 323-1). Réservé à l'offre AUDIT, interdit dans le diag gratuit.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "reconftw",
