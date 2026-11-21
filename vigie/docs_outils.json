@@ -1499,12 +1499,12 @@
   "nom": "Patator",
   "lien": "https://github.com/lanjelot/patator",
   "categorie": "Mots de passe et audit d'authentification",
-  "facette": "mots_de_passe",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-mdp",
+  "install": "apt install patator (Kali) ; pip install patator ; git clone lanjelot/patator ; docker (Python)",
+  "usage": "patator <module> host=cible user=FILE0 password=FILE1 0=users.txt 1=passwords.txt (brute-forcer polyvalent et modulaire) : modules ftp_login, ssh_login, telnet, smtp, http_fuzz (formulaires), mysql, smb, ldap, dcom, unzip_pass (ZIP chiffré), keystore_pass (Java)... ; multi-threadé, tout paramètre peut être 'fuzzé'",
+  "annexes": "aucune clé. Brute-forcer polyvalent et modulaire (Sébastien Macke, GPLv2, Python). 'Quand Medusa, Hydra échouent'. Modules par service (SSH, FTP, SMTP, HTTP/formulaires, MySQL, SMB, LDAP, SNMP...) + cassage hors-ligne de fichiers chiffrés (ZIP, Java keystore). Multi-threadé, très flexible. /!\\ la plupart des modules sont ONLINE (brute-force réseau) → verrouillage de comptes, bruit : OFFENSIF, cible autorisée. Les modules de fichiers chiffrés (unzip_pass) sont hors-ligne/défensifs. GATE (modules online).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "CeWL",
@@ -1554,12 +1554,12 @@
   "nom": "Aircrack-ng",
   "lien": "https://github.com/aircrack-ng/aircrack-ng",
   "categorie": "Sans fil",
-  "facette": "sans_fil",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-wifi",
+  "install": "apt install aircrack-ng (Kali) ; build depuis github.com/aircrack-ng/aircrack-ng ; nécessite une carte WiFi avec mode moniteur + injection",
+  "usage": "suite complète d'audit de sécurité WiFi (802.11) : airmon-ng (mode moniteur), airodump-ng (capture de paquets/handshakes), aireplay-ng (injection : deauth, faux AP), aircrack-ng (cassage des clés WEP et WPA/WPA2-PSK par dictionnaire/statistique) ; airdecap-ng (déchiffrement)",
+  "annexes": "aucune clé (wordlist pour WPA ; matériel WiFi compatible requis). Suite de référence d'audit WiFi (GPL). 4 domaines : surveillance (capture), attaque (injection : deauth, faux AP), test (cartes), cassage (WEP, WPA/WPA2-PSK par dictionnaire). Le cassage WPA se fait HORS-LIGNE sur un handshake capturé. /!\\ la capture de handshake nécessite souvent une DEAUTH (injection active = perturbe le réseau) → OFFENSIF/intrusif. UNIQUEMENT son propre WiFi ou avec accord écrit (écouter/perturber un réseau tiers est illégal). Audit du WiFi TPE (clé WPA faible, WPS). GATE. Ne casse pas WPA3 directement.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "hcxtools",
