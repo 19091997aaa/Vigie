@@ -8,7 +8,7 @@ Si le contrôle ne peut pas se faire, la fonction lève ControleImpossible.
             de failles). Jamais lancé sans autorisation signée.
 "defaut"  = lancé quand on ne précise pas la liste des modules.
 """
-from . import (accessibilite, adresses, apercu, archives, checkdmarc_mod, chiffrement,
+from . import (accessibilite, adresses, apercu, archives, bibliotheques, checkdmarc_mod, chiffrement,
                comptes_mail, conformite, domaines, liens, mail, metadonnees, pseudos,
                qualite_site, site, sousdomaines, technos, telephone)
 
@@ -39,6 +39,8 @@ MODULES = {
                     "defaut": True, "nom": "Informations cachées des fichiers publiés (ExifTool)"},
     "adresses": {"fonction": adresses.analyser, "bloc": "Exposition", "actif": False,
                  "defaut": True, "nom": "Adresses mail visibles publiquement (theHarvester)"},
+    "bibliotheques": {"fonction": bibliotheques.analyser, "bloc": "Exposition", "actif": False,
+                      "defaut": True, "nom": "Bibliothèques JavaScript du site (Retire.js)"},
     "liens": {"fonction": liens.analyser, "bloc": "Exposition", "actif": False,
               "defaut": True, "nom": "Liens cassés du site (LinkChecker)"},
     "accessibilite": {"fonction": accessibilite.analyser, "bloc": "Exposition", "actif": False,
