@@ -1224,12 +1224,12 @@
   "nom": "Exploit-DB (searchsploit)",
   "lien": "https://gitlab.com/exploit-database/exploitdb",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "exploits",
+  "install": "apt install exploitdb (Kali) ; brew install exploitdb ; git clone gitlab.com/exploit-database/exploitdb",
+  "usage": "searchsploit {terme}  (recherche OFFLINE dans la base Exploit-DB locale) ; --cve 2021-44228 ; -m pour copier l'exploit",
+  "annexes": "base LOCALE d'exploits (~190 Mo), MAJ par searchsploit -u. 100% OFFLINE, aucune cible touchée (juste une recherche). Relie un service/version détecté à des exploits connus. SÛR pour le diag.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Burp Suite Community",
@@ -1257,12 +1257,12 @@
   "nom": "sslscan",
   "lien": "https://github.com/rbsec/sslscan",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "tls",
+  "install": "apt install sslscan ; brew install sslscan ; git clone rbsec/sslscan + make",
+  "usage": "sslscan {host}:{port}  (teste un service SSL/TLS : protocoles, ciphers, certificat ; signale SSLv2/3, POODLE, CRIME, Heartbleed, certs expirés, TLS1.0/1.1 faibles)",
+  "annexes": "aucune clé. Analyse la config TLS d'un service exposé (comme tlsx, plus détaillé). Sortie colorée des problèmes. Se connecte au port (actif léger, comme un navigateur). PERTINENT pour le diag TLS externe.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Wapiti",
