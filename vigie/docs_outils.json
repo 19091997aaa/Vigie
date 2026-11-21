@@ -1192,11 +1192,11 @@
   "lien": "https://github.com/lc/gau",
   "categorie": "Pentest web",
   "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "install": "go install github.com/lc/gau/v2/cmd/gau@latest ; binaire ; docker",
+  "usage": "gau {domaine}  (récupère les URLs connues d'un domaine depuis Wayback Machine, Common Crawl, AlienVault OTX, URLScan)",
+  "annexes": "PASSIF : ne contacte PAS la cible, interroge des archives publiques. PARFAIT pour le diag externe (découvrir les pages/endpoints exposés sans toucher le site). Clé urlscan optionnelle, autres sources sans clé.",
+  "cle_api": "non (clé urlscan optionnelle)",
+  "statut": "lu"
  },
  {
   "nom": "Interactsh",
@@ -1213,12 +1213,12 @@
   "nom": "Retire.js",
   "lien": "https://github.com/RetireJS/retire.js",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "js",
+  "install": "npm install -g retire ; extension Chrome/Firefox ; plugin Burp/ZAP",
+  "usage": "retire (dans le dossier source) ; ou scanne un site chargé via l'extension navigateur  (détecte les bibliothèques JS à vulnérabilités connues)",
+  "annexes": "détecte l'usage de bibliothèques JS/Node vulnérables (OWASP 'composants vulnérables'). Base de vulns JS. L'extension analyse le JS chargé par un site (public). Pertinent pour le diag (JS exposé d'un site TPE).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Exploit-DB (searchsploit)",
