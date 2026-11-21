@@ -73,12 +73,12 @@ CATALOGUE = {
         "licence": "MIT", "actif": False, "adaptateur": None,
     },
     # Comme Sherlock, plus complet (68 comptes « vigie » sur 200 sites le 21/11/2026, la
-    # plupart d'homonymes). Pseudos du dirigeant + accord écrit uniquement. Banc seulement.
+    # plupart d'homonymes). Pseudos du dirigeant + accord écrit uniquement.
     "maigret": {
         "role": "Comptes publics ouverts sous un pseudo (2e avis)",
         "commande": "maigret", "installation": "pipx install --python python3.14 maigret",
         "depot": "https://github.com/soxoj/maigret",
-        "licence": "MIT", "actif": False, "adaptateur": None,
+        "licence": "MIT", "actif": False, "adaptateur": "pseudos",
     },
     # Lot 3 (21/11/2026) : Lighthouse sur TOUTES les pages. pavillon-noir.tech : 31 pages
     # en 95 s, rien de plus que Lighthouse sur l'accueil. Banc seulement (trop long).
@@ -87,6 +87,24 @@ CATALOGUE = {
         "commande": "unlighthouse-ci", "installation": "npm install -g unlighthouse",
         "depot": "https://github.com/harlan-zw/unlighthouse",
         "licence": "MIT", "actif": False, "adaptateur": None,
+    },
+    "user-scanner": {
+        "role": "Comptes publics ouverts sous un pseudo (3e avis, inclut Instagram et LinkedIn)",
+        "commande": "user-scanner", "installation": "pipx install user-scanner",
+        "depot": "https://github.com/kaifcodec/user-scanner",
+        "licence": "MIT", "actif": False, "adaptateur": "pseudos",
+    },
+    "holehe": {
+        "role": "Sites où une adresse mail est inscrite (sans alerter la personne)",
+        "commande": "holehe", "installation": "pipx install holehe",
+        "depot": "https://github.com/megadose/holehe",
+        "licence": "GPL-3.0", "actif": False, "adaptateur": "comptes_mail",
+    },
+    "phoneinfoga": {
+        "role": "Ce qu'un numéro de téléphone révèle (pays, opérateur, type de ligne)",
+        "commande": "phoneinfoga", "installation": "brew install phoneinfoga",
+        "depot": "https://github.com/sundowndev/phoneinfoga",
+        "licence": "GPL-3.0", "actif": False, "adaptateur": "telephone",
     },
     "linkchecker": {
         "role": "Liens cassés du site, et liens vers des domaines disparus",

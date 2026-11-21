@@ -60,12 +60,17 @@ class Base(unittest.TestCase):
         # Aucun essai ne télécharge pour de vrai, et aucun résultat d'un essai ne
         # resserre dans le suivant (les modules gardent 10 minutes ce qu'ils ont trouvé).
         metadonnees._ouvrir = pas_de_telechargement
+        from vigie.modules import telephone
+        self._sauve_tel = telephone._ouvrir
+        telephone._ouvrir = pas_de_telechargement
         sousdomaines._CACHE.clear()
         archives._CACHE.clear()
 
     def tearDown(self):
         (reseau.dns, site._ouvrir, site._jours_certificat, outils.executer,
          metadonnees._ouvrir) = self._sauve
+        from vigie.modules import telephone
+        telephone._ouvrir = self._sauve_tel
 
     def site_propre(self):
         site._jours_certificat = lambda d: 80
@@ -170,12 +175,32 @@ class Pseudos(Base):
             appels.append((nom, arguments))
             return self.SORTIE
         outils.executer = faux
-        constats, brut = pseudos.analyser(Cible("ex.fr", pseudos=["jdupont"],
-                                                accord_dirigeant=True))
+        vrai = outils.disponible
+        outils.disponible = lambda nom: nom == "sherlock"     # Sherlock seul
+        try:
+            constats, brut = pseudos.analyser(Cible("ex.fr", pseudos=["jdupont"],
+                                                    accord_dirigeant=True))
+        finally:
+            outils.disponible = vrai
         self.assertEqual(appels[0][0], "sherlock")
         self.assertEqual(appels[0][1][0], "jdupont")
-        self.assertIn("2 comptes publics", constats[0].titre)
-        self.assertEqual(len(brut["jdupont"]), 2)
+        self.assertIn("2 comptes publics probables", constats[0].titre)
+        self.assertEqual(len(brut["jdupont"]["sites"]), 2)
+
+    def test_recoupement_entre_outils(self):
+        # Comme sur « vigie » le 21/11/2026 : chaque outil voit des sites que les autres ratent.
+        sites = pseudos.recouper({
+            "Sherlock": [{"site": "GitHub", "adresse": "a"}, {"site": "Steam Community (User)",
+                                                             "adresse": "b"}],
+            "Maigret": [{"site": "GitHub", "adresse": "a"}, {"site": "Facebook", "adresse": "c"}],
+            "user-scanner": [{"site": "github", "adresse": "a"}, {"site": "Instagram", "adresse": "d"}]})
+        self.assertEqual(len(sites["github"]["vu_par"]), 3)
+        self.assertEqual(sites["facebook"]["vu_par"], ["Maigret"])
+        self.assertEqual(pseudos.lire_user_scanner([
+            {"status": "Found", "site_name": "Instagram.creator", "url": "u"},
+            {"status": "Not Found", "site_name": "X", "url": "v"},
+            {"status": "Found", "site_name": "HudsonRock", "url": "w"}]),
+            [{"site": "Instagram", "adresse": "u"}])
 
     def test_outil_absent(self):
         with self.assertRaises(ControleImpossible):
@@ -981,6 +1006,45 @@ class LotDeux(Base):
         self.assertTrue(constats[0].hors_note)
         outils.executer = lambda *a, **k: "[]"
         self.assertEqual(accessibilite.analyser(CIBLE)[0][0].niveau, OK)
+
+
+class Personne(Base):
+    def test_holehe_lecture_et_accord(self):
+        from vigie.modules import comptes_mail
+        sortie = ("[+] amazon.com\n[+] spotify.com\n[-] ebay.com\n"
+                  "[+] Email used, [-] Email not used, [x] Rate limit\n")
+        self.assertEqual(comptes_mail.lire_sortie(sortie), ["amazon.com", "spotify.com"])
+        with self.assertRaises(ControleImpossible):
+            comptes_mail.analyser(Cible("ex.fr", emails=["a@ex.fr"]))      # sans accord
+        outils.executer = lambda *a, **k: sortie
+        constats, _ = comptes_mail.analyser(Cible("ex.fr", emails=["a@ex.fr"], accord_dirigeant=True))
+        self.assertIn("2 sites", constats[0].titre)
+
+    def test_portables_publies_comptes_jamais_recopies(self):
+        from vigie.modules import telephone
+        self.assertEqual(telephone.portables("Tél 06 12 34 56 78 ou +33 7.98.76.54.32, "
+                                             "fixe 01 23 45 67 89, ou 0612345678"),
+                         {"0612345678", "0798765432"})
+        vrai = telephone._ouvrir
+        telephone._ouvrir = lambda url: "Appelez le 06 12 34 56 78"
+        try:
+            constats, brut = telephone.analyser_publics(CIBLE)
+        finally:
+            telephone._ouvrir = vrai
+        self.assertIn("1 numéro de portable", constats[0].titre)
+        self.assertNotIn("12 34", constats[0].explication + json.dumps(brut))
+
+    def test_phoneinfoga(self):
+        from vigie.modules import telephone
+        sortie = ("Results for local\nLocal: 06 39 98 00 00\nE164: +33639980000\nCountry: FR\n"
+                  "URL: https://www.google.com/search?q=site%3Afacebook.com+x\n")
+        outils.executer = lambda *a, **k: sortie
+        with self.assertRaises(ControleImpossible):
+            telephone.analyser(Cible("ex.fr", telephones=["+33639980000"]))
+        constats, brut = telephone.analyser(Cible("ex.fr", telephones=["+33639980000"],
+                                                  accord_dirigeant=True))
+        self.assertIn("portable", constats[0].titre)
+        self.assertEqual(len(brut["+33639980000"]["recherches"]), 1)
 
 
 class Mandat(unittest.TestCase):

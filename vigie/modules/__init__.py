@@ -8,8 +8,9 @@ Si le contrôle ne peut pas se faire, la fonction lève ControleImpossible.
             de failles). Jamais lancé sans autorisation signée.
 "defaut"  = lancé quand on ne précise pas la liste des modules.
 """
-from . import (accessibilite, adresses, apercu, liens, archives, checkdmarc_mod, chiffrement, conformite, domaines,
-               mail, metadonnees, pseudos, qualite_site, site, sousdomaines, technos)
+from . import (accessibilite, adresses, apercu, archives, checkdmarc_mod, chiffrement,
+               comptes_mail, conformite, domaines, liens, mail, metadonnees, pseudos,
+               qualite_site, site, sousdomaines, technos, telephone)
 
 # L'ordre compte : quand deux outils relèvent le même problème (même clé), le rapport
 # garde le texte du premier. Les contrôles écrits par Vigie passent donc en tête.
@@ -42,10 +43,18 @@ MODULES = {
               "defaut": True, "nom": "Liens cassés du site (LinkChecker)"},
     "accessibilite": {"fonction": accessibilite.analyser, "bloc": "Exposition", "actif": False,
                       "defaut": True, "nom": "Accessibilité de la page d'accueil (Pa11y)"},
+    "telephones_publics": {"fonction": telephone.analyser_publics, "bloc": "Exposition",
+                           "actif": False, "defaut": True,
+                           "nom": "Numéros de portable publiés sur le site"},
+    # Recherche sur une personne : pseudos, mail, téléphone DONNÉS par elle, avec accord.
+    "comptes_mail": {"fonction": comptes_mail.analyser, "bloc": "Exposition", "actif": False,
+                     "defaut": False, "nom": "Comptes liés au mail du dirigeant (Holehe)"},
+    "telephone": {"fonction": telephone.analyser, "bloc": "Exposition", "actif": False,
+                  "defaut": False, "nom": "Numéro du dirigeant (PhoneInfoga)"},
     "apercu": {"fonction": apercu.analyser, "bloc": "Exposition", "actif": False,
                "defaut": True, "nom": "Capture de la page d'accueil (gowitness)"},
     "pseudos": {"fonction": pseudos.analyser, "bloc": "Exposition", "actif": False,
-                "defaut": False, "nom": "Comptes publics du dirigeant (Sherlock)"},
+                "defaut": False, "nom": "Comptes publics du dirigeant (Sherlock, Maigret, user-scanner)"},
     "conformite": {"fonction": conformite.analyser, "bloc": "Conformité assureur",
                    "actif": False, "defaut": False, "nom": "Conformité assureur (questionnaire)"},
 }
