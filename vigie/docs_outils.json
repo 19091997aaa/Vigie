@@ -2049,12 +2049,12 @@
   "nom": "Cowrie",
   "lien": "https://github.com/cowrie/cowrie",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "honeypot",
+  "install": "git clone cowrie/cowrie + virtualenv ; docker cowrie/cowrie ; pip (Python 3)",
+  "usage": "honeypot SSH/Telnet à interaction moyenne : émule un système UNIX, journalise les attaques brute-force et les commandes de l'attaquant (replay)",
+  "annexes": "aucune clé. Honeypot SSH/Telnet (basé sur Kippo). Enregistre les tentatives brute-force, commandes, fichiers téléchargés. Mode shell ou proxy. Logs JSON (pour SIEM). Plus spécialisé que OpenCanary (SSH seulement). Recherche/threat intel.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "MISP",
@@ -2159,12 +2159,12 @@
   "nom": "OpenCanary",
   "lien": "https://github.com/thinkst/opencanary",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "honeypot",
+  "install": "git clone thinkst/opencanary + pip ; pip install opencanary ; docker (Python 3.7+)",
+  "usage": "opencanaryd --start  (honeypot réseau multi-protocoles : émule SSH/HTTP/FTP/SMB/SNMP... et alerte dès qu'un attaquant interagit)",
+  "annexes": "aucune clé. Honeypot modulaire décentralisé (version open source de Thinkst Canary commercial). Très faible conso (capteurs multiples). Alerte email/SMS/syslog dès qu'un service est touché = signal d'intrusion à FAIBLE faux-positif. PERTINENT TPE : un 'canari' interne qui alerte si quelqu'un scanne/explore. Simple et efficace.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "hardentools",
