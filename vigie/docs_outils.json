@@ -1752,23 +1752,23 @@
   "nom": "Velociraptor",
   "lien": "https://github.com/Velocidex/velociraptor",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "dfir-endpoint",
+  "install": "binaire unique auto-suffisant (Windows/Linux/Mac, Go) ; docker ; déploie un serveur + agents (Clients) ; CLI dispo",
+  "usage": "outil DFIR de visibilité et collecte sur postes : interroge/collecte des artefacts forensiques (logs, registre, $MFT, cache navigateur...) sur un ou des milliers de postes à la fois ; moteur VQL (Velociraptor Query Language), 'Artifacts' réutilisables, monitoring continu, quarantaine",
+  "annexes": "aucune clé (serveur + agents à déployer). Outil DFIR open source de référence (Velocidex/Rapid7, AGPL-3.0, Go). Visibilité/collecte endpoint. Langage VQL puissant, bibliothèque d''Artifacts' communautaires. Déployable en minutes, 1 binaire. Triage à grande échelle, monitoring, chasse, quarantaine. DÉFENSIF/DFIR. Pertinent pour l'offre de sécurisation/surveillance (MSP) ou une réponse à incident. Demande d'apprendre VQL.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Chainsaw",
   "lien": "https://github.com/WithSecureOpenSource/chainsaw",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "dfir-triage",
+  "install": "télécharger le binaire (Windows/Linux/Mac, Rust) ; build cargo ; pas de dépendance",
+  "usage": "chainsaw hunt logs/ -s sigma/ --mapping ... (triage rapide d'artefacts Windows : journaux .evtx, MFT, Shimcache, SRUM, registre... ; recherche mot-clé/regex/Event ID + détection via règles Sigma et Chainsaw) ; sortie table/CSV/JSON",
+  "annexes": "aucune clé. Triage forensic Windows rapide (WithSecure, Rust). 'Première réponse' : fouille journaux d'événements et artefacts (.evtx, MFT, Shimcache, SRUM, registre). Recherche + détection par règles SIGMA. Détecte : effacement de logs, création d'utilisateurs, brute-force, logins RDP, alertes AV. Autonome, multi-OS. DÉFENSIF/DFIR. TRÈS pertinent pour trier vite les logs Windows d'une TPE après incident. Simple à lancer.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Hayabusa",
