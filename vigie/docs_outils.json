@@ -15,11 +15,11 @@
   "lien": "https://github.com/soxoj/maigret",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
   "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "install": "pipx install maigret (ou pip3 install maigret ; brew install maigret ; docker soxoj/maigret)",
+  "usage": "maigret {cible}  (cible = pseudo ; --html / --pdf pour un rapport)",
+  "annexes": "base publique de 3000+ sites intégrée. Rapport PDF = extra optionnel (maigret[pdf], libs graphiques). Base privée 5000+ sites = offre commerciale.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "ArchiveBox",
@@ -36,12 +36,12 @@
   "nom": "SpiderFoot",
   "lien": "https://github.com/smicallef/spiderfoot",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "multi",
+  "install": "git clone + pip3 install -r requirements.txt puis python3 ./sf.py -l 127.0.0.1:5001 (ou pipx install spiderfoot-ng ; docker)",
+  "usage": "SURTOUT via interface web (sf.py -l host:port). CLI possible : sf.py -s {cible} -t <type>. Framework, pas une commande simple.",
+  "annexes": "des centaines de modules ; beaucoup exigent des clés API pour être efficaces. Interface web embarquée.",
+  "cle_api": "optionnelle (nombreux modules)",
+  "statut": "lu"
  },
  {
   "nom": "Social Analyzer",
@@ -69,12 +69,12 @@
   "nom": "PhoneInfoga",
   "lien": "https://github.com/sundowndev/phoneinfoga",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "telephone",
+  "install": "script install (curl ...), brew install phoneinfoga, ou docker (v2 en Go)",
+  "usage": "phoneinfoga scan -n '+33679368229'  (numéro E164/international). phoneinfoga serve pour l'API web.",
+  "annexes": "scanners à configurer, certains exigent des clés API. Entrée = NUMÉRO de téléphone, pas un domaine.",
+  "cle_api": "optionnelle (scanners)",
+  "statut": "lu"
  },
  {
   "nom": "theHarvester",
@@ -91,12 +91,12 @@
   "nom": "Holehe",
   "lien": "https://github.com/megadose/holehe",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "email",
+  "install": "pip3 install holehe (ou git clone + setup.py ; docker)",
+  "usage": "holehe {cible}  (cible = adresse email ; --only-used, --csv, --no-color)",
+  "annexes": "120+ services intégrés. N'alerte pas la cible. Entrée = EMAIL, pas un domaine.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Instaloader",
