@@ -2005,12 +2005,12 @@
   "nom": "ClamAV",
   "lien": "https://github.com/Cisco-Talos/clamav",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "antivirus",
+  "install": "apt install clamav ; dnf install clamav ; sources (Cisco Talos) ; cross-platform",
+  "usage": "clamscan [options] {fichier/dossier}  (antivirus : détecte trojans/virus/malware) ; clamd (démon) ; freshclam (MAJ signatures)",
+  "annexes": "aucune clé. Moteur antivirus open source (Cisco Talos). Scan fichiers/mails/endpoints. Signatures MAJ par freshclam. Multi-plateforme. Souvent sur passerelles mail/web. TPE : scan antivirus de base (gratuit), intégrable. Pas un EDR complet.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "MITRE Caldera",
@@ -2038,12 +2038,12 @@
   "nom": "Suricata",
   "lien": "https://github.com/OISF/suricata",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "ids",
+  "install": "apt install suricata ; brew install suricata ; dnf install suricata ; sources (OISF)",
+  "usage": "suricata -i eth0 (IDS passif) ; --simulate-ips (IPS) ; -r traffic.pcap (offline)  (IDS/IPS/NSM réseau basé sur signatures)",
+  "annexes": "aucune clé, nécessite un RULESET (suricata-update : Emerging Threats...). IDS/IPS inline/NSM. Multi-thread, haute perf (4x Snort). S'intègre aux SIEM (Wazuh, Elastic). Nécessite un point de capture réseau. TPE : surveillance réseau (plutôt via MSP). OISF (non-profit).",
+  "cle_api": "non (ruleset requis)",
+  "statut": "lu"
  },
  {
   "nom": "Cowrie",
