@@ -4,7 +4,9 @@ Le moteur tourne sur l'ordinateur. L'écran s'ouvre dans un navigateur, sur
 l'ordinateur lui-même ou sur un téléphone du même Wi-Fi (option --reseau-local,
 protégée par un code).
 
-Seuls les contrôles sans action sur les machines sont proposés ici.
+Le diagnostic ne lance que des contrôles sans action sur les machines. Les contrôles
+actifs sont à part, dans l'onglet « Outils manuels » (interface_manuel.py), un par un
+et uniquement sur autorisation signée.
 """
 import html
 import json
@@ -17,9 +19,13 @@ import time
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import __version__, rapport
+from . import __version__, interface_manuel, rapport
 from .cli import dossier_rapport, lancer, nettoyer_domaine
-from .modeles import Cible
+from .modeles import Cible, ControleImpossible
+
+# Où l'onglet « Outils manuels » range les autorisations et le journal des lancements.
+AUTORISATIONS = "autorisations"
+JOURNAL = "journal"
 from .modules import MODULES, PAR_DEFAUT
 
 NOM_RAPPORT = re.compile(r"[a-z0-9_-]{3,120}")
@@ -86,8 +92,9 @@ PAGE = """<!DOCTYPE html>
 <input name="societe" autocomplete="off"></label>
 <button type="submit">Lancer le diagnostic</button>
 <p class="aide">Contrôles lancés&nbsp;: {controles}. Ils lisent des informations publiques et
-prennent environ une minute. Vous suivez chaque contrôle en direct.</p>
+prennent environ 5 minutes. Vous suivez chaque contrôle en direct.</p>
 </form>
+<p><a href="/manuel">Outils manuels (contrôles actifs, sur autorisation signée)</a></p>
 <h2>Rapports déjà produits</h2>
 {rapports}
 </div>
@@ -304,6 +311,19 @@ def fabrique(sortie, code):
             if adresse.path == "/":
                 self._envoyer(200, page_accueil(sortie))
                 return
+            if adresse.path == "/manuel":
+                self._envoyer(200, interface_manuel.page(AUTORISATIONS))
+                return
+            document = re.fullmatch(r"/manuel/autorisation/([0-9a-f-]{15})", adresse.path)
+            if document and interface_manuel.page_autorisation(AUTORISATIONS, document.group(1)):
+                self._envoyer(200, interface_manuel.page_autorisation(AUTORISATIONS,
+                                                                       document.group(1)))
+                return
+            resultat = re.fullmatch(r"/manuel/resultat/([A-Za-z0-9_-]{8,40})", adresse.path)
+            if resultat and interface_manuel.page_resultat(resultat.group(1)):
+                self._envoyer(200, interface_manuel.page_resultat(resultat.group(1)),
+                              [("Cache-Control", "no-store")])
+                return
             suivi = re.fullmatch(r"/suivi/([A-Za-z0-9_-]{8,40})(/etat)?", adresse.path)
             if suivi and etat_suivi(suivi.group(1)) is not None:
                 if suivi.group(2):
@@ -324,6 +344,30 @@ def fabrique(sortie, code):
         def do_POST(self):
             if not self._autorise():
                 self._envoyer(403, "<p>Accès refusé.</p>")
+                return
+            # Un autre site ouvert dans le navigateur ne doit pas pouvoir envoyer de
+            # formulaire à Vigie à votre insu : l'origine doit être Vigie lui-même.
+            origine = self.headers.get("Origin", "")
+            if origine and urllib.parse.urlsplit(origine).netloc != self.headers.get("Host", ""):
+                self._envoyer(403, "<p>Formulaire refusé : il ne vient pas de Vigie.</p>")
+                return
+            if self.path in ("/manuel/autorisation", "/manuel/lancer"):
+                taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
+                corps = self.rfile.read(taille).decode("utf-8", "replace")
+                try:
+                    if self.path == "/manuel/autorisation":
+                        numero = interface_manuel.creer_autorisation(corps, AUTORISATIONS)
+                        lien = f"/manuel/autorisation/{numero}"
+                        self._envoyer(200, interface_manuel.page(
+                            AUTORISATIONS, ok=f"Autorisation n° {numero} prête : "
+                            f"<a href='{lien}' target='_blank'>l'ouvrir pour l'imprimer</a>, "
+                            "la faire signer, puis déposer le scan signé dans le dossier "
+                            "« autorisations »."))
+                    else:
+                        ident = interface_manuel.lancer(corps, AUTORISATIONS, JOURNAL)
+                        self._envoyer(303, "", [("Location", f"/manuel/resultat/{ident}")])
+                except (ValueError, ControleImpossible) as erreur:
+                    self._envoyer(400, interface_manuel.page(AUTORISATIONS, str(erreur)))
                 return
             if self.path != "/diagnostic":
                 self._envoyer(404, "<p>Page introuvable.</p>")
