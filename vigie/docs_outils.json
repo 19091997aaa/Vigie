@@ -2313,12 +2313,12 @@
   "nom": "SkillSpector",
   "lien": "https://github.com/NVIDIA/SkillSpector",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "ia-supply-chain",
+  "install": "uv tool install git+https://github.com/NVIDIA/skillspector ; git clone + make install (Python 3.12+)",
+  "usage": "skillspector scan ./my-skill/ (scanner de sécurité pour les 'skills' d'agents IA : détecte vulns, patterns malveillants, injection de prompt, instructions cachées, risques supply-chain avant installation) ; --no-llm pour un scan statique rapide",
+  "annexes": "clé selon le fournisseur LLM (Anthropic, NVIDIA, Ollama) ; option --no-llm sans clé. Scanner de SÉCURITÉ pour skills d'agents IA (NVIDIA, Apache 2.0). Détecte 64 patterns d'attaque (injection, instructions cachées, supply-chain) avant d'installer une skill (Claude Code, Codex, MCP). AST statique + LLM. Sortie SARIF (CI/CD). DÉFENSIF. Pertinent vu l'usage d'IA d'Anass (vérifier ses skills). Pas d'attaque.",
+  "cle_api": "LLM optionnel (--no-llm)",
+  "statut": "lu"
  },
  {
   "nom": "ARTEX",
@@ -2335,12 +2335,12 @@
   "nom": "DeepAudit",
   "lien": "https://github.com/lintsinghua/DeepAudit",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "sast-ia",
+  "install": "git clone lintsinghua/DeepAudit + docker compose up (supporte Ollama en privé)",
+  "usage": "plateforme d'audit de code multi-agents IA : 4 agents (Orchestrateur, Recon, Analyse, Vérification) analysent le code, trouvent des vulns et les prouvent par un PoC en sandbox Docker ; rapport PDF/MD/JSON",
+  "annexes": "clé API LLM (ou Ollama en local/privé). Plateforme d'audit de code (SAST) multi-agents IA (AGPL-3.0, Chine). Comprend le code, trouve des vulns, génère+exécute un PoC en sandbox Docker. A obtenu 49 CVE sur des projets connus. RAG (CWE/CVE). 2 modes (rapide / agent). Dépôt Git ou ZIP. DÉFENSIF/AUDIT (sandbox interne). Pertinent pour auditer du code. Coûte des appels API (sauf Ollama).",
+  "cle_api": "LLM (ou Ollama local)",
+  "statut": "lu"
  },
  {
   "nom": "Decepticon",
