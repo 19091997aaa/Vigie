@@ -1653,12 +1653,12 @@
   "nom": "CyberChef",
   "lien": "https://github.com/gchq/CyberChef",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "analyse-donnees",
+  "install": "en ligne (gchq.github.io/CyberChef, 100% côté navigateur) ; télécharger le zip d'une release pour l'hors-ligne ; docker ghcr.io/gchq/cyberchef ; npm",
+  "usage": "'couteau suisse cyber' web : ~450 opérations de manipulation de données en 'recette' (glisser-déposer) — encodage/décodage (Base64, hex, URL), chiffrement/déchiffrement (AES, XOR), compression, hachage, parsing (X.509, IP), détection auto d'encodage (Magic)",
+  "annexes": "aucune clé. 'Cyber Swiss Army Knife' (GCHQ, Apache-2.0). ~450 opérations enchaînables en 'recette'. 100% CÔTÉ NAVIGATEUR (les données ne quittent pas le poste — ok confidentialité, RGPD). Utilisable hors-ligne. Pour décoder/analyser des données, investiguer, CTF. DÉFENSIF/analyse. Accessible (techniques ET non-techniques). Pertinent pour l'investigation et pour expliquer à un client.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "radare2",
@@ -1796,12 +1796,12 @@
   "nom": "tcpdump",
   "lien": "https://github.com/the-tcpdump-group/tcpdump",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "analyse-reseau",
+  "install": "déjà présent sur beaucoup de distros ; apt install tcpdump / dnf install tcpdump / brew install tcpdump (libpcap requis)",
+  "usage": "tcpdump -i eth0 (capture le trafic réseau en CLI) ; filtres BPF (host, port, src/dst) ; -w capture.pcap pour enregistrer, -r pour relire ; idéal sur serveur distant/sans GUI, en tâche de fond ou cron",
+  "annexes": "aucune clé, droits root/capture requis. Capture de paquets en ligne de commande (front-end de libpcap ; Wireshark en est un wrapper). Léger, flexible, idéal sur serveur sans GUI ou à distance. Filtres BPF. Enregistre en .pcap (relisible dans Wireshark). DÉFENSIF/diagnostic. Pertinent pour capturer du trafic sur un serveur TPE puis l'analyser. Syntaxe de filtre différente de Wireshark.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "The Sleuth Kit",
