@@ -2225,12 +2225,12 @@
   "nom": "PentestGPT",
   "lien": "https://github.com/GreyDGL/PentestGPT",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-agent",
+  "install": "pip3 install git+https://github.com/GreyDGL/PentestGPT ; ou git clone + make install (docker)",
+  "usage": "pentestgpt --target ... (agent de pentest autonome piloté par LLM : guide/automatise les étapes d'un test d'intrusion, résout des CTF)",
+  "annexes": "clé API LLM requise (OpenAI/Gemini/Deepseek/Ollama local). AGENT de pentest IA (prototype de recherche, USENIX Security 2024). Autonome : identifie des vulns, lance des exploits. /!\\ OFFENSIF — Supervisor/Executor ont un accès FULL au système ; cible autorisée/CTF uniquement. Nécessite déjà des compétences pentest. Coûte des appels API. GATE.",
+  "cle_api": "LLM requis",
+  "statut": "lu"
  },
  {
   "nom": "garak",
@@ -2247,12 +2247,12 @@
   "nom": "Vulnhuntr",
   "lien": "https://github.com/protectai/vulnhuntr",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "sast-ia",
+  "install": "pipx install vulnhuntr --python 3.10 ; uv pip ; docker ; git clone protectai/vulnhuntr",
+  "usage": "vulnhuntr -r /chemin/repo -a fichier.py -l claude (analyse statique de code Python par LLM : détecte des vulns exploitables à distance — RCE, LFI, SSRF — suit les chaînes d'appels depuis l'entrée utilisateur) ; rapports SARIF/HTML",
+  "annexes": "clé API LLM requise (Claude recommandé, GPT, Ollama, OpenRouter). Analyseur de code par LLM (découverte de 0-day). Python UNIQUEMENT. Suit la chaîne d'appels entrée→sortie (réduit les faux positifs). A trouvé de vrais 0-days (Ragflow, FastChat). Rapports SARIF (CI/CD) + HTML. /!\\ détecte mais n'exploite pas. Plutôt outil d'AUDIT de code (SAST IA). Coûte des appels API.",
+  "cle_api": "LLM requis",
+  "statut": "lu"
  },
  {
   "nom": "hackingBuddyGPT",
