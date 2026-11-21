@@ -1081,12 +1081,12 @@
   "nom": "XSStrike",
   "lien": "https://github.com/s0md3v/XSStrike",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "xss",
+  "install": "git clone s0md3v/XSStrike ; pip install -r requirements.txt (Python 3)",
+  "usage": "python xsstrike.py -u {url}  (détection XSS avancée : crawl, fuzz, analyse de contexte, contournement WAF, génération de payloads)",
+  "annexes": "aucune clé. Scanner XSS avancé (s0md3v, comme Arjun). Injecte des payloads = OFFENSIF. Détecte/contourne les WAF. Utilise Photon/Arjun. À GATER (autorisation). Très rapide — régler un délai.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "dirsearch",
@@ -1169,12 +1169,12 @@
   "nom": "Commix",
   "lien": "https://github.com/commixproject/commix",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "rce",
+  "install": "git clone commixproject/commix ; snap install commix ; apt (Kali) (Python 2.6/2.7/3.x)",
+  "usage": "python commix.py -u {url}  (détecte ET exploite les injections de commandes OS : shell injection)",
+  "annexes": "aucune clé. Outil d'EXPLOITATION d'injection de commandes OS (classic/blind/time-based). Peut uploader un webshell/Meterpreter. OFFENSIF — À GATER, jamais dans le pipeline auto ni le diag. Usage sans consentement = illégal.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Dalfox",
