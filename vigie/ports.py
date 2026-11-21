@@ -59,7 +59,9 @@ INCONNU = (INFO, "service non identifié", "À identifier : un service inconnu e
 def lire_nmap(chemin):
     """[{ip, nom, ports: [{port, service, produit}]}] pour chaque appareil vu."""
     appareils = []
-    for hote in ET.parse(chemin).getroot().iter("host"):
+    # Fichier produit par Nmap sur la machine elle-même, pas une donnée reçue d'un tiers ;
+    # ElementTree ne charge pas les entités externes (Python 3.7.1+). Semgrep, 21/11/2026.
+    for hote in ET.parse(chemin).getroot().iter("host"):  # nosemgrep
         etat = hote.find("status")
         if etat is not None and etat.get("state") != "up":
             continue

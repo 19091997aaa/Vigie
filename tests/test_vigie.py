@@ -882,6 +882,9 @@ class LotDix(Base):
         liens = metadonnees.liens_fichiers(page, "https://ex.fr/", "ex.fr")
         self.assertEqual(len(liens), 4)
         self.assertFalse(any("autre.fr" in l for l in liens))
+        # un lien file:// glissé dans la page ne fait jamais lire un fichier du Mac
+        piege = '<a href="file://ex.fr/etc/passwd.pdf">x</a>'
+        self.assertEqual(metadonnees.liens_fichiers(piege, "https://ex.fr/", "ex.fr"), [])
 
     def test_metadonnees_noms_comptes_jamais_gardes(self):
         sortie = json.dumps([
