@@ -25,12 +25,12 @@
   "nom": "ArchiveBox",
   "lien": "https://github.com/ArchiveBox/ArchiveBox",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "archivage",
+  "install": "pip install archivebox (ou docker ; apt ; brew) ; puis archivebox init dans un dossier",
+  "usage": "archivebox add 'https://cible'  (archive une URL) ; archivebox server pour l'interface web",
+  "annexes": "self-hosted : nécessite d'initialiser un dossier de collection. Utilise Chrome headless, yt-dlp, git, node. C'est de l'ARCHIVAGE, pas de la recon offensive.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "SpiderFoot",
@@ -48,11 +48,11 @@
   "lien": "https://github.com/qeeqbox/social-analyzer",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
   "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "install": "pip3 install social-analyzer (Python) ; ou git clone + npm install (Node)",
+  "usage": "python3 -m social-analyzer --cli --username '{cible}'  (pseudo ; --websites 'github twitter' ; --metadata)",
+  "annexes": "300+ sites. Pour captures/détection avancée : Chrome/Chromium + Tesseract OCR optionnels. Entrée = pseudo.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "GHunt",
@@ -135,12 +135,12 @@
   "nom": "Toutatis",
   "lien": "https://github.com/megadose/toutatis",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "instagram",
+  "install": "pip install toutatis (ou git clone + setup.py)",
+  "usage": "toutatis -u {username} -s {instagramsessionid}  (extrait email/téléphone d'un compte Instagram)",
+  "annexes": "REQUIERT un sessionID Instagram (cookie d'un compte connecté). Entrée = compte Instagram.",
+  "cle_api": "non (sessionID IG requis)",
+  "statut": "lu"
  },
  {
   "nom": "Exiv2",
