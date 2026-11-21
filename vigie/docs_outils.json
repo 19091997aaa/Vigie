@@ -2390,23 +2390,23 @@
   "nom": "open-kritt",
   "lien": "https://github.com/Kritt-ai/open-kritt",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "audit-code-ia",
+  "install": "git clone Kritt-ai/open-kritt + ./kritt setup + ./kritt start (Git, Docker Compose, Node.js 20+) ; UI sur localhost:5173",
+  "usage": "plateforme self-hosted d'orchestration d'agents IA pour la recherche de vulns dans le CODE : découpe la recherche en tâches, lance plusieurs agents en parallèle (chacun en env isolé lit le code, teste, fuzz, PoC), fusionne en findings dé-dupliqués et classés ; constructeur de workflows",
+  "annexes": "accès à un modèle LLM requis. Infra open source (self-hosted) de recherche de vulns par agents IA (JS). Orchestre des agents isolés (lecture code/test/fuzz/PoC), puis fusion + dé-duplication + classement. Pour chercher dans de VRAIS dépôts. L'équipe Kritt (Blockian) a gagné 1,5M$ en bug bounty avec la version interne. DÉFENSIF/recherche sur du code (le sien ou sous accord). Plutôt bug bounty que diag TPE. Coûte des appels API.",
+  "cle_api": "LLM requis",
+  "statut": "lu"
  },
  {
   "nom": "pentest-ai",
   "lien": "https://github.com/0xSteph/pentest-ai",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-agent",
+  "install": "pip install git+.../pentest-ai ; npm install -g pentest-ai ; serveur MCP (uvx) ; CLI (Python)",
+  "usage": "pentests autonomes en une commande : serveur MCP offensif avec 200+ outils wrappés, ~10-17 agents spécialistes (recon, web, AD, cloud, chaînage, PoC, détection, rapport), 60 probes SPA pour l'OWASP Top 10 ; vérification 'oracle' qui re-exécute chaque exploit ; CI/CD (SARIF, gates)",
+  "annexes": "BYO LLM (pas de clé requise sur le chemin MCP). Serveur MCP + CLI de pentest IA autonome (MIT). 200+ outils offensifs wrappés (BlackArch), agents spécialistes (dont AD, cloud). Vérification 'oracle' (re-exécute l'exploit → élimine faux positifs). Tourne depuis Claude Code ('scanne 10.10.1.0/24 et construis une chaîne vers Domain Admin'). CI/CD. /!\\ TRES OFFENSIF (exploitation, chaînage, outils destructifs type kill_process) — cible autorisée uniquement. Registre MCP : identité non vérifiée. GATE strict.",
+  "cle_api": "BYO LLM (option sans clé)",
+  "statut": "lu"
  },
  {
   "nom": "Burp AI Agent",
