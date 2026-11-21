@@ -79,6 +79,14 @@ CATALOGUE = {
         "depot": "https://github.com/soxoj/maigret",
         "licence": "MIT", "actif": False, "adaptateur": None,
     },
+    # Lot 3 (21/11/2026) : Lighthouse sur TOUTES les pages. pavillon-noir.tech : 31 pages
+    # en 95 s, rien de plus que Lighthouse sur l'accueil. Banc seulement (trop long).
+    "unlighthouse": {
+        "role": "Protections et vitesse de toutes les pages du site (2e avis)",
+        "commande": "unlighthouse-ci", "installation": "npm install -g unlighthouse",
+        "depot": "https://github.com/harlan-zw/unlighthouse",
+        "licence": "MIT", "actif": False, "adaptateur": None,
+    },
     "linkchecker": {
         "role": "Liens cassés du site, et liens vers des domaines disparus",
         "commande": "linkchecker", "installation": "pipx install linkchecker",
