@@ -1356,12 +1356,12 @@
   "nom": "Adalanche",
   "lien": "https://github.com/lkarlslund/Adalanche",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "audit-ad",
+  "install": "télécharger le binaire des Releases (Windows/Mac/Linux, Go) ; build (Go 1.21, PowerShell 7)",
+  "usage": "adalanche collect activedirectory puis analyse (visualiseur et explorateur des ACL d'Active Directory) : collecte les objets AD/GPO (via LDAP authentifié ou un export AD Explorer), puis affiche un graphe d'attaque dans le navigateur — 'qui est VRAIMENT Domain Admin ?' ; langage de requête AQL ; détecte délégation non contrainte, ESC1, serveurs obsolètes, droits admin...",
+  "annexes": "aucune clé (identifiants AD pour la collecte LDAP, OU un export .bin d'AD Explorer). Visualiseur/explorateur des ACL d'AD par graphe (Lars Karlslund, AGPL-3.0, Go). 'Qui est vraiment Domain Admin ?'. Collecte → graphe d'attaque dans le navigateur. Détecte les erreurs de config (délégation non contrainte, ESC1, droits excessifs). Évasif, 1 binaire. Orienté AD-AUDIT/BLUE TEAM. Similaire à BloodHound. Version payante (NetSection). DÉFENSIF/audit AD. Pertinent pour l'offre de sécurisation AD. Collecte authentifiée → audit avec accord.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "SMBMap",
@@ -1400,12 +1400,12 @@
   "nom": "Locksmith",
   "lien": "https://github.com/jakehildreth/Locksmith",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "audit-ad",
+  "install": "Install-Module Locksmith (PowerShell Gallery) ; git clone jakehildreth/Locksmith + Import-Module (PowerShell 5.1+, module ActiveDirectory, poste joint au domaine)",
+  "usage": "Invoke-Locksmith (petit outil pour TROUVER ET CORRIGER les mauvaises configs courantes d'Active Directory Certificate Services / AD CS) : identifie ~10+ malconfigurations (ESC1-16), 4 modes (du rapport à la correction auto), sortie console/CSV + code de remédiation",
+  "annexes": "aucune clé (identifiants AD). Outil DÉFENSIF pour AD Certificate Services (AD CS/PKI) (Jake Hildreth, PowerShell). TROUVE ET CORRIGE les malconfigurations (ESC1 à ESC16). Modes : rapport, rapport+correctifs, CSV, auto-fix. Module ActiveDirectory PowerShell. Sortie avec code de remédiation. Pour les admins AD et la défense (AUDITE et RÉPARE, pas un outil d'attaque). Mode 1 sûr en production. PERTINENT pour l'offre de sécurisation (audit AD CS, faille fréquente et grave). Accès au domaine (interne). Locksmith 2 en dev.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "ldapdomaindump",
