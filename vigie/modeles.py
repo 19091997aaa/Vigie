@@ -30,6 +30,9 @@ class Constat:
     correction: str = ""     # quoi faire
     cle: str = ""            # deux constats de même clé portent sur le MÊME problème : on fusionne
     sources: list = field(default_factory=list)  # quel(s) outil(s) l'ont trouvé (gardé pour Anass)
+    # Utile au dirigeant mais pas une faille (« site sous WordPress », « page lente ») :
+    # affiché dans le rapport, sans retirer de points. Décision d'Anass du 21/11/2026.
+    hors_note: bool = False
 
     def en_dict(self):
         return asdict(self)
@@ -60,9 +63,10 @@ def fusionner(constats):
             if ORDRE[constat.niveau] < ORDRE[garde.niveau]:
                 garde.niveau, garde.titre = constat.niveau, constat.titre
                 garde.explication, garde.correction = constat.explication, constat.correction
+                garde.hors_note = constat.hors_note
     return retenus
 
 
 def note(constats):
     """Note sur 100 : on part de 100 et chaque problème retire des points."""
-    return max(0, 100 - sum(POIDS[c.niveau] for c in constats))
+    return max(0, 100 - sum(POIDS[c.niveau] for c in constats if not c.hors_note))

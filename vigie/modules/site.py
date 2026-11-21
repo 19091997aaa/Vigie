@@ -16,8 +16,10 @@ from ..modeles import CRITIQUE, IMPORTANT, INFO, OK, Constat
 BLOC = "Exposition"
 
 
-def _c(niveau, titre, explication, correction=""):
-    return Constat(BLOC, niveau, titre, explication, correction)
+def _c(niveau, titre, explication, correction="", cle=""):
+    # Une clé par problème : elle permet de recouper avec SSLyze et Lighthouse sans
+    # jamais fondre deux problèmes différents en un seul (vu sur un vrai diagnostic).
+    return Constat(BLOC, niveau, titre, explication, correction, cle=cle)
 
 
 def _ouvrir(url):
@@ -48,16 +50,18 @@ def _certificat(domaine):
     except ssl.SSLError:
         return None, [_c(CRITIQUE, "Certificat du site invalide ou expiré",
                          "Les navigateurs affichent une alerte de sécurité à vos visiteurs.",
-                         "Renouveler ou réinstaller le certificat.")]
+                         "Renouveler ou réinstaller le certificat.", cle="certificat")]
     except OSError:
         return None, [_c(IMPORTANT, "Le site ne répond pas en connexion chiffrée (HTTPS)",
                          "Ce qui transite entre vos visiteurs et le site peut être lu ou modifié.",
-                         "Activer HTTPS chez l'hébergeur.")]
+                         "Activer HTTPS chez l'hébergeur.", cle="https")]
     if jours < 15:
         return jours, [_c(IMPORTANT, f"Le certificat expire dans {jours} jours",
                           "Passé cette date, vos visiteurs verront une alerte de sécurité.",
-                          "Renouveler le certificat, et activer le renouvellement automatique.")]
-    return jours, [_c(OK, "Certificat valide", f"Il reste {jours} jours avant son expiration.")]
+                          "Renouveler le certificat, et activer le renouvellement automatique.",
+                          cle="certificat")]
+    return jours, [_c(OK, "Certificat valide", f"Il reste {jours} jours avant son expiration.",
+                      cle="certificat")]
 
 
 def _redirection(domaine):
@@ -67,10 +71,11 @@ def _redirection(domaine):
         return None, []  # pas de version non chiffrée : rien à signaler
     if finale.lower().startswith("https://"):
         return finale, [_c(OK, "Redirection vers la version chiffrée",
-                           "Un visiteur qui tape l'adresse simple arrive sur la version sécurisée.")]
+                           "Un visiteur qui tape l'adresse simple arrive sur la version sécurisée.",
+                           cle="redirection_https")]
     return finale, [_c(IMPORTANT, "Le site reste accessible sans chiffrement",
                        "Un visiteur peut naviguer sur une version non protégée du site.",
-                       "Rediriger automatiquement http vers https.")]
+                       "Rediriger automatiquement http vers https.", cle="redirection_https")]
 
 
 def _entetes(domaine):
@@ -84,21 +89,22 @@ def _entetes(domaine):
             IMPORTANT, "Le site n'impose pas la connexion chiffrée (HSTS absent)",
             "Sur un Wi-Fi public, un attaquant peut ramener vos visiteurs vers une version "
             "non chiffrée du site.",
-            "Ajouter l'en-tête Strict-Transport-Security."))
+            "Ajouter l'en-tête Strict-Transport-Security.", cle="hsts"))
     if "content-security-policy" not in entetes:
         constats.append(_c(
             INFO, "Pas de politique de contenu (CSP absente)",
             "Le site n'a pas de filet de sécurité contre l'injection de code dans ses pages.",
-            "Ajouter une Content-Security-Policy adaptée au site."))
+            "Ajouter une Content-Security-Policy adaptée au site.", cle="csp"))
     if "x-content-type-options" not in entetes:
         constats.append(_c(INFO, "Protection contre les fichiers déguisés absente",
                            "L'en-tête X-Content-Type-Options n'est pas envoyé.",
-                           "Ajouter X-Content-Type-Options: nosniff."))
+                           "Ajouter X-Content-Type-Options: nosniff.", cle="nosniff"))
     if "x-frame-options" not in entetes and "frame-ancestors" not in entetes.get(
             "content-security-policy", ""):
         constats.append(_c(INFO, "Le site peut être affiché dans une page piégée",
                            "Aucune protection contre l'encadrement du site par un autre site.",
-                           "Ajouter X-Frame-Options: DENY ou une règle frame-ancestors."))
+                           "Ajouter X-Frame-Options: DENY ou une règle frame-ancestors.",
+                           cle="cadre"))
     bavards = [f"{nom}: {entetes[nom]}" for nom in ("server", "x-powered-by")
                if re.search(r"\d", entetes.get(nom, ""))]
     if bavards:
@@ -106,7 +112,7 @@ def _entetes(domaine):
             INFO, "Le site affiche la version de ses logiciels",
             "Information visible par tous : " + " ; ".join(bavards) + ". "
             "Elle aide un attaquant à chercher les failles connues de cette version.",
-            "Masquer les versions dans la configuration du serveur."))
+            "Masquer les versions dans la configuration du serveur.", cle="versions_visibles"))
     if not constats:
         constats.append(_c(OK, "Protections de base du site en place",
                            "Les en-têtes de sécurité attendus sont présents."))
@@ -123,9 +129,5 @@ def analyser(cible):
     jours, c_cert = _certificat(domaine)
     finale, c_redir = _redirection(domaine)
     reponse, c_entetes = _entetes(domaine)
-    # Clé de convergence : les constats qui touchent au chiffrement du site.
-    for constat in c_cert + c_redir:
-        if constat.niveau != OK:
-            constat.cle = "chiffrement"
     brut = {"jours_certificat": jours, "adresse_finale_http": finale, "reponse": reponse}
     return c_cert + c_redir + c_entetes, brut

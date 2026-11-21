@@ -52,8 +52,22 @@ Options utiles de `diagnostic` : `--societe`, `--modules mail,site` ou
 | Module | Bloc | Ce qu'il contrôle | Besoin |
 | --- | --- | --- | --- |
 | `mail` | Exposition | Peut-on envoyer un faux mail au nom de la société (SPF, DKIM, DMARC) | Rien |
+| `checkdmarc` | Exposition | 2e avis mail, plus MTA-STS, rapports TLS, DNSSEC | checkdmarc |
 | `site` | Exposition | Certificat, chiffrement, protections de base du site | Rien |
+| `chiffrement` | Exposition | Versions du chiffrement acceptées (sans test de faille) | SSLyze |
+| `qualite_site` | Exposition | Protections et vitesse de la page, vues par Chrome | Lighthouse + Chrome |
+| `technos` | Exposition | Logiciels visibles (WordPress, PHP…), autres sites qui répondent | httpx |
+| `sousdomaines` | Exposition | Adresses annexes de la société, sources publiques | Subfinder |
+| `domaines` | Exposition | Domaines imitateurs enregistrés | dnstwist[full] |
+| `archives` | Exposition | Fichiers sensibles gardés par les archives d'internet | gau |
+| `metadonnees` | Exposition | Noms, logiciels, GPS cachés dans les fichiers publiés (comptés, jamais listés) | ExifTool |
+| `adresses` | Exposition | Adresses mail visibles publiquement (comptées, sans source de fuite) | theHarvester |
+| `apercu` | — | Capture de la page d'accueil, en tête du rapport | gowitness + Chrome |
 | `pseudos` | Exposition | Comptes publics du dirigeant, via Sherlock | Pseudos et accord écrit |
+
+Tous sont lancés par défaut, sauf `pseudos` et `conformite`. Un outil absent ne bloque
+rien : son contrôle est listé « non réalisé ». Premier essai réel complet : 21/11/2026
+sur pavillon-noir.tech.
 
 ## Comment c'est rangé
 

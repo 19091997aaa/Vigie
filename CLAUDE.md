@@ -85,7 +85,23 @@ Application Python structurée, mécanique fonctionnelle. Points d'entrée :
 
 Modules de contrôle déjà écrits (bloc Exposition) : `mail` (SPF/DKIM/DMARC),
 `site` (TLS/certificat/en-têtes), `pseudos` (Sherlock), `domaines` (dnstwist),
-`checkdmarc`, `conformite` (questionnaire assureur).
+`checkdmarc`, `conformite` (questionnaire assureur), et depuis le 21/11/2026 le
+premier lot d'outils : `chiffrement` (SSLyze), `qualite_site` (Lighthouse),
+`technos` (httpx), `sousdomaines` (Subfinder), `archives` (gau), `metadonnees`
+(ExifTool), `adresses` (theHarvester), `apercu` (capture gowitness dans le rapport).
+Tableau complet : `LISEZMOI.md`, « Ce qui existe ».
+
+Règles apprises sur le premier vrai scan (21/11/2026) :
+- **Une clé de constat = un seul problème.** Deux problèmes sous la même clé
+  fusionnent et l'un disparaît du rapport (c'est arrivé avec DMARC).
+- **Résolveurs publics** pour les outils (`reseau.SERVEURS_DNS`) : la box internet
+  sature et met ~2 s par question.
+- **Jamais installer un paquet sur son seul nom** (npm/PyPI) : 63 faux outils
+  avaient été posés ainsi. `installeur.methodes()` n'essaie que la doc de l'outil
+  et son dépôt exact.
+- **Lighthouse** : pour les protections, lire le détail (`severity`), pas la note.
+- **theHarvester** : uniquement `adresses.SOURCES` (aucune source de fuite) ;
+  ExifTool et theHarvester **comptent** les noms, ne les listent jamais.
 
 Brique de **sélection d'outils** — le cœur de la méthode d'Anass : lancer plusieurs
 dépôts GitHub sur une même cible, comparer les sorties en chiffres, garder les
@@ -100,8 +116,8 @@ sur la machine (chaque outil garde sa licence, se met à jour seul, et Vigie con
 de marcher si l'un manque). Pour brancher un nouvel outil GitHub : voir la section
 « Brancher un outil GitHub » du `LISEZMOI.md`.
 
-**Limite majeure** : les contrôles réseau **n'ont pas encore tourné sur un vrai
-domaine**. La prochaine étape est un **premier vrai scan**.
+**Premier vrai scan fait le 21/11/2026** sur le Mac d'Anass (pavillon-noir.tech,
+note 72/100 avant le lot d'outils). Le Mac d'Anass est l'environnement de scan.
 
 ## Le catalogue d'outils (chantier terminé le 21/11/2026)
 

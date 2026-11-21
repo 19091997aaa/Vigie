@@ -27,7 +27,8 @@ $env:Path += ";$env:USERPROFILE\.local\bin"
 
 # 2. Outils passifs (Python) -------------------------------------------------
 Titre "Outils passifs (sans action sur les machines)"
-foreach ($p in @("sherlock-project", "dnstwist", "checkdmarc")) {
+# dnstwist[full] : sans son module DNS, dnstwist refuse de demarrer avec des resolveurs publics.
+foreach ($p in @("sherlock-project", "dnstwist[full]", "checkdmarc")) {
     try { python -m pipx install $p 2>$null; Ok $p } catch { Rate $p }
 }
 

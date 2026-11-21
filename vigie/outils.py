@@ -13,6 +13,7 @@ Pour brancher un nouvel outil :
      traduit la sortie de l'outil en constats ;
   3. inscrire l'adaptateur dans vigie/modules/__init__.py.
 """
+import os
 import shutil
 import subprocess
 
@@ -33,27 +34,75 @@ CATALOGUE = {
         "role": "Sous-domaines visibles de la société",
         "commande": "subfinder", "installation": "brew install subfinder",
         "depot": "https://github.com/projectdiscovery/subfinder",
-        "licence": "MIT", "actif": False, "adaptateur": None,
+        "licence": "MIT", "actif": False, "adaptateur": "sousdomaines",
+    },
+    # Comparé à Subfinder le 21/11/2026 sur pavillon-noir.tech : 0 trouvé contre 1, et il
+    # laisse un « moteur » tourner après coup. Gardé hors de l'enchaînement, pour le banc.
+    "amass": {
+        "role": "Sous-domaines visibles de la société (2e avis, plus lourd)",
+        "commande": "amass", "installation": "brew install amass",
+        "depot": "https://github.com/owasp-amass/amass",
+        "licence": "Apache-2.0", "actif": False, "adaptateur": None,
+    },
+    "gau": {
+        "role": "Anciennes pages du site gardées par les archives d'internet",
+        "commande": "gau", "installation": "brew install gau",
+        "depot": "https://github.com/lc/gau",
+        "licence": "MIT", "actif": False, "adaptateur": "archives",
+    },
+    "exiftool": {
+        "role": "Informations cachées dans les documents et photos publiés",
+        "commande": "exiftool", "installation": "brew install exiftool",
+        "depot": "https://github.com/exiftool/exiftool",
+        "licence": "Artistic ou GPL (comme Perl)", "actif": False, "adaptateur": "metadonnees",
+    },
+    # Les quatre suivants lisent ce que le site publie à un visiteur (page d'accueil,
+    # poignée de main du chiffrement) : zone sûre du cadre légal (MARCHE.md §2).
+    # Aucune recherche de faille : Vigie ne leur passe que ces réglages-là.
+    "httpx": {
+        "role": "Sites qui répondent, technologie et version",
+        "commande": "httpx", "installation": "brew install httpx",
+        "depot": "https://github.com/projectdiscovery/httpx",
+        "licence": "MIT", "actif": False, "adaptateur": "technos",
+    },
+    "sslyze": {
+        "role": "Versions du chiffrement acceptées par le site",
+        "commande": "sslyze",
+        "installation": "pipx install --python python3.14 sslyze (pas encore compatible 3.15)",
+        "depot": "https://github.com/nabla-c0d3/sslyze",
+        "licence": "AGPL-3.0", "actif": False, "adaptateur": "chiffrement",
+    },
+    "lighthouse": {
+        "role": "Protections et vitesse de la page d'accueil, vues par Chrome",
+        "commande": "lighthouse", "installation": "npm install -g lighthouse",
+        "depot": "https://github.com/GoogleChrome/lighthouse",
+        "licence": "Apache-2.0", "actif": False, "adaptateur": "qualite_site",
+    },
+    "gowitness": {
+        "role": "Capture d'écran de la page d'accueil, pour le rapport",
+        "commande": "gowitness", "installation": "go install github.com/sensepost/gowitness@latest",
+        "depot": "https://github.com/sensepost/gowitness",
+        "licence": "GPL-3.0", "actif": False, "adaptateur": "apercu",
     },
     "dnstwist": {
         "role": "Noms de domaine qui imitent celui de la société",
-        "commande": "dnstwist", "installation": "pipx install dnstwist",
+        "commande": "dnstwist", "installation": "pipx install \"dnstwist[full]\"",
         "depot": "https://github.com/elceef/dnstwist",
         "licence": "Apache-2.0", "actif": False, "adaptateur": "domaines",
+    },
+    "checkdmarc": {
+        "role": "Réglages mail, deuxième avis (SPF, DMARC, MTA-STS, DNSSEC)",
+        "commande": "checkdmarc", "installation": "pipx install checkdmarc",
+        "depot": "https://github.com/domainaware/checkdmarc",
+        "licence": "Apache-2.0", "actif": False, "adaptateur": "checkdmarc",
     },
     "theHarvester": {
         "role": "Adresses mail de la société visibles publiquement",
         "commande": "theHarvester", "installation": "brew install theharvester",
         "depot": "https://github.com/laramies/theHarvester",
-        "licence": "GPL-2.0", "actif": False, "adaptateur": None,
+        "licence": "GPL-2.0", "actif": False, "adaptateur": "adresses",
     },
     # --- Bloc Exposition : scan externe (autorisation signée) ---
-    "httpx": {
-        "role": "Sites qui répondent, technologie et version",
-        "commande": "httpx", "installation": "brew install httpx",
-        "depot": "https://github.com/projectdiscovery/httpx",
-        "licence": "MIT", "actif": True, "adaptateur": None,
-    },
     "naabu": {
         "role": "Services ouverts sur internet (ports)",
         "commande": "naabu", "installation": "brew install naabu",
@@ -118,8 +167,27 @@ CATALOGUE = {
 # HardeningKitty (MIT) pour la configuration de Windows, Maester (MIT) pour Microsoft 365.
 
 
+# Où les installeurs posent les outils (pipx, go, Homebrew). Lancé par un double-clic,
+# Vigie n'hérite pas toujours de ces dossiers : sans eux, un outil bien installé passe
+# pour absent, et un outil écrit en JavaScript ne trouve pas « node ».
+DOSSIERS_OUTILS = ["~/.local/bin", "~/go/bin", "/opt/homebrew/bin", "/usr/local/bin"]
+
+
+def chemin_recherche():
+    dossiers = os.environ.get("PATH", "").split(os.pathsep)
+    for dossier in DOSSIERS_OUTILS:
+        dossier = os.path.expanduser(dossier)
+        if dossier not in dossiers:
+            dossiers.append(dossier)
+    return os.pathsep.join(d for d in dossiers if d)
+
+
+def trouver(commande):
+    return shutil.which(commande, path=chemin_recherche())
+
+
 def disponible(nom):
-    return shutil.which(CATALOGUE[nom]["commande"]) is not None
+    return trouver(CATALOGUE[nom]["commande"]) is not None
 
 
 def executer(nom, arguments, delai=300, dossier=None):
@@ -129,13 +197,15 @@ def executer(nom, arguments, delai=300, dossier=None):
     par l'utilisateur ne peut pas devenir une commande.
     """
     outil = CATALOGUE[nom]
-    chemin = shutil.which(outil["commande"])
+    chemin = trouver(outil["commande"])
     if not chemin:
         raise ControleImpossible(
             f"l'outil {nom} n'est pas installé ({outil['installation']})")
+    environnement = dict(os.environ, PATH=chemin_recherche())
     try:
         resultat = subprocess.run([chemin] + list(arguments), capture_output=True, text=True,
-                                  timeout=delai, cwd=dossier)
+                                  timeout=delai, cwd=dossier, env=environnement,
+                                  errors="replace")
     except subprocess.TimeoutExpired:
         raise ControleImpossible(f"l'outil {nom} n'a pas répondu en {delai} secondes")
     return resultat.stdout

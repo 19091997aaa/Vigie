@@ -1,14 +1,14 @@
 """Installation en masse des outils du catalogue, par catégorie.
 
-Le catalogue des 222 outils ne donne qu'un lien GitHub : on ne connaît pas
-d'avance la bonne commande d'installation. Plutôt que de la deviner, on essaie
-plusieurs méthodes dans l'ordre et on note celle qui marche. L'essai est la mesure.
+Pour chaque outil, on essaie d'abord les commandes écrites dans sa propre
+documentation (docs_outils.json), puis son dépôt GitHub exact, et on note celle
+qui marche. On ne devine JAMAIS un paquet à partir de son nom (voir methodes()).
 
     python3 -m vigie installer --categorie "OSINT : pseudos, e-mails, images, métadonnées"
     python3 -m vigie installer --tous --a-blanc
 
-Rien n'est installé en dehors des gestionnaires standards (pipx, go, npm), qui
-isolent chaque outil. Aucun script distant n'est exécuté.
+Rien n'est installé en dehors des gestionnaires standards (Homebrew, pipx, go,
+npm). Aucun script distant n'est exécuté.
 """
 import json
 import os
@@ -60,14 +60,18 @@ def _lancer(commande, delai=600):
 APPS_PIPX = re.compile(r"^\s*-\s+(\S+)\s*$", re.M)
 
 
-def binaires_poses(libelle, sortie, proprietaire, nom):
+def binaires_poses(libelle, sortie, proprietaire, nom, commande=None):
     """Quels exécutables l'installation a réellement posés. L'outil le dit lui-même."""
     if libelle.startswith("pipx"):
         apps = APPS_PIPX.findall(sortie or "")
         if apps:
             return apps
-    if libelle == "go":
-        return [nom]                     # go install pose le dernier segment du module
+    if libelle.startswith("go"):
+        # go install pose le dernier segment du module : .../v2/cmd/subfinder@latest -> subfinder
+        module = (commande or [""])[-1].split("@")[0]
+        segments = [s for s in module.split("/") if s and s != "..."
+                    and not re.fullmatch(r"v\d+", s)]
+        return [segments[-1]] if len(segments) > 3 else [nom]
     return [nom.lower(), nom]
 
 
@@ -89,19 +93,60 @@ def repond(binaire, delai=25):
     return False
 
 
-def methodes(outil):
-    """Les commandes à essayer pour cet outil, dans l'ordre du plus propre au plus large."""
+DOCS = os.path.join(os.path.dirname(__file__), "docs_outils.json")
+# Un nom de paquet : lettres, chiffres, - _ . et d'éventuelles options entre crochets.
+PAQUET = r"([A-Za-z0-9][A-Za-z0-9._-]*(?:\[[A-Za-z0-9,_-]+\])?)"
+DOCUMENTEES = [
+    ("brew (documenté)", re.compile(r"\bbrew install\s+" + PAQUET), ["brew", "install"]),
+    ("pipx (documenté)", re.compile(r"\bpip[x3]? install\s+(?:--upgrade\s+|-U\s+)?" + PAQUET),
+     ["pipx", "install"]),
+    ("go (documenté)", re.compile(r"\bgo install\s+(?:-v\s+)?(github\.com/\S+@\S+)"), ["go", "install"]),
+    ("npm (documenté)", re.compile(r"\bnpm (?:install|i) -g\s+" + PAQUET), ["npm", "install", "-g"]),
+]
+
+
+def _install_documentee(outil, chemin=DOCS):
+    """La ligne « install » relevée dans le dépôt de l'outil (docs_outils.json)."""
+    try:
+        docs = charger(chemin)
+    except (OSError, ValueError):
+        return ""
+    lien = (outil.get("lien") or "").rstrip("/").lower()
+    for fiche in docs:
+        if fiche.get("nom") == outil.get("nom") or (
+                lien and (fiche.get("lien") or "").rstrip("/").lower() == lien):
+            return fiche.get("install") or ""
+    return ""
+
+
+def methodes(outil, install=None):
+    """Les commandes à essayer pour cet outil.
+
+    JAMAIS un paquet choisi sur son seul nom. Le 21/11/2026, l'ancienne méthode
+    (« npm install -g <nom du dépôt> ») a posé 63 programmes sans rapport sur le Mac
+    d'Anass : un téléchargeur de sous-titres à la place de Subfinder, etc. N'importe qui
+    peut publier un paquet sous le nom d'un outil connu. On n'essaie donc que :
+      1. les commandes écrites dans la documentation de l'outil (docs_outils.json) ;
+      2. le dépôt GitHub de l'outil lui-même (pipx ou go, depuis son adresse exacte).
+    """
     couple = depot(outil.get("lien", ""))
     if not couple:
         return []
     proprietaire, nom = couple
-    simple = nom.lower()
-    return [
-        ("pipx (PyPI)", ["pipx", "install", simple]),
+    texte = _install_documentee(outil) if install is None else install
+    essais, vus = [], set()
+    for libelle, motif, debut in DOCUMENTEES:
+        for paquet in motif.findall(texte):
+            commande = debut + [paquet]
+            if paquet.startswith("-") or tuple(commande) in vus:
+                continue
+            vus.add(tuple(commande))
+            essais.append((libelle, commande))
+    essais += [
         ("pipx (dépôt)", ["pipx", "install", f"git+https://github.com/{proprietaire}/{nom}"]),
-        ("go", ["go", "install", f"github.com/{proprietaire}/{nom}@latest"]),
-        ("npm", ["npm", "install", "-g", simple]),
+        ("go (dépôt)", ["go", "install", f"github.com/{proprietaire}/{nom}@latest"]),
     ]
+    return essais
 
 
 def installer_un(outil, a_blanc=False):
@@ -121,7 +166,7 @@ def installer_un(outil, a_blanc=False):
             raisons.append(f"{libelle} : {message}")
             continue
         # Installé n'est pas prêt : on lance l'exécutable pour le vérifier.
-        for binaire in binaires_poses(libelle, sortie, proprietaire, depot_nom):
+        for binaire in binaires_poses(libelle, sortie, proprietaire, depot_nom, commande):
             if repond(binaire):
                 return {"nom": outil["nom"], "installe": True, "repond": True,
                         "binaire": binaire, "methode": libelle, "raison": ""}
