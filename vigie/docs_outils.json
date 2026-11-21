@@ -2324,12 +2324,12 @@
   "nom": "ARTEX",
   "lien": "https://github.com/BaaRai/ARTEX",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-dangereux",
+  "install": "dépôt original SUPPRIMÉ (était Autumn-27/ARTEX, AGPL-3.0, Go) — des forks subsistent",
+  "usage": "framework multi-agents IA de pentest ENTIÈREMENT AUTONOME : plusieurs agents se répartissent une attaque, lancent de vrais outils offensifs sur une cible (recon via ScopeSentry)",
+  "annexes": "/!\\/!\\ OUTIL TRES DANGEREUX. Pentest IA autonome (publié juil. 2026, Go). MASSIVEMENT ABUSÉ par des attaquants en 3 mois (groupe étatique chinois, crimeware banques Asie) → AVIS FBI, Google Threat Intel en fait une catégorie de menace. Créateur a SUPPRIMÉ le dépôt (closed-source) fin oct. 2026 ; forks restants. Chasse les secrets/clés exposés (GitHub) à vitesse machine. À NE JAMAIS UTILISER — risque juridique et de fuite. BLOQUÉ.",
+  "cle_api": "LLM requis",
+  "statut": "lu"
  },
  {
   "nom": "DeepAudit",
@@ -2346,12 +2346,12 @@
   "nom": "Decepticon",
   "lien": "https://github.com/BitterSecurity/Decepticon",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-agent",
+  "install": "git clone PurpleAILAB/Decepticon + docker compose (Docker v2) ; ou cloud app.decepticon.red",
+  "usage": "agent red team autonome multi-agents (16 agents, LangGraph) : chaîne d'attaque complète (recon, exploitation, élévation de privilèges, mouvement latéral, C2) dans une sandbox Kali ; génère les docs d'engagement (RoE, ConOps) avant d'attaquer",
+  "annexes": "clé API LLM requise (ou cloud). AGENT red team AUTONOME puissant (Apache-2.0, 'Offensive Vaccine'). 16 agents LangGraph, chaîne complète (jusqu'au C2 Sliver, BloodHound). 98% au benchmark XBOW (hacking web). Sandbox Kali. Génère RoE/ConOps/MITRE ATT&CK. /!\\ OFFENSIF puissant — 'tests autorisés' uniquement ; jamais dans le diag auto/gratuit. GATE.",
+  "cle_api": "LLM requis",
+  "statut": "lu"
  },
  {
   "nom": "RedAmon",
