@@ -933,6 +933,28 @@ class LotDix(Base):
         self.assertIn(os.path.expanduser("~/go/bin"), outils.chemin_recherche())
 
 
+class Ports(unittest.TestCase):
+    XML = """<?xml version="1.0"?><nmaprun><host><status state="up"/>
+      <address addr="192.168.1.20" addrtype="ipv4"/><hostnames><hostname name="pc-bureau"/></hostnames>
+      <ports><port protocol="tcp" portid="3389"><state state="open"/><service name="ms-wbt-server"/></port>
+      <port protocol="tcp" portid="80"><state state="closed"/><service name="http"/></port>
+      <port protocol="tcp" portid="49999"><state state="open"/><service name="unknown"/></port></ports></host>
+      <host><status state="down"/><address addr="192.168.1.30" addrtype="ipv4"/></host></nmaprun>"""
+
+    def test_lecture_et_traduction(self):
+        from vigie import ports
+        with tempfile.NamedTemporaryFile("w", suffix=".xml", delete=False) as f:
+            f.write(self.XML)
+        self.addCleanup(os.remove, f.name)
+        appareils = ports.lire_nmap(f.name)
+        self.assertEqual(len(appareils), 1)                         # l'appareil éteint est ignoré
+        self.assertEqual([p["port"] for p in appareils[0]["ports"]], [3389, 49999])  # fermé ignoré
+        lignes = ports.traduire(appareils)
+        self.assertEqual(lignes[0][0], CRITIQUE)                    # le bureau à distance d'abord
+        self.assertIn("pc-bureau", lignes[0][1])
+        self.assertIn("non identifié", lignes[1][1])
+
+
 class Pdf(unittest.TestCase):
     def test_sans_navigateur_message_clair(self):
         vrai = pdf.trouver_navigateur
