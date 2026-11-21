@@ -35,8 +35,11 @@ LOGICIELS = ("PDF:Creator", "PDF:Producer", "XMP:CreatorTool", "EXIF:Software",
 
 
 def _du_domaine(url, domaine):
-    hote = (urllib.parse.urlparse(url).hostname or "").lower()
-    return hote == domaine or hote.endswith("." + domaine)
+    # http(s) seulement : un lien « file://domaine/... » glissé dans une page ne doit
+    # jamais faire lire un fichier du Mac (relevé par Semgrep le 21/11/2026).
+    morceaux = urllib.parse.urlparse(url)
+    hote = (morceaux.hostname or "").lower()
+    return morceaux.scheme in ("http", "https") and (hote == domaine or hote.endswith("." + domaine))
 
 
 def liens_fichiers(html, base, domaine):
