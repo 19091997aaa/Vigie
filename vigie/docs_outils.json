@@ -1818,23 +1818,23 @@
   "nom": "Plaso (log2timeline)",
   "lien": "https://github.com/log2timeline/plaso",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "dfir-timeline",
+  "install": "pip install plaso ; docker pull log2timeline/plaso ; apt (Kali)",
+  "usage": "log2timeline --storage-file out.plaso image.dd (moteur Python de création de 'super timeline' forensic) : extrait et agrège TOUS les événements horodatés d'un système (fichiers MACB, registre, EVTX, navigateur, prefetch, LNK...) en une timeline unique ; psort pour filtrer/exporter (CSV), pinfo pour inspecter, psteal en un passage",
+  "annexes": "aucune clé. Moteur Python de 'super timeline' forensic (back-end de log2timeline, Apache-2.0). Agrège des centaines de types d'artefacts horodatés (fichiers, registre, EVTX, navigateur, logs cloud AWS/Azure) en une timeline unique. Outils : log2timeline (extraction), psort (filtre/export CSV), psteal (1 passage). Nourrit Timesketch (visualisation). DÉFENSIF/DFIR. Détecte l'anti-forensic. Courbe d'apprentissage. Pour reconstruire la chronologie d'un incident. Nécessite une image/des artefacts.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Zircolite",
   "lien": "https://github.com/wagga40/Zircolite",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "dfir-triage",
+  "install": "binaire des Releases (Win/Lin/Mac) ; git clone wagga40/Zircolite + pip (Python 3.10+) ; docker wagga40/zircolite",
+  "usage": "python3 zircolite.py -e <EVTX> -r <ruleset Sigma> (outil autonome d'application de règles SIGMA sur des logs : EVTX Windows, Auditd, Sysmon for Linux, CSV/JSONL/XML) ; détecte les menaces, sortie JSON ; utilisable sur le poste ou en lab",
+  "annexes": "aucune clé, règles Sigma incluses/converties. Détection autonome basée SIGMA (Python 3, wagga40, auteur français). Applique des règles Sigma sur EVTX Windows, Auditd, Sysmon for Linux, CSV/JSONL. Rapide (SQLite en mémoire), option faible conso (--ondiskdb). Règles Sigma natives (pySigma). Sortie JSON. S'intègre à Velociraptor. DÉFENSIF/DFIR. Proche de Chainsaw/Hayabusa. Utilisable directement sur un poste investigué. Pertinent pour analyser vite des logs Windows/Linux d'une TPE.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Outils Zimmerman",
