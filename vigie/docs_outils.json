@@ -905,12 +905,12 @@
   "nom": "ROADtools",
   "lien": "https://github.com/dirkjanm/ROADtools",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "azure-ad",
+  "install": "git clone dirkjanm/ROADtools ; pip install roadlib/ roadrecon/ ; npm install (frontend)",
+  "usage": "roadrecon auth ; roadrecon gather ; roadrecon gui  (explore un tenant Azure AD/Entra, recon rouge/bleue)",
+  "annexes": "REQUIERT une authentification au tenant (creds/token). Collecte via l'API Graph. Recon Azure AD offensif+défensif. À GATER (audit AD sur autorisation).",
+  "cle_api": "authentification tenant Azure requise",
+  "statut": "lu"
  },
  {
   "nom": "MicroBurst",
@@ -960,12 +960,12 @@
   "nom": "AADInternals",
   "lien": "https://github.com/Gerenios/AADInternals",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "azure-ad",
+  "install": "Install-Module AADInternals (PowerShell Gallery)",
+  "usage": "fonctions Get-AADInt* : énumération tenant, OSINT (domaines/fédération SANS creds), + exploitation AVEC creds",
+  "annexes": "NUANCE : partie OSINT SANS creds (savoir si un domaine a un tenant M365, type de fédération) = utilisable pour le diag EXTERNE. Partie exploitation (export certs ADFS, bypass MFA, backdoors) = offensive, à GATER. MITRE S0677.",
+  "cle_api": "non pour l'OSINT ; creds pour l'exploitation",
+  "statut": "lu"
  },
  {
   "nom": "Monkey365",
