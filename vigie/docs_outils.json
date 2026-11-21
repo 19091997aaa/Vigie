@@ -2016,23 +2016,23 @@
   "nom": "MITRE Caldera",
   "lien": "https://github.com/apache/caldera",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif",
+  "install": "git clone mitre/caldera --recursive + pip ; docker ghcr.io/mitre/caldera (Python, Go, NodeJS)",
+  "usage": "python3 server.py (plateforme d'émulation d'adversaire automatisée, MITRE ATT&CK : déploie des agents, enchaîne des techniques d'attaque post-compromission, interface web)",
+  "annexes": "aucune clé. PLATEFORME OFFENSIVE d'émulation d'adversaire (MITRE). Client-serveur : agents + serveur C2. Automatise des opérations post-compromission (ATT&CK). /!\\ exécute des attaques réelles — accord écrit obligatoire. Plus lourd qu'Atomic Red Team (campagnes). Red team / test de défense (avec Wazuh). GATE.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Infection Monkey",
   "lien": "https://github.com/guardicore/monkey",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif",
+  "install": "installeur prêt à l'emploi (Windows/Linux/Docker) ; git clone guardicore/monkey ; télécharger depuis le site",
+  "usage": "simulation de brèche et d'attaque (BAS) : un 'Monkey' infecte une machine et se propage (mouvement latéral) pour tester la segmentation ; rapports MITRE ATT&CK + Zero Trust",
+  "annexes": "aucune clé. Outil BAS (Breach & Attack Simulation) open source GRATUIT. Ver 'sûr' qui teste la propagation/mouvement latéral interne. 3 rapports : ATT&CK, Zero Trust, BAS. /!\\ offensif (se propage sur le réseau) — autorisation requise. Teste surtout la SEGMENTATION réseau. GATE.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Suricata",
