@@ -1180,12 +1180,12 @@
   "nom": "Dalfox",
   "lien": "https://github.com/hahwul/dalfox",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "xss",
+  "install": "brew install dalfox ; snap install dalfox ; go install github.com/hahwul/dalfox/v2@latest ; docker",
+  "usage": "dalfox url {url}  (scanner XSS automatisé : analyse de paramètres + injection + vérification DOM)",
+  "annexes": "aucune clé. Scanner XSS (injecte des payloads = offensif). Vérifie via un parseur DOM headless. Sortie SARIF (CI/CD). Scan actif offensif = À GATER (autorisation).",
+  "cle_api": "non (callback XSS Hunter optionnel)",
+  "statut": "lu"
  },
  {
   "nom": "gau",
@@ -1202,12 +1202,12 @@
   "nom": "Interactsh",
   "lien": "https://github.com/projectdiscovery/interactsh",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "oob",
+  "install": "go install github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest (Go 1.20+) ; docker ; npm",
+  "usage": "interactsh-client  (génère une URL unique pour le test OOB : détecte les vuln aveugles hors-bande via DNS/HTTP/SMTP)",
+  "annexes": "serveur+client d'interactions OOB (type Burp Collaborator). Détecte les vuln aveugles (SSRF aveugle, injection OOB). Serveurs publics PD (oast.pro) ou auto-hébergé. S'intègre à Nuclei ({{interactsh-url}}). Infrastructure de test, pas un scanner seul. Audit.",
+  "cle_api": "non (PDCP optionnel)",
+  "statut": "lu"
  },
  {
   "nom": "Retire.js",
