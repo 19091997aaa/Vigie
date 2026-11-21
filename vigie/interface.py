@@ -19,7 +19,7 @@ import time
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import __version__, interface_manuel, rapport
+from . import __version__, interface_duel, interface_manuel, rapport
 from .cli import dossier_rapport, lancer, nettoyer_domaine
 from .modeles import Cible, ControleImpossible
 
@@ -94,7 +94,7 @@ PAGE = """<!DOCTYPE html>
 <p class="aide">Contrôles lancés&nbsp;: {controles}. Ils lisent des informations publiques et
 prennent environ 5 minutes. Vous suivez chaque contrôle en direct.</p>
 </form>
-<p><a href="/manuel">Outils manuels (contrôles actifs, sur autorisation signée)</a></p>
+<p><a href="/comparer">Comparer des outils</a> · <a href="/manuel">Outils manuels (contrôles actifs, sur autorisation signée)</a></p>
 <h2>Rapports déjà produits</h2>
 {rapports}
 </div>
@@ -311,6 +311,14 @@ def fabrique(sortie, code):
             if adresse.path == "/":
                 self._envoyer(200, page_accueil(sortie))
                 return
+            if adresse.path == "/comparer":
+                self._envoyer(200, interface_duel.page())
+                return
+            banc = re.fullmatch(r"/comparer/([A-Za-z0-9_-]{8,40})", adresse.path)
+            if banc and interface_duel.page_resultat(banc.group(1)):
+                self._envoyer(200, interface_duel.page_resultat(banc.group(1)),
+                              [("Cache-Control", "no-store")])
+                return
             if adresse.path == "/manuel":
                 self._envoyer(200, interface_manuel.page(AUTORISATIONS))
                 return
@@ -350,6 +358,16 @@ def fabrique(sortie, code):
             origine = self.headers.get("Origin", "")
             if origine and urllib.parse.urlsplit(origine).netloc != self.headers.get("Host", ""):
                 self._envoyer(403, "<p>Formulaire refusé : il ne vient pas de Vigie.</p>")
+                return
+            if self.path == "/comparer":
+                taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
+                corps = self.rfile.read(taille).decode("utf-8", "replace")
+                try:
+                    ident = interface_duel.lancer(corps)
+                except ValueError as erreur:
+                    self._envoyer(400, interface_duel.page(str(erreur)))
+                    return
+                self._envoyer(303, "", [("Location", f"/comparer/{ident}")])
                 return
             if self.path in ("/manuel/autorisation", "/manuel/lancer"):
                 taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
