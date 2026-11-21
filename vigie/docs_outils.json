@@ -1642,12 +1642,12 @@
   "nom": "Ghidra",
   "lien": "https://github.com/NationalSecurityAgency/ghidra",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "reverse-engineering",
+  "install": "télécharger depuis ghidra-sre.org / github.com/NationalSecurityAgency/ghidra + ./ghidraRun (Java requis) ; multi-plateforme",
+  "usage": "framework de rétro-ingénierie logicielle (SRE) à interface graphique : désassemble, DÉCOMPILE (binaire → pseudo-C lisible) et analyse des exécutables de nombreuses architectures ; gestion par projet (multi-fichiers, collaboratif), scriptable, Headless Analyzer",
+  "annexes": "aucune clé. Framework de rétro-ingénierie (SRE) de la NSA (ouvert en 2019, Apache-2.0, Java). Désassemble ET décompile (pseudo-C lisible), nombreuses architectures. Interface graphique accessible même sans expertise. Gestion par projet, collaboratif, scriptable. Pour analyser un malware, comprendre un binaire, trouver des vulns. DÉFENSIF/analyse (usage légal). Alternative gratuite à IDA Pro. Niche : analyse de malware approfondie (peu pertinent pour un diag TPE, plutôt expertise pointue).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "CyberChef",
@@ -1664,12 +1664,12 @@
   "nom": "radare2",
   "lien": "https://github.com/radareorg/radare2",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "reverse-engineering",
+  "install": "git clone radareorg/radare2 + sys/install.sh ; pip install r2env ; paquets (apt/kali) ; multi-plateforme",
+  "usage": "r2 ./binaire puis aaa (framework de rétro-ingénierie CLI : éditeur hexa, désassembleur, débogueur, analyse, patch de binaires) ; nombreux utilitaires (rabin2, rax2, rasm2...) ; Cutter = interface graphique au-dessus de r2",
+  "annexes": "aucune clé. Framework de rétro-ingénierie en CLI (LGPL-3, philosophie Unix). Désassemble, analyse, débogue, patche, émule des binaires. Boîte à outils (rabin2 infos, rax2 conversions, rasm2 assembleur). Cutter = GUI moderne. Pour analyse de malware, forensic de binaires, dev d'exploits. DÉFENSIF/analyse (ou offensif selon usage). Courbe d'apprentissage raide. Alternative libre à IDA/Ghidra. Niche experte (peu pertinent pour un diag TPE).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Wireshark",
