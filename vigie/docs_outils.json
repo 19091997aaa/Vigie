@@ -2214,12 +2214,12 @@
   "nom": "promptfoo",
   "lien": "https://github.com/promptfoo/promptfoo",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "llm-redteam",
+  "install": "npm install -g promptfoo (Node.js 22+) ; npx promptfoo",
+  "usage": "promptfoo redteam init/run/report (éval + red teaming de LLM : génère des tests adverses — jailbreaks, injections, fuite de données — scanne 50+ types de vulns, rapport web)",
+  "annexes": "clé API selon la cible. Éval ET red teaming de LLM (dev-first, local). 67+ plugins d'attaque, 90+ fournisseurs (OpenAI, Anthropic, Azure...). Tests adverses OWASP LLM Top 10. S'intègre en CI/CD (GitHub Action). Tourne 100% en local (prompts privés). PERTINENT pour auditer une appli LLM d'un client. NB : promptfoo a rejoint OpenAI (reste open source MIT).",
+  "cle_api": "selon la cible",
+  "statut": "lu"
  },
  {
   "nom": "PentestGPT",
