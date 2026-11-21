@@ -1114,12 +1114,12 @@
   "nom": "Nikto",
   "lien": "https://github.com/sullo/nikto",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "web-scanner",
+  "install": "apt install nikto (Kali) ; git clone sullo/nikto → program/nikto.pl ; docker sullo/nikto",
+  "usage": "nikto -h {url}  (scanne un serveur web : fichiers dangereux, logiciels obsolètes, mauvaises configs ; ~6500 fichiers/CGI)",
+  "annexes": "aucune clé. Scanner de serveur web ACTIF (envoie des requêtes HTTP de test à la cible). N'EXPLOITE pas, détecte seulement. Bruyant (non furtif). Pour l'offre AUDIT (autorisation).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "feroxbuster",
@@ -1268,12 +1268,12 @@
   "nom": "Wapiti",
   "lien": "https://github.com/wapiti-scanner/wapiti",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "web-scanner",
+  "install": "pip install wapiti3 (Python 3.12+) ; apt install wapiti",
+  "usage": "wapiti -u {url}  (scanner de vuln web boîte noire : fuzze pages/formulaires — SQLi, XSS, injection, Log4Shell, SSRF...)",
+  "annexes": "aucune clé. Scanner ACTIF (injecte des payloads, comme un fuzzer). Module 'wapp' = technos web + CVE (Wappalyzer). Énumère WordPress/Drupal, subdomain takeovers. Rapports HTML/XML/JSON. Offre AUDIT (scan intrusif).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "WPProbe",
