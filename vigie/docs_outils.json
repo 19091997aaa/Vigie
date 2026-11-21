@@ -894,12 +894,12 @@
   "nom": "ScubaGear",
   "lien": "https://github.com/cisagov/ScubaGear",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "m365",
+  "install": "Install-Module -Name ScubaGear (PSGallery, PowerShell 5) ; puis Initialize-SCuBA",
+  "usage": "Invoke-SCuBA  (vérifie la config d'un tenant Microsoft 365 contre les référentiels CISA SCuBA ; rapport HTML/JSON/CSV)",
+  "annexes": "REQUIERT un accès admin au tenant M365 (interroge les API M365). Audit interne cloud Microsoft, pas diag externe. Utilise OPA + policies Rego.",
+  "cle_api": "accès admin tenant M365 requis",
+  "statut": "lu"
  },
  {
   "nom": "ROADtools",
@@ -993,12 +993,12 @@
   "nom": "AzureHound",
   "lien": "https://github.com/SpecterOps/AzureHound",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "azure-ad",
+  "install": "télécharger le binaire des releases SpecterOps/AzureHound (Windows/Linux/macOS)",
+  "usage": "azurehound list -u user -p pass -t tenant  (collecte Azure/Entra pour BloodHound : chemins d'attaque d'identité)",
+  "annexes": "OFFENSIF : collecteur BloodHound. REQUIERT des identifiants Azure/Entra valides (API Graph accessibles de l'extérieur). À GATER derrière autorisation, jamais dans le pipeline auto.",
+  "cle_api": "identifiants Azure/Entra requis",
+  "statut": "lu"
  },
  {
   "nom": "PSRule for Azure",
