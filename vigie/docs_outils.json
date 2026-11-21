@@ -751,12 +751,12 @@
   "nom": "Prowler",
   "lien": "https://github.com/prowler-cloud/prowler",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "cloud",
+  "install": "pip install prowler (Python 3.9+) ; docker",
+  "usage": "prowler aws ; prowler azure ; prowler gcp ; prowler kubernetes  (audit conformité CIS/NIST/PCI-DSS d'un compte cloud)",
+  "annexes": "REQUIERT des identifiants cloud (AWS CLI configuré, creds Azure/GCP). Audite LE compte cloud du client, PAS un domaine externe. 500+ contrôles. Offre audit, pas diag gratuit.",
+  "cle_api": "identifiants cloud requis",
+  "statut": "lu"
  },
  {
   "nom": "Nuclei Templates",
@@ -774,11 +774,11 @@
   "lien": "https://github.com/anchore/grype",
   "categorie": "Scan de vulnérabilités et audit de configuration",
   "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "install": "brew install grype (tap anchore/grype) ; script install.sh ; docker anchore/grype",
+  "usage": "grype {image} ; grype dir:/chemin ; grype -o json  (vulnérabilités d'images conteneurs/dossiers)",
+  "annexes": "télécharge sa base SQLite de vulnérabilités au 1er run (MAJ auto). Marche avec Syft (SBOM). macOS/Linux seulement. Scanne conteneurs/fichiers, PAS un domaine.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Kubescape",
