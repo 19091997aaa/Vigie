@@ -1301,23 +1301,23 @@
   "nom": "Responder",
   "lien": "https://github.com/lgandx/Responder",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-ad",
+  "install": "git clone lgandx/Responder + pip install -r requirements.txt ; apt install responder (Kali) ; Python 2.7/3.x",
+  "usage": "sudo responder -I eth0 (empoisonneur LLMNR/NBT-NS/mDNS + serveurs d'authentification pirates HTTP/SMB/MSSQL/FTP/LDAP) : répond aux requêtes de résolution de nom en échec, se fait passer pour l'hôte, capture les hashes NetNTLMv1/v2 (à casser hors-ligne ou relayer) ; mode -A (analyse passive)",
+  "annexes": "aucune clé. Empoisonneur LLMNR/NBT-NS/mDNS (Laurent Gaffie, GPLv3, intégré à Kali). Capture les hashes NetNTLM. MITRE ATT&CK T1557.001. Serveurs pirates intégrés. Mode -A = ANALYSE PASSIVE (observe sans empoisonner) — utile en diag pour repérer LLMNR/NBT-NS activés (vulnérabilité fréquente). /!\\ mode actif (empoisonnement) OFFENSIF et intrusif — cible autorisée. Remédiation : désactiver LLMNR/NBT-NS (GPO), signature SMB. GATE (actif) ; mode -A envisageable en audit.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "NetExec",
   "lien": "https://github.com/Pennyw0rth/NetExec",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-ad",
+  "install": "pipx install git+.../NetExec ; apt install pipx git puis pipx ; brew (Mac, Rust requis) (Python)",
+  "usage": "nxc smb 10.0.0.0/24 -u alice -p ... ('couteau suisse' d'exécution et de recon sur réseaux Windows/AD, successeur de CrackMapExec) : auth + post-auth sur SMB/LDAP/MSSQL/WinRM/RDP/SSH/FTP/VNC ; 200+ modules (ingestion BloodHound auto, scan ESC1-15, PrintNightmare, password spraying, énumération)",
+  "annexes": "aucune clé. 'Couteau suisse' d'exécution réseau Windows/AD (successeur communautaire de CrackMapExec, archivé fin 2023, BSD). Une CLI, 8+ protocoles, 200+ modules. Auth + post-auth : énumération, exécution, password spraying, ingestion BloodHound, scan de vulns (ESC1-15, PrintNightmare). Rapide (grande échelle). /!\\ TRES OFFENSIF (exécution, spraying) — cible autorisée uniquement, jamais dans le diag auto/gratuit. GATE strict.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Certipy",
