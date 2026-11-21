@@ -1444,12 +1444,12 @@
   "nom": "SecLists",
   "lien": "https://github.com/danielmiessler/SecLists",
   "categorie": "Mots de passe et audit d'authentification",
-  "facette": "mots_de_passe",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "wordlists",
+  "install": "git clone --depth 1 https://github.com/danielmiessler/SecLists.git ; apt install seclists (Kali) ; pacman (BlackArch) ; ~1.2 GB",
+  "usage": "collection de listes (wordlists) pour les tests de sécurité : noms d'utilisateurs, mots de passe (rockyou, mdp par défaut...), URLs/répertoires (fuzzing web), payloads (XSS, SQLi, 'naughty strings'), web shells, motifs de données sensibles... ; 'le compagnon du testeur de sécurité'",
+  "annexes": "aucune clé (ce sont des fichiers de listes, pas un exécutable). Collection de référence de wordlists (Daniel Miessler, Jason Haddix, g0tmi1k, MIT). Noms d'utilisateurs, mots de passe (dont rockyou, mdp par défaut), chemins web (fuzzing), payloads (XSS/SQLi), web shells, données sensibles. NEUTRE en soi (des listes) : alimente d'AUTRES outils (Hashcat, ffuf/Gobuster...). Peut déclencher un faux positif antivirus (web shells). Base utile pour l'audit (mdp par défaut à tester, défensif) comme pour l'offensif. PAS d'action directe : support.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Hashcat",
@@ -1521,12 +1521,12 @@
   "nom": "Name-That-Hash",
   "lien": "https://github.com/bee-san/Name-That-Hash",
   "categorie": "Mots de passe et audit d'authentification",
-  "facette": "mots_de_passe",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "hash-id",
+  "install": "pip3 install name-that-hash ; pipx install name-that-hash ; apt install name-that-hash (Kali) ; puis nth ou name-that-hash (Python, MIT/GPL)",
+  "usage": "nth --text '5f4dcc...' (ou --file hashes.txt) (identifie le TYPE d'un hash) : reconnaît MD5, SHA256, NTLM et 300+ types, classe par popularité (le plus probable d'abord), donne un résumé de chaque type et le mode Hashcat/John correspondant",
+  "annexes": "aucune clé. Identificateur de type de hash (bee-san, créateur de RustScan/Ciphey). Reconnaît 300+ types (MD5, SHA, NTLM...), classés par popularité. Donne le mode Hashcat/John pour casser. App web aussi. NEUTRE/support : aide à préparer le cassage (avec Hashcat/John). Succède à hashID. Simple, utile en audit de mdp. Pas d'action offensive directe. Support.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Medusa",
