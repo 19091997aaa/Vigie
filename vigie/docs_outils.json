@@ -2357,12 +2357,12 @@
   "nom": "RedAmon",
   "lien": "https://github.com/samugit83/redamon",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-agent",
+  "install": "déploiement en une commande sur serveur ; docker (Kali) ; git clone samugit83/redamon",
+  "usage": "framework red team agentique IA (tests AUTORISÉS) : chaîne complète recon → exploitation → post-exploitation → triage IA → agent CodeFix → pull request GitHub (répare les vulns, pas seulement les trouve) ; multi-agents parallèles",
+  "annexes": "clé API LLM requise. Framework red team AGENTIQUE IA (MIT, v6, STRIDE-modélisé). Pipeline bout-en-bout : recon→exploit→post-exploit→triage IA→CodeFix→PR GitHub. Ne s'arrête pas aux vulns, il les corrige. 'Supervision humaine à chaque étape critique'. Kali/Docker. Inclut des tests offensifs IA (AI Gauntlet). /!\\ OFFENSIF — 'tests autorisés' uniquement. GATE.",
+  "cle_api": "LLM requis",
+  "statut": "lu"
  },
  {
   "nom": "PentestAgent",
@@ -2434,11 +2434,11 @@
   "nom": "DorkAgent",
   "lien": "https://github.com/yee-yore/DorkAgent",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "osint-offensif",
+  "install": "git clone yee-yore/DorkAgent + pip install -r requirements.txt (Python 3.11) ; config clés (Serper + LLM) ; python dorkagent.py",
+  "usage": "agent LLM de Google Dorking automatisé : on entre un domaine cible, il génère et lance des requêtes Google 'dork' pour trouver des infos exposées/pages vulnérables (bug bounty, OSINT) ; CrewAI",
+  "annexes": "clé API LLM (Claude/Gemini) + clé Serper.dev (recherche Google). Agent LLM de Google Dorking (MIT, CrewAI). Automatise les requêtes 'dork' pour trouver fichiers/pages sensibles exposés sur un domaine. OSINT/bug bounty. Zone grise : le dorking interroge Google (public) — proche du PASSIF — mais cibler un domaine tiers reste du repérage offensif. Pour le diag gratuit : chercher les infos exposées sur SA cible via Google est envisageable (public) mais à encadrer. GATE prudent.",
+  "cle_api": "LLM + Serper",
+  "statut": "lu"
  }
 ]
