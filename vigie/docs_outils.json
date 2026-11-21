@@ -1125,12 +1125,12 @@
   "nom": "feroxbuster",
   "lien": "https://github.com/epi052/feroxbuster",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "bruteforce",
+  "install": "install-nix.sh ; brew install feroxbuster ; winget/choco ; apt (Kali) ; docker",
+  "usage": "feroxbuster -u {url} -w {wordlist}  (découverte de contenu RÉCURSIVE : fichiers/répertoires non liés)",
+  "annexes": "aucune clé, nécessite une WORDLIST (SecLists par défaut). Écrit en Rust, rapide, RÉCURSIF. Brute-force ACTIF de chemins (comme Gobuster/ffuf). Scan actif = autorisation. Offre AUDIT.",
+  "cle_api": "non (wordlist requise)",
+  "statut": "lu"
  },
  {
   "nom": "jwt_tool",
@@ -1235,12 +1235,12 @@
   "nom": "Burp Suite Community",
   "lien": "https://portswigger.net/burp/communitydownload",
   "categorie": "Pentest web",
-  "facette": "urls",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "web-proxy",
+  "install": "télécharger depuis portswigger.net/burp/communitydownload (Java, Win/Linux/macOS)",
+  "usage": "proxy MITM + Intercepter + Repeater + Intruder (brute-force bridé) ; test manuel d'appli web",
+  "annexes": "aucune clé. Boîte à outils manuelle de test web (PortSwigger). Édition Community GRATUITE : proxy, interception, repeater ; PAS de scanner auto (réservé au Pro ~449$/an), Intruder bridé. Certificat CA à installer. Audit manuel (autorisation).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "SSRFmap",
