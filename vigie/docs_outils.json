@@ -1488,12 +1488,12 @@
   "nom": "CUPP",
   "lien": "https://github.com/Mebus/cupp",
   "categorie": "Mots de passe et audit d'authentification",
-  "facette": "mots_de_passe",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "wordlists",
+  "install": "git clone Mebus/cupp ; apt install cupp (Kali) ; pip install cupp ; python3 cupp.py",
+  "usage": "python3 cupp.py -i (Common User Passwords Profiler : génère une wordlist CIBLÉE sur une personne à partir d'infos personnelles) : pose des questions interactives (nom, date de naissance, surnom, nom de l'animal, du conjoint...) et produit un dictionnaire de mots de passe probables ; -w pour améliorer une liste existante",
+  "annexes": "aucune clé. Générateur de wordlist CIBLÉE (Muris Kurgas, GPL-3, Python). Mode interactif : questions sur une personne (nom, date, surnom, animal, entreprise...) → mots de passe probables (variations, chiffres, symboles). OSINT sur la cible. NEUTRE/support (génère une liste) MAIS la liste sert ensuite à un bruteforce/cassage. Illustre la faiblesse des mdp basés sur des infos perso (utile en sensibilisation/audit). Pour red team/pentest. Support.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Patator",
@@ -1510,12 +1510,12 @@
   "nom": "CeWL",
   "lien": "https://github.com/digininja/CeWL",
   "categorie": "Mots de passe et audit d'authentification",
-  "facette": "mots_de_passe",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "wordlists",
+  "install": "git clone digininja/CeWL + bundle install (Ruby + gems) ; apt install cewl (Kali) ; docker ghcr.io/digininja/cewl",
+  "usage": "cewl -d 2 -m 5 -w wordlist.txt https://cible.com (Custom Word List generator : explore (spider) un site web jusqu'à une profondeur donnée et extrait les mots uniques pour en faire une wordlist) : options de longueur min, extraction d'emails (-e), de métadonnées (-a)",
+  "annexes": "aucune clé. Générateur de wordlist CIBLÉE (Robin Wood/digininja, Ruby). Explore (spider) un site web et collecte les mots uniques → wordlist spécifique à la cible (jargon métier, noms de produits...). Extrait aussi emails et métadonnées. Alimente John/Hashcat/Hydra. NEUTRE/support (crawl public + génération de liste) — le crawl d'un site public est peu intrusif, mais la liste sert à casser des mdp. Utile quand les wordlists génériques échouent. Support.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Name-That-Hash",
