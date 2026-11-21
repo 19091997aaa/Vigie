@@ -5,7 +5,8 @@ Il lance des contrôles, traduit les résultats en « français de patron » et 
 un rapport (page imprimable, texte, données). Développeur : **Anass**, solo.
 
 > Ce fichier est le point d'entrée. Pour le détail technique et la feuille de route
-> semaine par semaine, voir **`LISEZMOI.md`**.
+> semaine par semaine, voir **`LISEZMOI.md`**. Pour les décisions produit prises avec
+> Anass (format du livrable, accroches, critères de tri des outils), voir **`VISION.md`**.
 
 ## Comment travailler ici (IMPORTANT)
 
