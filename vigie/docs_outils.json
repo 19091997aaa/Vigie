@@ -2258,12 +2258,12 @@
   "nom": "hackingBuddyGPT",
   "lien": "https://github.com/ipa-lab/hackingBuddyGPT",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-agent",
+  "install": "git clone ipa-lab/hackingBuddyGPT + pip ; pip install hackingBuddyGPT ; config .env (clé OpenAI + IP/identifiants de la VM)",
+  "usage": "wintermute <cas d'usage> (framework pour chercheurs : agents LLM d'attaque autonomes — élévation de privilèges Linux/Windows, test d'API web — en ~50 lignes de code)",
+  "annexes": "clé API LLM requise (OpenAI). Framework de recherche/pentest par agents LLM (TU Wien, GitHub Accelerator 2024). Agents autonomes (privesc Linux/Windows, test d'API web). Prototyper un agent en <50 lignes. /!\\ OFFENSIF — 'usage sans consentement mutuel = illégal'. Expérimental. Cible de test/VM. Coûte des appels API. GATE.",
+  "cle_api": "LLM requis",
+  "statut": "lu"
  },
  {
   "nom": "Nebula",
@@ -2280,12 +2280,12 @@
   "nom": "Strix",
   "lien": "https://github.com/usestrix/strix",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-agent",
+  "install": "curl -sSL https://strix.ai/install | bash ; pipx install strix-agent (Python 3.12+, Docker) ; config STRIX_LLM + clé",
+  "usage": "strix --target ./repo ou https://app.com (agents IA pentesteurs autonomes : recon, exploitation, validation par PoC réel ; autofix en pull request ; CI/CD)",
+  "annexes": "clé API LLM requise (OpenAI/Anthropic/Google) ou version cloud. AGENTS IA 'hackers' autonomes open source. Boîte à outils offensive complète (proxy HTTP/Caido, Nuclei, Playwright). Valide par PoC réel, propose un correctif en PR. Multi-agents. Sandbox Docker. /!\\ OFFENSIF — 'ne tester que ce qu'on possède/est autorisé à tester'. Intégration CI/CD. GATE.",
+  "cle_api": "LLM requis",
+  "statut": "lu"
  },
  {
   "nom": "Shannon",
