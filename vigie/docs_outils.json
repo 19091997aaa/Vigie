@@ -1774,23 +1774,23 @@
   "nom": "Hayabusa",
   "lien": "https://github.com/Yamato-Security/hayabusa",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "dfir-timeline",
+  "install": "télécharger le binaire des Releases (Win/Linux/Mac, Rust) ; ou git clone --recursive (règles en submodule)",
+  "usage": "hayabusa csv-timeline -d ./logs/ (générateur de timeline forensic rapide + chasse aux menaces pour les journaux Windows .evtx) : applique des règles SIGMA + règles Hayabusa, produit une timeline CSV/JSON priorisée, métriques d'Event IDs",
+  "annexes": "aucune clé, règles incluses (submodule). Timeline forensic + chasse aux menaces pour journaux Windows (.evtx) (Yamato Security, Japon, Rust). Basé sur SIGMA + règles maison. Réduit/priorise des centaines de milliers d'événements (viser 80% du travail en 20% du temps). Sortie CSV/JSON (Excel, ELK). Proche de Chainsaw. S'intègre à Velociraptor. DÉFENSIF/DFIR. TRÈS pertinent pour l'analyse de logs Windows TPE (timeline d'incident).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Autopsy",
   "lien": "https://github.com/sleuthkit/autopsy",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "forensic-disque",
+  "install": "installeur Windows ; paquet Linux/Mac ; s'appuie sur The Sleuth Kit (TSK)",
+  "usage": "plateforme de forensic numérique avec interface graphique (au-dessus de The Sleuth Kit) : analyse une image disque (RAW/DD, EnCase .E01, AFF) — systèmes de fichiers, fichiers supprimés/cachés, recherche, tri, hachage, galerie d'images, timeline, gestion de cas",
+  "annexes": "aucune clé. Plateforme de forensic disque à interface graphique (Brian Carrier) au-dessus de The Sleuth Kit (CLI). Analyse une image disque (RAW, .E01, AFF) : fichiers alloués/supprimés/cachés, recherche, tri, hachage (intégrité des preuves), galerie, timeline. Gestion de cas multi-enquêteurs. Windows et Linux. DÉFENSIF/forensic disque. Pertinent pour une enquête sur un poste saisi (après incident). Gratuit (alternative aux suites commerciales chères). Nécessite une image disque.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "tcpdump",
