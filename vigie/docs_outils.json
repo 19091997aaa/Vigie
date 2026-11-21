@@ -2104,12 +2104,12 @@
   "nom": "OPNsense",
   "lien": "https://github.com/opnsense/core",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "pare-feu",
+  "install": "flasher l'image ISO (FreeBSD/HardenedBSD) sur une machine dédiée ; VM ; AWS",
+  "usage": "pare-feu/routeur (comme pfSense) : stateful firewall, NAT, VPN (OpenVPN/IPsec/WireGuard), IDS/IPS inline, proxy web, portail captif, 2FA ; interface web",
+  "annexes": "aucune clé. Fork de pfSense (HardenedBSD, plus sécurisé). NGFW : filtrage, IDS/IPS (Suricata), contrôle applicatif (Zenarmor), proxy. MAJ fréquentes (sécurité). Licence BSD. Alternative à pfSense (cadence de MAJ plus rapide). Machine dédiée. Passerelle sécurisée TPE.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Coraza WAF",
@@ -2170,12 +2170,12 @@
   "nom": "hardentools",
   "lien": "https://github.com/hardentools/hardentools",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "durcissement",
+  "install": "télécharger l'exe depuis github.com/hardentools/hardentools (Windows, Go)",
+  "usage": "désactive en un clic les fonctionnalités Windows à risque (macros Office, Windows Script Host, autorun...) pour réduire la surface d'attaque",
+  "annexes": "aucune clé. Durcissement Windows simple (un clic) : désactive les 'low-hanging fruits'. Pour postes individuels. Réversible. Simple pour durcir un poste Windows TPE rapidement (désactive des fonctions — à tester). Ne remplace pas une politique complète.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Stratus Red Team",
