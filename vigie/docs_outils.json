@@ -157,23 +157,23 @@
   "nom": "auto-archiver",
   "lien": "https://github.com/bellingcat/auto-archiver",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "archivage",
+  "install": "pip install auto-archiver (ou docker bellingcat/auto-archiver)",
+  "usage": "auto-archiver --config orchestration.yaml  (archive des URLs depuis Google Sheets/CSV/console)",
+  "annexes": "nécessite un fichier d'orchestration YAML + ffmpeg + firefox/geckodriver. ARCHIVAGE de contenus réseaux sociaux/vidéos (Bellingcat), PAS de la recon d'exposition.",
+  "cle_api": "selon les stockages (S3/Drive)",
+  "statut": "lu"
  },
  {
   "nom": "Datashare",
   "lien": "https://github.com/ICIJ/datashare",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
-  "facette": "pseudos",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "documents",
+  "install": "télécharger sur datashare.icij.org (.deb Debian/Ubuntu ; installeurs Mac/Windows ; docker)",
+  "usage": "application de bureau : indexe et cherche dans TES PROPRES documents via un navigateur local",
+  "annexes": "self-hosted (embarque elasticsearch/redis). Pour analyser un corpus de documents (journalisme ICIJ), PAS pour la recon d'une cible.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Metagoofil",
