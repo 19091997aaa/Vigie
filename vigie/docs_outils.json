@@ -839,23 +839,23 @@
   "nom": "OWASP Dependency-Check",
   "lien": "https://github.com/dependency-check/DependencyCheck",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "dependances",
+  "install": "brew install dependency-check ; ou zip CLI (Java 11+ requis)",
+  "usage": "dependency-check --project 'X' --scan {chemin}  (détecte les CVE des dépendances/bibliothèques d'un projet)",
+  "annexes": "télécharge la base NVD du NIST au 1er run. Scanne les DÉPENDANCES logicielles (jar, npm...), pas un domaine. C'est du SCA (DevOps).",
+  "cle_api": "non (clé NVD optionnelle pour accélérer)",
+  "statut": "lu"
  },
  {
   "nom": "OpenVAS (Greenbone Community)",
   "lien": "https://github.com/greenbone/openvas-scanner",
   "categorie": "Scan de vulnérabilités et audit de configuration",
   "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "install": "COMPLEXE : build source (gvm-libs, openvas-scanner, gvmd, gsa...) ou conteneurs Greenbone Community ; sur Kali: sudo gvm-setup",
+  "usage": "sudo gvm-start puis interface web GSA ; les scans sont des 'tasks' sur des hôtes",
+  "annexes": "nécessite une base NVT (feed) synchronisée (greenbone-feed-sync, plusieurs Go). Scanner de vulnérabilités RÉSEAU complet et lourd, interface web. Pour AUDIT INTERNE autorisé, pas diag externe.",
+  "cle_api": "non (feed à synchroniser)",
+  "statut": "lu"
  },
  {
   "nom": "PrivescCheck",
