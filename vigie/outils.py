@@ -71,6 +71,14 @@ CATALOGUE = {
         "depot": "https://github.com/projectdiscovery/dnsx",
         "licence": "MIT", "actif": False, "adaptateur": None,
     },
+    # Comme Sherlock, plus complet (68 comptes « vigie » sur 200 sites le 21/11/2026, la
+    # plupart d'homonymes). Pseudos du dirigeant + accord écrit uniquement. Banc seulement.
+    "maigret": {
+        "role": "Comptes publics ouverts sous un pseudo (2e avis)",
+        "commande": "maigret", "installation": "pipx install --python python3.14 maigret",
+        "depot": "https://github.com/soxoj/maigret",
+        "licence": "MIT", "actif": False, "adaptateur": None,
+    },
     "linkchecker": {
         "role": "Liens cassés du site, et liens vers des domaines disparus",
         "commande": "linkchecker", "installation": "pipx install linkchecker",
