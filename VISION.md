@@ -68,3 +68,16 @@ Quand plusieurs outils tournent sur la même cible, on garde le meilleur selon,
 - **Constat cash** au milieu, avec les **scénarios concrets** par trouvaille.
 - **Appel à l'action** en bas vers l'offre de **sécurisation** payante
   (« ces failles, je te les corrige — appelle-moi »).
+
+## L'offre payante (sécurisation)
+
+Deux formules :
+- **Forfait one-shot** — corriger les failles trouvées au diagnostic (prix fixe).
+- **Abonnement surveillance** — re-scan régulier + alertes, en continu (récurrent).
+
+**Priorité au récurrent.** L'objectif d'Anass est de bâtir un socle d'**abonnements
+mensuels** (revenu prévisible, cohérent avec une activité nomade) plutôt que de
+dépendre de gros one-shots ponctuels. **Conséquence produit** : l'appel à l'action
+du PDF et l'app doivent pousser vers l'**abonnement** (surveillance continue), pas
+seulement vers la correction one-shot. Prévoir à terme un mode « re-scan planifié +
+rapport d'évolution » pour servir ces abonnements.
