@@ -1675,12 +1675,12 @@
   "nom": "Wireshark",
   "lien": "https://github.com/wireshark/wireshark",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "analyse-reseau",
+  "install": "installeur Windows/macOS (wireshark.org) ; apt install wireshark / dnf install wireshark / brew install wireshark (Npcap/libpcap requis pour la capture)",
+  "usage": "analyseur de protocoles réseau : capture le trafic en direct (ou lit un .pcap), décode tous les protocoles (Ethernet, IP, TCP, HTTP, DNS...), filtres puissants, décodeurs Lua ; version CLI = TShark",
+  "annexes": "aucune clé. Analyseur de paquets réseau de référence (standard du secteur). Capture live ou analyse de .pcap. Décode des centaines de protocoles. Filtres puissants. CLI = TShark. La capture nécessite des droits (groupe wireshark). Pour diagnostiquer un réseau, enquêter, analyser une capture. DÉFENSIF/analyse. Pertinent pour l'investigation et le dépannage réseau d'une TPE (sur site, avec accord). Nécessite de savoir lire les protocoles.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "YARA",
@@ -1708,12 +1708,12 @@
   "nom": "Zeek",
   "lien": "https://github.com/zeek/zeek",
   "categorie": "Analyse réseau et forensic",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "nsm",
+  "install": "apt/dnf depuis le dépôt OpenSUSE security:zeek ; build depuis github.com/zeek/zeek ; docker",
+  "usage": "moniteur de sécurité réseau (NSM) passif : observe tout le trafic d'un lien et génère des logs structurés riches (connexions, DNS, HTTP, SSL, fichiers...) ; moteur d'événements + couche de politique scriptable pour détecter l'anormal ; alimente un SIEM",
+  "annexes": "aucune clé. Moniteur de sécurité réseau (NSM) / NIDS passif (créé en 1995 'Bro' à Berkeley). Génère des logs réseau structurés (pas juste des alertes). Moteur d'événements + scripts. Haut débit (10-100 GE). S'installe sur un 'capteur' (interface en miroir/TAP). Alimente un SIEM (ex : Wazuh). DÉFENSIF — visibilité et détection réseau. Plutôt réseaux à surveiller en continu (entreprise/MSP). Nécessite un point de capture.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Arkime",
