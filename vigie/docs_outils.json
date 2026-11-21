@@ -971,23 +971,23 @@
   "nom": "Monkey365",
   "lien": "https://github.com/silverhack/monkey365",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "m365",
+  "install": "Install-Module -Name monkey365 ; ou git clone silverhack/monkey365",
+  "usage": "Invoke-Monkey365 -Instance Azure -IncludeEntraID -ExportTo HTML  (revue config sécurité M365/Azure/Entra contre CIS)",
+  "annexes": "REQUIERT des identifiants (lecture seule). Rapport HTML/JSON/CSV contre CIS. Read-only, ne modifie rien. Audit interne cloud Microsoft.",
+  "cle_api": "identifiants M365/Azure requis (lecture seule)",
+  "statut": "lu"
  },
  {
   "nom": "Maester",
   "lien": "https://github.com/maester365/maester",
   "categorie": "Scan de vulnérabilités et audit de configuration",
-  "facette": "failles",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "m365",
+  "install": "Install-Module Maester (PowerShell 5.1+)",
+  "usage": "Invoke-Maester  (framework de tests Pester sur la config de sécurité M365/Entra : CISA/CIS)",
+  "annexes": "REQUIERT une connexion au tenant (Graph). ~194 tests CISA/CIS. Monitoring continu de la config M365. Audit interne.",
+  "cle_api": "connexion tenant M365 requise",
+  "statut": "lu"
  },
  {
   "nom": "AzureHound",
