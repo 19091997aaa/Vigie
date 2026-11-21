@@ -2412,12 +2412,12 @@
   "nom": "Burp AI Agent",
   "lien": "https://github.com/six2dez/burp-ai-agent",
   "categorie": "Pentest et audit assistés par IA ou LLM",
-  "facette": "ia",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-assistant",
+  "install": "installer depuis le BApp Store de Burp (nom : Custom AI Agent) ; ou télécharger le JAR des Releases ; ou build (Java 21) ; Burp Suite 2023.12+ (Community ou Pro)",
+  "usage": "extension Burp Suite qui intègre l'IA : connecte Burp à plusieurs backends IA (Ollama/LM Studio locaux, CLIs cloud), analyse assistée par IA des requêtes/vulns, scan passif et actif, serveur MCP (53-59 outils) pour qu'un agent externe (ex : Claude Desktop) pilote Burp",
+  "annexes": "backend IA requis (local Ollama/LM Studio sans clé, ou cloud avec clé). Extension Burp Suite (MIT, Kotlin) 'pont entre Burp et l'IA'. 7-11 backends IA, 53+ outils MCP. Permet à un agent IA de piloter le moteur de scan de Burp. Scan passif ET actif. Contrôles de confidentialité. /!\\ scan actif de Burp = offensif → cible autorisée ; mode passif/analyse moins risqué. Pour un pentesteur qui utilise déjà Burp. GATE (scan actif).",
+  "cle_api": "backend IA (local sans clé possible)",
+  "statut": "lu"
  },
  {
   "nom": "Xalgorix",
