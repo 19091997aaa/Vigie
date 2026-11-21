@@ -108,4 +108,24 @@ def analyser(cible):
         constats.append(Constat(BLOC, OK, "Certificat valide",
                                 f"Délivré par {certificat['emetteur'] or 'une autorité reconnue'}.",
                                 cle="certificat"))
+    # tlsx, gardé pour ce qu'il est seul à voir (comparaison du 21/11/2026) : le certificat
+    # de « www », que le serveur peut servir à part. Un www sans certificat valide = alerte
+    # de sécurité pour les visiteurs qui tapent www.
+    if outils.disponible("tlsx"):
+        www = "www." + cible.domaine
+        sortie = outils.executer("tlsx", ["-u", www, "-json", "-silent"], delai=60)
+        fiche = next((json.loads(l) for l in (sortie or "").splitlines() if l.startswith("{")), None)
+        if fiche:
+            noms = [n.lower() for n in (fiche.get("subject_an") or [])]
+            couvert = any(n == www or (n.startswith("*.") and www.endswith(n[1:])) for n in noms)
+            if couvert and not fiche.get("expired") and not fiche.get("untrusted"):
+                constats.append(Constat(BLOC, OK, "Certificat de www valide — vu par tlsx",
+                                        "Les visiteurs qui tapent « www » n'ont pas d'alerte.",
+                                        cle="certificat_www"))
+            else:
+                constats.append(Constat(BLOC, IMPORTANT, "Certificat de www absent ou invalide — vu par tlsx",
+                                        "Les visiteurs qui tapent « www » devant l'adresse voient "
+                                        "une alerte de sécurité.",
+                                        "Ajouter www au certificat du site.", cle="certificat_www"))
+            resultat["certificat_www"] = {"noms": noms, "couvert": couvert}
     return constats, {"chiffrement": resultat}

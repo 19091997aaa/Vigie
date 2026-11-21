@@ -94,3 +94,22 @@ rien de connu. Branché dans le diagnostic (module `bibliotheques`).
 searchsploit (sur « PHP 8.3 » ou « Apache », trop de bruit pour un rapport de patron).
 Syft (inventaire des logiciels) sert de base à Grype, pas de rapport à lui seul.
 Social Analyzer : 15 minutes sans résultat lisible.
+
+## Règle d'Anass (21/11/2026) : un seul point unique suffit pour garder un outil
+
+« Même si c'est juste une chose, on le garde. » On n'écarte que les payants, les vrais
+doublons (rien d'unique) et les outils qui ne produisent rien.
+
+| Outil | Avant | Point unique trouvé | Maintenant |
+| --- | --- | --- | --- |
+| dnsrecon | réserve | services de messagerie annoncés (IMAP, envoi, configuration auto), IPv6 | **gardé** : `dns_complet`, par défaut |
+| Unlighthouse | réserve | 2e page lente (article « verrou vide »), robots.txt absent | **gardé** : `toutes_pages`, sur demande (1 min 30) |
+| tlsx | réserve | certificat séparé de www, vérifié valide | **gardé** : dans `chiffrement` |
+| SSLyze | gardé | refus des vieilles versions, chiffrements faibles | gardé |
+| Gitleaks | réserve | jeton Slack que TruffleHog rate | **gardé** : banc `secrets` |
+| TruffleHog | réserve | vérifie si un jeton marche encore | **gardé** : banc `secrets` |
+| Grype / Trivy | réserve | aucun au niveau des paquets (même 2 paquets) | réserve, dans le banc ; à refaire sur d'autres cibles |
+| Amass | réserve | aucun sur pavillon-noir.tech | réserve, dans le banc ; à refaire |
+| dnsx | réserve | aucun (pas d'alias) ; seul à pouvoir voir un alias abandonné | réserve ; à refaire sur une société avec sous-domaines |
+| Exiv2 | écarté | aucun (ExifTool voit tout ce qu'il voit, et plus) | écarté : vrai doublon |
+| Social Analyzer | écarté | ne produit rien (15 min) | écarté |
