@@ -92,6 +92,8 @@ def en_texte(rapport, public="technique"):
         for numero, constat in enumerate(bloc["constats"], 1):
             lignes.append(f"{numero}. [{LIBELLES[constat['niveau']]}] {constat['titre']}")
             lignes.append(f"   {constat['explication']}")
+            if constat.get("hors_note"):
+                lignes.append("   (Pour information : ce point ne compte pas dans la note.)")
             if constat["correction"]:
                 lignes.append(f"   Correction : {constat['correction']}")
             if constat.get("sources"):
@@ -384,6 +386,9 @@ def _corps_detaille(rapport):
                           if constat["correction"] else "")
             sources = (f'<p class="sources">Relevé par&nbsp;: {e(", ".join(constat["sources"]))}.</p>'
                        if constat.get("sources") else "")
+            if constat.get("hors_note"):
+                sources = ('<p class="sources">Pour information : ce point ne compte pas '
+                           'dans la note.</p>') + sources
             corps.append(
                 f'<section class="constat {constat["niveau"]}">'
                 f'<span class="etiquette">{e(LIBELLES[constat["niveau"]])}</span>'

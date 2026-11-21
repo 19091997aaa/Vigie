@@ -86,7 +86,8 @@ def analyser(cible):
             "robots pirates : ils cherchent sans relâche les sites dont le logiciel ou les "
             "extensions ne sont pas à jour. Ce n'est pas un défaut, c'est un point à tenir.",
             "Activer les mises à jour automatiques du logiciel et des extensions, supprimer "
-            "les extensions inutilisées, et garder une sauvegarde récente du site.", cle="cms"))
+            "les extensions inutilisées, et garder une sauvegarde récente du site.", cle="cms",
+            hors_note=True))
 
     versions = [t for t in technos if re.search(r":\d", t)]
     if versions:

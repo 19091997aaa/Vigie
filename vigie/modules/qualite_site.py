@@ -87,7 +87,7 @@ def analyser(cible):
             "Ce n'est pas une faille, mais une page lente fait partir des visiteurs avant "
             "la fin du chargement, et elle est moins bien classée par Google.",
             "Alléger les images et activer un cache (sur WordPress, une extension suffit).",
-            cle="lenteur"))
+            cle="lenteur", hors_note=True))
     if not constats:
         constats.append(Constat(BLOC, OK, "La page d'accueil passe les contrôles de Chrome",
                                 "Protections en place et affichage rapide.", cle="lighthouse"))

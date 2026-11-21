@@ -918,6 +918,17 @@ class LotDix(Base):
         sans = rapport.construire("S", "ex.fr", "2026-11-21", [], {}, [], None)
         self.assertNotIn("<figure", rapport.en_html(sans))
 
+    def test_wordpress_et_lenteur_ne_comptent_pas_dans_la_note(self):
+        # Décision d'Anass du 21/11/2026 : utiles au dirigeant, mais pas des failles.
+        outils.executer = lambda nom, *a, **k: self.HTTPX.splitlines()[0] if nom == "httpx" else ""
+        constats, _ = technos.analyser(CIBLE)
+        cms = next(c for c in constats if c.cle == "cms")
+        self.assertTrue(cms.hors_note)
+        self.assertEqual(note([cms]), 100)
+        self.assertEqual(note([cms, Constat("Exposition", INFO, "t", "e")]), 98)
+        resultat = rapport.construire("S", "ex.fr", "2026-11-21", [cms], {}, [], None)
+        self.assertIn("ne compte pas dans la note", rapport.en_html(resultat))
+
     def test_outils_cherches_aussi_hors_du_path(self):
         self.assertIn(os.path.expanduser("~/go/bin"), outils.chemin_recherche())
 
