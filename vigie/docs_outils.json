@@ -1477,12 +1477,12 @@
   "nom": "THC-Hydra",
   "lien": "https://github.com/vanhauser-thc/thc-hydra",
   "categorie": "Mots de passe et audit d'authentification",
-  "facette": "mots_de_passe",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-mdp",
+  "install": "apt install hydra (Kali) ; brew install hydra (Mac) ; git clone vanhauser-thc/thc-hydra + ./configure && make && make install ; docker vanhauser/hydra",
+  "usage": "hydra -l user -P passlist.txt ssh://cible (casseur de login réseau EN LIGNE, parallélisé) : attaques brute-force/dictionnaire contre de nombreux protocoles (SSH, FTP, RDP, SMB, HTTP(S)/formulaires web, POP3, IMAP, MySQL, VNC, SNMP...) ; 16 threads par défaut",
+  "annexes": "aucune clé. Casseur de login réseau EN LIGNE parallélisé (van Hauser/THC, AGPL-3, C). Brute-force/dictionnaire contre de nombreux protocoles (SSH, FTP, RDP, SMB, HTTP/formulaires, MySQL, VNC...). /!\\ ONLINE = tente réellement de se connecter → PEUT VERROUILLER des comptes, surcharger le serveur, GÉNÈRE du bruit/des alertes. OFFENSIF — cible autorisée, jamais dans le diag auto/gratuit. Remédiation client : verrouillage, MFA, fail2ban. GATE strict.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "CUPP",
@@ -1532,12 +1532,12 @@
   "nom": "Medusa",
   "lien": "https://github.com/jmk-foofus/medusa",
   "categorie": "Mots de passe et audit d'authentification",
-  "facette": "mots_de_passe",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-mdp",
+  "install": "apt install medusa (Kali) ; git clone jmk-foofus/medusa + ./configure && make && make install",
+  "usage": "medusa -h cible -u user -P passwords.txt -M ssh (casseur de login réseau parallèle et modulaire) : brute-force contre de nombreux services via des modules (SSH, SMB/NTLM, HTTP, MS-SQL, POP3, RDP, FTP, MySQL, formulaires web...) ; test parallèle (plusieurs hôtes/users/mdp à la fois)",
+  "annexes": "aucune clé. Casseur de login réseau parallèle et modulaire (JoMo-Kun/Foofus, GPL-2, C). Modules par service (SSH, SMB, HTTP, MS-SQL, RDP, FTP, web-form...). Test en parallèle. Alternative à Hydra (architecture modulaire). /!\\ ONLINE comme Hydra → vraies connexions, PEUT VERROUILLER des comptes, bruyant. OFFENSIF — cible autorisée uniquement. GATE strict.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "airgeddon",
