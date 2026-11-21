@@ -1290,12 +1290,12 @@
   "nom": "Impacket",
   "lien": "https://github.com/fortra/impacket",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-ad",
+  "install": "pip install impacket ; pipx install git+.../impacket ; apt install impacket-scripts (Kali) ; git clone fortra/impacket + pip install . (Python 3.9+)",
+  "usage": "collection de classes Python + ~68 scripts pour les protocoles réseau Windows (SMB, MSRPC, DCOM/WMI, Kerberos, LDAP) : psexec/wmiexec/smbexec (exécution à distance), secretsdump (vol de hashes), GetUserSPNs (Kerberoasting), ntlmrelayx (relais NTLM), smbserver, GetADUsers... ; pass-the-hash natif",
+  "annexes": "aucune clé. Bibliothèque Python + boîte à outils de protocoles réseau Windows (ex-SecureAuth, Fortra). Réimplémente SMB, MSRPC, DCOM/WMI, Kerberos, LDAP → exécution de commandes à distance et mouvement latéral depuis Linux. ~68 scripts (psexec, wmiexec, secretsdump, Kerberoasting, ntlmrelayx). Pass-the-hash natif. 'Pas un framework d'exploit' MAIS outil offensif majeur de post-compromission AD. Base de NetExec. /!\\ OFFENSIF — cible autorisée uniquement, jamais dans le diag auto/gratuit. GATE.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Responder",
@@ -1334,12 +1334,12 @@
   "nom": "BloodHound",
   "lien": "https://github.com/SpecterOps/BloodHound",
   "categorie": "Active Directory",
-  "facette": "ip",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "audit-ad",
+  "install": "BloodHound CE (Community Edition) : docker compose (serveur + Neo4j + UI web) ; collecteurs SharpHound (Windows) / BloodHound.py (Linux)",
+  "usage": "analyse des chemins d'attaque dans Active Directory et Entra ID (Azure AD) par théorie des graphes : les collecteurs (SharpHound/BloodHound.py) récoltent les relations AD (appartenances, droits, sessions, admin local...), BloodHound les modélise en graphe et trouve le chemin le plus court d'un compte compromis vers Domain Admin ; 'Google Maps de l'AD'",
+  "annexes": "aucune clé (collecteurs + serveur/Neo4j à déployer). Analyse des CHEMINS D'ATTAQUE dans AD/Entra ID par graphe (SpecterOps, open source CE). Collecteurs (SharpHound Windows, BloodHound.py Linux) → graphe Neo4j. Trouve le chemin le plus court vers Domain Admin. USAGE DOUBLE : attaquants trouvent les chemins, DÉFENSEURS les éliminent. Version Enterprise payante (APM). La collecte nécessite un compte du domaine (authentifié) → AUDIT AD avec accord, pas un scan externe. Pertinent pour l'offre de sécurisation AD (défensif) mais collecte intrusive : accord écrit. GATE (collecte authentifiée).",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "kerbrute",
