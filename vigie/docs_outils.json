@@ -1543,12 +1543,12 @@
   "nom": "airgeddon",
   "lien": "https://github.com/v1s1t0r1sh3r3/airgeddon",
   "categorie": "Sans fil",
-  "facette": "sans_fil",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "offensif-wifi",
+  "install": "git clone v1s1t0r1sh3r3/airgeddon + cd airgeddon + sudo bash airgeddon.sh ; apt install airgeddon (Kali) ; root obligatoire + nombreux outils tiers (aircrack-ng, hashcat, hcxtools, bettercap, reaver...)",
+  "usage": "sudo bash airgeddon.sh (script bash tout-en-un à menus pour auditer le WiFi, wrapper d'outils tiers) : mode moniteur, capture de handshake, déchiffrement, attaques evil twin / faux AP / portail captif, WPS (reaver/bully/pixie dust), PMKID, cassage (aircrack/hashcat), WEP, WPA Enterprise, système de plugins",
+  "annexes": "aucune clé (root + nombreux outils tiers). Script bash multi-usage à menus pour auditer le WiFi (v1s1t0r, GPLv3). Enrobe aircrack-ng, hashcat, hcxtools, reaver, bettercap, beef... en une interface guidée. Fait tout : handshake, evil twin (faux AP + portail captif pour piéger la clé), WPS/Pixie Dust, PMKID, WEP, WPA Enterprise. /!\\ TRES OFFENSIF et accessible (menus) — inclut de l'ingénierie sociale (evil twin, portail captif). UNIQUEMENT son propre réseau ou accord écrit ; le wiki lui-même rappelle 'permission is key'. GATE strict.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Aircrack-ng",
