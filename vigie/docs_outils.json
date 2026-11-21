@@ -1950,12 +1950,12 @@
   "nom": "Gophish",
   "lien": "https://github.com/gophish/gophish",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "sensibilisation",
+  "install": "go install github.com/gophish/gophish@latest ; binaire des releases ; docker gophish/gophish",
+  "usage": "./gophish  (interface web : groupes cibles, templates email, landing pages, campagnes de phishing simulé, rapports)",
+  "annexes": "aucune clé. Framework de SIMULATION de phishing (sensibilisation). Mesure qui ouvre/clique/soumet. Nécessite un serveur SMTP/relais. REQUIERT une autorisation écrite de la direction. PERTINENT pour l'offre TPE (le facteur humain = maillon faible). Gratuit, auto-hébergé.",
+  "cle_api": "non (SMTP requis)",
+  "statut": "lu"
  },
  {
   "nom": "Atomic Red Team",
@@ -1972,12 +1972,12 @@
   "nom": "VeraCrypt",
   "lien": "https://github.com/veracrypt/VeraCrypt",
   "categorie": "Défense, détection et durcissement",
-  "facette": "defense",
-  "install": "",
-  "usage": "",
-  "annexes": "",
-  "cle_api": "",
-  "statut": "à lire"
+  "facette": "chiffrement",
+  "install": "télécharger depuis veracrypt.fr (Win/macOS/Linux) ; apt install veracrypt",
+  "usage": "créer un volume/conteneur chiffré (à la volée) ou chiffrer une partition/disque entier ; monter comme un disque",
+  "annexes": "aucune clé. Chiffrement de disque à la volée (fork de TrueCrypt). AES/Argon2id. Conteneur, partition ou disque système. Déni plausible (volume caché). PROJET FRANÇAIS (IDRIX). PERTINENT TPE : chiffrer les données sensibles (RGPD) sur postes/clés USB. Gratuit.",
+  "cle_api": "non",
+  "statut": "lu"
  },
  {
   "nom": "Sigma",
