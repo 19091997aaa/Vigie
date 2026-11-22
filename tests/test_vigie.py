@@ -1455,3 +1455,45 @@ class TestRegistre(unittest.TestCase):
         from vigie import registre
         for o in registre.par_famille()["diag"]:
             self.assertFalse(o["autorisation_requise"])
+
+
+class TestLancerSeul(unittest.TestCase):
+    """Mode « lancer chaque outil un par un » (lancer_seul.py)."""
+
+    def test_ligne_verifiee_pour_outil_declare(self):
+        from vigie import lancer_seul
+        commande, arguments, verifiee = lancer_seul.ligne_lancement("subfinder", "ex.fr")
+        self.assertEqual(commande, "subfinder")
+        self.assertIn("ex.fr", arguments)
+        self.assertTrue(verifiee)
+
+    def test_ligne_devinee_depuis_usage(self):
+        from vigie import lancer_seul
+        commande, arguments, verifiee = lancer_seul.ligne_lancement("Sherlock", "vigie")
+        self.assertEqual(commande, "sherlock")
+        self.assertEqual(arguments, ["vigie"])
+        self.assertFalse(verifiee)                 # devinée, à confirmer
+
+    def test_outil_interactif_sans_ligne(self):
+        from vigie import lancer_seul
+        self.assertIsNone(lancer_seul.ligne_lancement("Recon-ng", "ex.fr"))
+
+    def test_refuse_outil_actif_sans_autorisation(self):
+        from vigie import lancer_seul
+        with self.assertRaises(lancer_seul.Refus):
+            lancer_seul.verifier_lancable("nuclei", autorisation_ok=False)
+
+    def test_refuse_outil_payant(self):
+        from vigie import lancer_seul
+        with self.assertRaises(lancer_seul.Refus):
+            lancer_seul.verifier_lancable("uncover")
+
+    def test_outil_passif_est_lancable(self):
+        from vigie import lancer_seul
+        # Sherlock (diag/passif) : aucune exception.
+        lancer_seul.verifier_lancable("Sherlock", autorisation_ok=False)
+
+    def test_lancer_refuse_actif(self):
+        from vigie import lancer_seul
+        with self.assertRaises(lancer_seul.Refus):
+            lancer_seul.lancer("nmap", "ex.fr")

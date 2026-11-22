@@ -146,6 +146,11 @@ def main(arguments=None):
     reg = commandes.add_parser("registre",
                                help="lister TOUS les outils du catalogue, par famille")
     reg.add_argument("familles", nargs="*", help="diag, audit, secu, gate (sinon : toutes)")
+    unp = commandes.add_parser("outil",
+                               help="lancer UN outil passif, seul, sur une cible")
+    unp.add_argument("--nom", required=True, help="nom de l'outil (voir « registre »)")
+    unp.add_argument("--cible", required=True, help="domaine, pseudo, e-mail… selon l'outil")
+    unp.add_argument("--delai", type=int, default=300)
     commandes.add_parser("questionnaire", help="afficher le questionnaire assureur")
 
     aut = commandes.add_parser("autorisation",
@@ -335,6 +340,19 @@ def main(arguments=None):
     if args.commande == "registre":
         from . import registre
         return registre._principal(args.familles)
+
+    if args.commande == "outil":
+        from . import lancer_seul
+        try:
+            compte = lancer_seul.lancer(args.nom, args.cible, args.delai)
+        except lancer_seul.Refus as refus:
+            raise SystemExit(str(refus))
+        if not compte.get("lance"):
+            raise SystemExit(f"Non lancé : {compte.get('raison')}")
+        drapeau = "" if compte["verifiee"] else "  (ligne devinée, à confirmer)"
+        print(f"{compte['outil']} — {compte['secondes']} s{drapeau}\n")
+        print(compte.get("traduction") or "Rien à afficher.")
+        return 0
 
     if args.commande == "autorisation":
         from . import mandat
