@@ -1421,3 +1421,37 @@ class TestAuditActif(unittest.TestCase):
         for nom in ("nmap", "nuclei", "naabu", "sslscan"):
             self.assertIn(nom, manuel.OUTILS)
             self.assertIn("test", manuel.OUTILS[nom])
+
+
+class TestRegistre(unittest.TestCase):
+    """Le registre des 222 outils du catalogue (registre.py)."""
+
+    def test_charge_les_220_outils_trouves(self):
+        from vigie import registre
+        tout = registre.charger()
+        self.assertEqual(len(tout), 220)          # 222 - 2 introuvables
+        self.assertTrue(all("famille" in o for o in tout))
+
+    def test_familles_bien_reparties(self):
+        from vigie import registre
+        g = registre.par_famille()
+        self.assertEqual(len(g["diag"]), 42)
+        self.assertEqual(len(g["gate"]), 66)
+
+    def test_outils_offensifs_exigent_autorisation(self):
+        from vigie import registre
+        for o in registre.charger():
+            if o["attaque"]:
+                self.assertTrue(o["autorisation_requise"])
+                self.assertTrue(o["actif"])
+
+    def test_payants_marques_et_non_installables(self):
+        from vigie import registre
+        payants = [o for o in registre.charger() if o["payant"]]
+        self.assertIn("uncover", [o["nom"].lower() for o in payants])
+        self.assertTrue(all(not o["installable"] for o in payants))
+
+    def test_diag_est_passif_et_libre(self):
+        from vigie import registre
+        for o in registre.par_famille()["diag"]:
+            self.assertFalse(o["autorisation_requise"])
