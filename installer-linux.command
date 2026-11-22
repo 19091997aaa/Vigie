@@ -122,6 +122,19 @@ fi
 (cd "$racine" && python3 -m vigie installer --tous --parallele 6 $dest_arg \
     --rapport "$HOME/vigie-installation.json")
 
+titre "Nettoyage des caches de compilation (récupère de la place)"
+# Le cache de compilation Go peut peser des dizaines de Go. Les OUTILS déjà posés
+# (dans bin/, pipx/) n'en ont plus besoin : on le vide après coup. Rien d'installé
+# n'est touché. On garde le cache des modules Go (petit, accélère un ré-essai).
+avant="$(df -Pm "${dest:-$HOME}" 2>/dev/null | awk 'NR==2{print $4}')"
+go clean -cache >/dev/null 2>&1 || rm -rf "${GOCACHE:-$HOME/.cache/go-build}" 2>/dev/null || true
+rm -rf "${PIP_CACHE_DIR:-$HOME/.cache/pip}" 2>/dev/null || true
+rm -rf "$HOME/.cache/go-build" "$HOME/.cache/pip" 2>/dev/null || true   # restes éventuels sur /
+apres="$(df -Pm "${dest:-$HOME}" 2>/dev/null | awk 'NR==2{print $4}')"
+if [ -n "$avant" ] && [ -n "$apres" ]; then
+  echo "  [ok] $(( (apres - avant) / 1024 )) Go récupérés (place libre : $(( apres / 1024 )) Go)"
+fi
+
 titre "Vérification : ce que Vigie voit maintenant"
 (cd "$racine" && python3 -m vigie outils 2>/dev/null | grep -i "installé" | head -40) || true
 
