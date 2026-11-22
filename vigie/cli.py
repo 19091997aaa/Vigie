@@ -143,6 +143,9 @@ def main(arguments=None):
 
     commandes.add_parser("modules", help="lister les contrôles disponibles")
     commandes.add_parser("outils", help="lister les outils externes")
+    reg = commandes.add_parser("registre",
+                               help="lister TOUS les outils du catalogue, par famille")
+    reg.add_argument("familles", nargs="*", help="diag, audit, secu, gate (sinon : toutes)")
     commandes.add_parser("questionnaire", help="afficher le questionnaire assureur")
 
     aut = commandes.add_parser("autorisation",
@@ -328,6 +331,10 @@ def main(arguments=None):
             print(f"{outil['nom']:13} {etat}  {branche:10}  {genre:6}  {outil['role']}")
             print(f"{'':13} licence : {outil['licence']} | installation : {outil['installation']}")
         return
+
+    if args.commande == "registre":
+        from . import registre
+        return registre._principal(args.familles)
 
     if args.commande == "autorisation":
         from . import mandat
