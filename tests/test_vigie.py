@@ -1497,3 +1497,28 @@ class TestLancerSeul(unittest.TestCase):
         from vigie import lancer_seul
         with self.assertRaises(lancer_seul.Refus):
             lancer_seul.lancer("nmap", "ex.fr")
+
+
+class TestInterfaceOutils(unittest.TestCase):
+    """Onglet « Lancer un outil » (interface_outils.py)."""
+
+    def test_page_liste_les_familles(self):
+        from vigie import interface_outils
+        p = interface_outils.page()
+        self.assertIn("Lancer un outil", p)
+        self.assertIn("optgroup", p)                 # outils passifs proposés
+        self.assertIn("Offensif", p)                 # catalogue complet affiché
+
+    def test_page_resultat_inconnu(self):
+        from vigie import interface_outils
+        self.assertIsNone(interface_outils.page_resultat("inexistant"))
+
+    def test_lancer_refuse_actif(self):
+        from vigie import interface_outils, lancer_seul
+        with self.assertRaises(lancer_seul.Refus):
+            interface_outils.lancer("nom=nmap&cible=ex.fr")
+
+    def test_lancer_refuse_cible_vide(self):
+        from vigie import interface_outils, lancer_seul
+        with self.assertRaises(lancer_seul.Refus):
+            interface_outils.lancer("nom=Sherlock&cible=")
