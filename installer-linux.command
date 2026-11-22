@@ -25,6 +25,41 @@ titre() { printf "\n=== %s ===\n" "$1"; }
 if command -v sudo >/dev/null; then SUDO="sudo"; $SUDO -v || true; else SUDO=""; fi
 APT=""; command -v apt-get >/dev/null && APT="apt-get"
 
+# Si un dossier cible est donné, TOUT doit y aller (y compris les caches), sinon le
+# disque système se remplit. On vérifie d'abord que ce dossier est bien sur un disque
+# séparé : sinon on s'arrête, car la personne a oublié de monter le disque dédié.
+if [ -n "$dest" ]; then
+  titre "Disque cible : $dest"
+  $SUDO mkdir -p "$dest" 2>/dev/null && $SUDO chown -R "$USER":"$USER" "$dest" 2>/dev/null || true
+  cible_fs="$(df -P "$dest" 2>/dev/null | awk 'NR==2{print $6}')"
+  racine_fs="$(df -P / 2>/dev/null | awk 'NR==2{print $6}')"
+  libre_go="$(df -PBG "$dest" 2>/dev/null | awk 'NR==2{gsub("G","",$4); print $4}')"
+  if [ -z "$cible_fs" ] || [ "$cible_fs" = "$racine_fs" ]; then
+    echo "  [STOP] $dest est sur le disque SYSTÈME (/), pas sur un disque séparé."
+    echo "         Le disque de 50 Go n'est pas monté. Monte-le d'abord :"
+    echo "           sudo mkfs.ext4 /dev/sdc   (⚠ efface le disque — vérifie 'lsblk')"
+    echo "           sudo mkdir -p $dest && sudo mount /dev/sdc $dest"
+    echo "           sudo chown -R \$USER:\$USER $dest"
+    echo "         Puis relance ce script. (J'arrête pour ne pas remplir le système.)"
+    exit 1
+  fi
+  echo "  [ok] $dest est sur un disque séparé (${libre_go:-?} Go libres)"
+  # Les caches de compilation (Go surtout) iront aussi sur ce disque.
+  export GOCACHE="$dest/cache/go-build" GOMODCACHE="$dest/go/pkg/mod"
+  export PIP_CACHE_DIR="$dest/cache/pip" TMPDIR="$dest/tmp"
+  export GOPATH="$dest/go" GOBIN="$dest/bin"
+  mkdir -p "$GOCACHE" "$PIP_CACHE_DIR" "$TMPDIR" "$dest/go" "$dest/bin" 2>/dev/null || true
+fi
+
+liberer_apt() {
+  # Au démarrage, unattended-upgrades tient le verrou tout le temps de l'install, pas
+  # seulement au début. On arrête (pour cette session) les mises à jour automatiques
+  # afin de libérer apt durant tout le travail. Une VM de labo : sans risque.
+  $SUDO systemctl stop unattended-upgrades.service apt-daily.service \
+        apt-daily-upgrade.service >/dev/null 2>&1 || true
+  $SUDO systemctl stop apt-daily.timer apt-daily-upgrade.timer >/dev/null 2>&1 || true
+}
+
 attendre_apt() {
   # Juste après le démarrage, les mises à jour automatiques (unattended-upgrades)
   # tiennent le verrou de dpkg. On attend qu'il se libère (jusqu'à ~3 min) au lieu
@@ -43,6 +78,7 @@ titre "Base (Python, pipx, go, npm, git, curl)"
 if [ -z "$APT" ]; then
   echo "  [!] apt introuvable : ce script vise Debian/Ubuntu/Kali"; exit 1
 fi
+liberer_apt
 attendre_apt
 $SUDO $APT update -y >/dev/null 2>&1 || true
 attendre_apt

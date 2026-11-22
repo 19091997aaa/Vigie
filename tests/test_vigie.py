@@ -1556,8 +1556,9 @@ class TestInstallTousNonPayants(unittest.TestCase):
         import os
         import tempfile
         from vigie import installeur
-        garde = {c: os.environ.get(c) for c in
-                 ("PIPX_HOME", "PIPX_BIN_DIR", "GOPATH", "GOBIN", "PATH")}
+        variables = ("PIPX_HOME", "PIPX_BIN_DIR", "GOPATH", "GOBIN", "GOMODCACHE",
+                     "GOCACHE", "PIP_CACHE_DIR", "TMPDIR", "PATH")
+        garde = {c: os.environ.get(c) for c in variables}
         try:
             with tempfile.TemporaryDirectory() as dossier:
                 cible = os.path.join(dossier, "vigie-outils")
@@ -1566,6 +1567,11 @@ class TestInstallTousNonPayants(unittest.TestCase):
                 self.assertEqual(os.environ["PIPX_BIN_DIR"], bin_dir)
                 self.assertEqual(os.environ["GOBIN"], bin_dir)
                 self.assertTrue(os.environ["PATH"].startswith(bin_dir))
+                # Les caches (go-build, pip) et le temp doivent aussi être SOUS le
+                # dossier cible, sinon ils remplissent le disque système.
+                for cle in ("GOCACHE", "PIP_CACHE_DIR", "TMPDIR", "GOMODCACHE"):
+                    self.assertTrue(os.environ[cle].startswith(cible),
+                                    f"{cle} = {os.environ[cle]} n'est pas sous {cible}")
         finally:
             for cle, valeur in garde.items():
                 if valeur is None:
