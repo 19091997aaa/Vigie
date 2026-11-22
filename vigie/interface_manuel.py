@@ -15,7 +15,7 @@ import secrets
 import threading
 import urllib.parse
 
-from . import __version__, manuel, mandat, ports, rapport
+from . import __version__, audit_actif, manuel, mandat, ports, rapport
 
 NUMERO = re.compile(r"[0-9]{8}-[0-9a-f]{6}")
 FICHIER = re.compile(r"[A-Za-z0-9 ._-]{1,120}")
@@ -190,10 +190,13 @@ def _verifier(nom, cible, fiche, signee, confirmation, journal):
 
 
 def _traduire(nom, chemin):
-    if nom != "nmap":
-        return ""
     try:
-        lignes = ports.traduire(ports.lire_nmap(chemin))
+        if nom == "nmap":
+            lignes = ports.traduire(ports.lire_nmap(chemin))
+        elif nom in audit_actif.TRADUCTEURS:
+            lignes = audit_actif.TRADUCTEURS[nom](chemin)
+        else:
+            return ""
     except Exception:
         return ""
     return "\n".join(f"[{niveau}] {texte}" for niveau, texte in lignes) or \
