@@ -260,7 +260,10 @@ CATALOGUE = {
 # Où les installeurs posent les outils (pipx, go, Homebrew). Lancé par un double-clic,
 # Vigie n'hérite pas toujours de ces dossiers : sans eux, un outil bien installé passe
 # pour absent, et un outil écrit en JavaScript ne trouve pas « node ».
-DOSSIERS_OUTILS = ["~/.local/bin", "~/go/bin", "/opt/homebrew/bin", "/usr/local/bin"]
+DOSSIERS_OUTILS = ["~/.local/bin", "~/go/bin", "/opt/homebrew/bin", "/usr/local/bin",
+                   # Dossier où « installer --dest /opt/vigie-outils » pose les outils :
+                   # Vigie les retrouve seul, même si le PATH de la personne ne le liste pas.
+                   "/opt/vigie-outils/bin"]
 
 
 def chemin_recherche():

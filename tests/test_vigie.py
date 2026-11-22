@@ -1552,6 +1552,31 @@ class TestInstallTousNonPayants(unittest.TestCase):
                         if lancer_seul.ligne_lancement(o["nom"], "cible.fr"))
         self.assertGreaterEqual(lancables, 70)
 
+    def test_dest_regle_les_variables_et_cree_le_dossier(self):
+        import os
+        import tempfile
+        from vigie import installeur
+        garde = {c: os.environ.get(c) for c in
+                 ("PIPX_HOME", "PIPX_BIN_DIR", "GOPATH", "GOBIN", "PATH")}
+        try:
+            with tempfile.TemporaryDirectory() as dossier:
+                cible = os.path.join(dossier, "vigie-outils")
+                bin_dir = installeur.preparer_dest(cible)
+                self.assertTrue(os.path.isdir(bin_dir))
+                self.assertEqual(os.environ["PIPX_BIN_DIR"], bin_dir)
+                self.assertEqual(os.environ["GOBIN"], bin_dir)
+                self.assertTrue(os.environ["PATH"].startswith(bin_dir))
+        finally:
+            for cle, valeur in garde.items():
+                if valeur is None:
+                    os.environ.pop(cle, None)
+                else:
+                    os.environ[cle] = valeur
+
+    def test_vigie_cherche_dans_le_dossier_dest(self):
+        from vigie import outils
+        self.assertIn("/opt/vigie-outils/bin", outils.DOSSIERS_OUTILS)
+
 
 class TestInstallerParFamille(unittest.TestCase):
     """Installer par famille (pour tenir dans un petit disque)."""

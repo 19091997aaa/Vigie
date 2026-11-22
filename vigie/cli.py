@@ -142,6 +142,8 @@ def main(arguments=None):
                       help="nombre d'installations menées de front (8 par défaut, 1 = à la file)")
     inst.add_argument("--rapport", default="installation.json",
                       help="fichier où écrire le compte rendu")
+    inst.add_argument("--dest", help="dossier où poser TOUS les outils (ex. /opt/vigie-outils) : "
+                      "évite d'avoir à régler soi-même PIPX_HOME, GOPATH, GOBIN et le PATH")
 
     commandes.add_parser("modules", help="lister les contrôles disponibles")
     commandes.add_parser("outils", help="lister les outils externes")
@@ -289,6 +291,9 @@ def main(arguments=None):
 
     if args.commande == "installer":
         from . import installeur, registre
+        if getattr(args, "dest", None):
+            bin_dir = installeur.preparer_dest(args.dest)
+            print(f"Outils posés dans {args.dest} (exécutables : {bin_dir})\n")
         outils_catalogue = installeur.charger()
         if not args.categorie and not args.tous and not args.famille:
             print("Choisis : --famille diag|audit|secu|gate, --categorie \"...\", ou --tous\n")
