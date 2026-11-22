@@ -1362,3 +1362,62 @@ class Pdf(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestAuditActif(unittest.TestCase):
+    """Traducteurs des outils d'audit actif (naabu, nuclei, sslscan) -> français."""
+
+    from vigie import audit_actif  # noqa: E402
+
+    def _fichier(self, contenu, suffixe=".txt"):
+        tmp = tempfile.NamedTemporaryFile("w", suffix=suffixe, delete=False, encoding="utf-8")
+        tmp.write(contenu)
+        tmp.close()
+        self.addCleanup(os.unlink, tmp.name)
+        return tmp.name
+
+    def test_naabu_traduit_les_ports_connus(self):
+        from vigie import audit_actif
+        contenu = ('{"ip":"10.0.1.3","host":"mail","port":3389}\n'
+                   '{"ip":"10.0.1.3","host":"mail","port":80}\n')
+        lignes = audit_actif.traduire_naabu(self._fichier(contenu, ".json"))
+        self.assertEqual(lignes[0][0], CRITIQUE)      # 3389 (RDP) passe en tête
+        self.assertIn("3389", lignes[0][1])
+        self.assertTrue(any("80" in t for _, t in lignes))
+
+    def test_naabu_ignore_les_lignes_cassees(self):
+        from vigie import audit_actif
+        lignes = audit_actif.traduire_naabu(self._fichier('pas du json\n\n', ".json"))
+        self.assertEqual(lignes, [])
+
+    def test_nuclei_classe_par_gravite(self):
+        from vigie import audit_actif
+        contenu = ('{"info":{"name":"Faille grave","severity":"critical"},"matched-at":"http://10.0.1.3"}\n'
+                   '{"info":{"name":"Point mineur","severity":"info"},"host":"10.0.1.3"}\n')
+        lignes = audit_actif.traduire_nuclei(self._fichier(contenu, ".jsonl"))
+        self.assertEqual(lignes[0][0], CRITIQUE)
+        self.assertIn("Faille grave", lignes[0][1])
+        self.assertEqual(lignes[-1][0], INFO)
+
+    def test_sslscan_signale_vieux_protocole(self):
+        from vigie import audit_actif
+        xml = ('<document><ssltest>'
+               '<protocol type="ssl" version="3" enabled="1"/>'
+               '<protocol type="tls" version="1.2" enabled="1"/>'
+               '<cipher status="accepted" cipher="RC4-SHA"/>'
+               '</ssltest></document>')
+        lignes = audit_actif.traduire_sslscan(self._fichier(xml, ".xml"))
+        self.assertEqual(lignes[0][0], CRITIQUE)          # SSLv3
+        self.assertTrue(any("RC4" in t for _, t in lignes))
+
+    def test_sslscan_rien_a_signaler(self):
+        from vigie import audit_actif
+        xml = '<document><ssltest><protocol type="tls" version="1.3" enabled="1"/></ssltest></document>'
+        lignes = audit_actif.traduire_sslscan(self._fichier(xml, ".xml"))
+        self.assertEqual(lignes[0][0], OK)
+
+    def test_outils_manuels_connaissent_naabu_et_sslscan(self):
+        from vigie import manuel
+        for nom in ("nmap", "nuclei", "naabu", "sslscan"):
+            self.assertIn(nom, manuel.OUTILS)
+            self.assertIn("test", manuel.OUTILS[nom])

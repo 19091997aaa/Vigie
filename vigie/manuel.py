@@ -32,6 +32,13 @@ OUTILS = {
                "arguments": ["-u", "{cible}", "-jsonl", "-silent", "-rate-limit", "20",
                              "-severity", "medium,high,critical"],
                "role": "Failles connues sur les sites et services de la cible"},
+    "naabu": {"outil": "naabu", "test": "ports",
+              "arguments": ["-host", "{cible}", "-json", "-silent", "-rate", "200",
+                            "-top-ports", "1000"],
+              "role": "Quelles portes la cible ouvre sur le réseau (1 000 ports les plus courants)"},
+    "sslscan": {"outil": "sslscan", "test": "failles",
+                "arguments": ["--xml=-", "--no-colour", "{cible}"],
+                "role": "Versions du chiffrement et certificat acceptés par le site"},
 }
 CIBLE = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}|(?:\d{1,3}\.){3}\d{1,3}")
 
