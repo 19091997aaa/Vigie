@@ -19,7 +19,7 @@ import time
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import __version__, interface_duel, interface_manuel, rapport
+from . import __version__, interface_duel, interface_manuel, interface_outils, rapport
 from .cli import dossier_rapport, lancer, nettoyer_domaine
 from .modeles import Cible, ControleImpossible
 
@@ -94,7 +94,7 @@ PAGE = """<!DOCTYPE html>
 <p class="aide">Contrôles lancés&nbsp;: {controles}. Ils lisent des informations publiques et
 prennent environ 5 minutes. Vous suivez chaque contrôle en direct.</p>
 </form>
-<p><a href="/comparer">Comparer des outils</a> · <a href="/manuel">Outils manuels (contrôles actifs, sur autorisation signée)</a></p>
+<p><a href="/outils-un">Lancer un outil</a> · <a href="/comparer">Comparer des outils</a> · <a href="/manuel">Outils manuels (contrôles actifs, sur autorisation signée)</a></p>
 <h2>Rapports déjà produits</h2>
 {rapports}
 </div>
@@ -319,6 +319,14 @@ def fabrique(sortie, code):
                 self._envoyer(200, interface_duel.page_resultat(banc.group(1)),
                               [("Cache-Control", "no-store")])
                 return
+            if adresse.path == "/outils-un":
+                self._envoyer(200, interface_outils.page())
+                return
+            resultat_outil = re.fullmatch(r"/outil/resultat/([A-Za-z0-9_-]{8,40})", adresse.path)
+            if resultat_outil and interface_outils.page_resultat(resultat_outil.group(1)):
+                self._envoyer(200, interface_outils.page_resultat(resultat_outil.group(1)))
+                return
+
             if adresse.path == "/manuel":
                 self._envoyer(200, interface_manuel.page(AUTORISATIONS))
                 return
@@ -369,6 +377,16 @@ def fabrique(sortie, code):
                     return
                 self._envoyer(303, "", [("Location", f"/comparer/{ident}")])
                 return
+            if self.path == "/outil/lancer":
+                taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
+                corps = self.rfile.read(taille).decode("utf-8", "replace")
+                try:
+                    ident = interface_outils.lancer(corps)
+                    self._envoyer(303, "", [("Location", f"/outil/resultat/{ident}")])
+                except interface_outils.lancer_seul.Refus as erreur:
+                    self._envoyer(400, interface_outils.page(str(erreur)))
+                return
+
             if self.path in ("/manuel/autorisation", "/manuel/lancer"):
                 taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
                 corps = self.rfile.read(taille).decode("utf-8", "replace")
