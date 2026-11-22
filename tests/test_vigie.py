@@ -1522,3 +1522,32 @@ class TestInterfaceOutils(unittest.TestCase):
         from vigie import interface_outils, lancer_seul
         with self.assertRaises(lancer_seul.Refus):
             interface_outils.lancer("nom=Sherlock&cible=")
+
+
+class TestInstallTousNonPayants(unittest.TestCase):
+    """Installation en masse : méthode apt + exclusion des payants + plus d'outils lançables."""
+
+    def test_methode_apt_reconnue(self):
+        from vigie import installeur
+        outil = {"nom": "ExifTool", "lien": "https://github.com/exiftool/exiftool"}
+        essais = installeur.methodes(outil, install="sudo apt install libimage-exiftool-perl")
+        self.assertTrue(any(cmd[:4] == ["sudo", "apt-get", "install", "-y"]
+                            for _, cmd in essais))
+
+    def test_payants_exclus_du_registre(self):
+        from vigie import registre
+        self.assertIn("uncover", registre.noms_payants())
+        self.assertIn("robin", registre.noms_payants())
+
+    def test_usage_avec_exemple_de_cible(self):
+        from vigie import lancer_seul
+        # PhoneInfoga : usage « phoneinfoga scan -n '+33679368229' » -> cible substituée.
+        commande, arguments, _ = lancer_seul.ligne_lancement("PhoneInfoga", "+33600000000")
+        self.assertEqual(commande, "phoneinfoga")
+        self.assertIn("+33600000000", arguments)
+
+    def test_plus_de_80_outils_lancables(self):
+        from vigie import registre, lancer_seul
+        lancables = sum(1 for o in registre.non_payants()
+                        if lancer_seul.ligne_lancement(o["nom"], "cible.fr"))
+        self.assertGreaterEqual(lancables, 70)

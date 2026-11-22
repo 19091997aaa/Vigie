@@ -59,28 +59,54 @@ def ligne_lancement(nom, cible):
     return None
 
 
+# Un jeton de la ligne d'usage qui ressemble à un exemple de cible (domaine, e-mail,
+# URL, pseudo @, numéro +33…). On le remplace par la vraie cible.
+_EXEMPLE_CIBLE = re.compile(
+    r"^(?:'|\")?(?:"
+    r"https?://\S+"                                   # une URL
+    r"|\+?\d[\d ().-]{6,}"                             # un numéro de téléphone
+    r"|@[A-Za-z0-9_.]+"                                # un pseudo @handle
+    r"|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"  # une adresse e-mail
+    r"|(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}"              # un nom de domaine
+    r")(?:'|\")?$")
+_PLACEHOLDERS = ("{cible}", "{email}", "{profil}", "{fichier}", "{numero}", "{domaine}",
+                 "{pseudo}", "{url}", "{ip}", "{utilisateur}")
+
+
 def _depuis_usage(usage, cible):
     """Devine « commande + arguments » depuis la première ligne d'usage, si elle est nette.
 
-    On ne garde que les usages de forme « commande ... {cible} ... » (ou {email}/{profil}
-    /{fichier}/{numero}). Les usages interactifs ou sans emplacement de cible sont ignorés :
-    mieux vaut ne rien proposer que proposer une mauvaise commande.
+    Deux cas sûrs :
+      1. un emplacement explicite ({cible}, {email}, {profil}…) ;
+      2. un exemple de cible reconnaissable (domaine, e-mail, URL, @pseudo, numéro).
+    Dans les deux cas on remplace l'emplacement / l'exemple par la vraie cible. Les
+    usages interactifs ou sans cible devinable sont ignorés : mieux vaut ne rien
+    proposer qu'une mauvaise commande.
     """
     if not usage:
         return None
     premier = usage.split(";")[0].split("(")[0].strip()
-    emplacements = ("{cible}", "{email}", "{profil}", "{fichier}", "{numero}", "{domaine}")
-    if not any(e in premier for e in emplacements):
-        return None
-    premier = re.sub(r"\{(email|profil|fichier|numero|domaine)\}", "{cible}", premier)
+    a_placeholder = any(e in premier for e in _PLACEHOLDERS)
+    if a_placeholder:
+        premier = re.sub(r"\{[a-z]+\}", "\x00", premier)
     try:
-        morceaux = shlex.split(premier.replace("{cible}", "\x00"))
+        morceaux = shlex.split(premier)
     except ValueError:
         return None
-    morceaux = [m.replace("\x00", cible) for m in morceaux]
     if len(morceaux) < 2:
         return None
-    return morceaux[0], morceaux[1:]
+    remplace = False
+    sortie = []
+    for jeton in morceaux:
+        if "\x00" in jeton:
+            sortie.append(jeton.replace("\x00", cible)); remplace = True
+        elif not remplace and not a_placeholder and _EXEMPLE_CIBLE.match(jeton):
+            sortie.append(cible); remplace = True
+        else:
+            sortie.append(jeton)
+    if not remplace:
+        return None
+    return sortie[0], sortie[1:]
 
 
 class Refus(outils.ControleImpossible):

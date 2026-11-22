@@ -296,6 +296,13 @@ def main(arguments=None):
             return
         choisis = (outils_catalogue if args.tous else
                    [o for o in outils_catalogue if o["categorie"] == args.categorie])
+        # On n'installe jamais les outils payants (Robin, uncover, PentAGI, mcp-scan…).
+        from . import registre
+        payants = registre.noms_payants()
+        avant = len(choisis)
+        choisis = [o for o in choisis if o["nom"].lower() not in payants]
+        if avant - len(choisis):
+            print(f"({avant - len(choisis)} outils payants écartés)")
         if not choisis:
             raise SystemExit(f"Aucun outil dans la catégorie : {args.categorie}")
         if args.limite:

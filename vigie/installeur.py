@@ -72,6 +72,9 @@ def binaires_poses(libelle, sortie, proprietaire, nom, commande=None):
         segments = [s for s in module.split("/") if s and s != "..."
                     and not re.fullmatch(r"v\d+", s)]
         return [segments[-1]] if len(segments) > 3 else [nom]
+    if libelle.startswith("apt") and commande:
+        # Le paquet apt (dernier argument) sert souvent de nom d'exécutable.
+        return [commande[-1], nom.lower(), nom]
     return [nom.lower(), nom]
 
 
@@ -102,6 +105,10 @@ DOCUMENTEES = [
      ["pipx", "install"]),
     ("go (documenté)", re.compile(r"\bgo install\s+(?:-v\s+)?(github\.com/\S+@\S+)"), ["go", "install"]),
     ("npm (documenté)", re.compile(r"\bnpm (?:install|i) -g\s+" + PAQUET), ["npm", "install", "-g"]),
+    # Linux (Debian/Ubuntu/Kali) : le paquet est celui écrit dans la doc de l'outil,
+    # jamais deviné. -y pour ne pas bloquer sur une question.
+    ("apt (documenté)", re.compile(r"\bapt(?:-get)? install\s+" + PAQUET),
+     ["sudo", "apt-get", "install", "-y"]),
 ]
 
 
