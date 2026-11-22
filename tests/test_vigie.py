@@ -1583,6 +1583,51 @@ class TestInstallTousNonPayants(unittest.TestCase):
         from vigie import outils
         self.assertIn("/opt/vigie-outils/bin", outils.DOSSIERS_OUTILS)
 
+    def test_specs_go_ont_le_prefixe_github(self):
+        # Naabu et tlsx : la ligne « go install » doit viser github.com/… (sinon
+        # go tente un module introuvable et l'install échoue).
+        from vigie import installeur
+        docs = installeur.charger(installeur.DOCS) if hasattr(installeur, "DOCS") else None
+        import json
+        import os
+        chemin = os.path.join(os.path.dirname(installeur.__file__), "docs_outils.json")
+        fiches = {o["nom"]: o for o in json.load(open(chemin, encoding="utf-8"))}
+        for nom in ("Naabu", "tlsx"):
+            essais = installeur.methodes(fiches[nom])
+            go = [cmd for lib, cmd in essais if lib.startswith("go (documenté)")]
+            self.assertTrue(go, f"{nom} : aucune commande go documentée reconnue")
+            self.assertTrue(all(c[-1].startswith("github.com/") for c in go),
+                            f"{nom} : module go sans github.com/")
+
+    def test_reprendre_ne_reessaie_que_les_echecs(self):
+        # --reprendre : un outil marqué installé dans le rapport précédent est gardé,
+        # pas réessayé ; seuls les échecs repartent.
+        import json
+        import os
+        import subprocess
+        import sys
+        import tempfile
+        rapport = {"resume": {}, "details": [
+            {"nom": "Sherlock", "installe": True, "repond": True},
+            {"nom": "Naabu", "installe": False, "repond": False},
+        ]}
+        with tempfile.TemporaryDirectory() as d:
+            chemin = os.path.join(d, "prec.json")
+            with open(chemin, "w", encoding="utf-8") as f:
+                json.dump(rapport, f)
+            sortie = os.path.join(d, "out.json")
+            res = subprocess.run(
+                [sys.executable, "-m", "vigie", "installer", "--tous", "--a-blanc",
+                 "--reprendre", chemin, "--rapport", sortie],
+                capture_output=True, text=True,
+                cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            self.assertIn("déjà prêts gardés", res.stdout)
+            # Le rapport final garde Sherlock (déjà prêt) sans l'avoir réessayé.
+            with open(sortie, encoding="utf-8") as f:
+                final = json.load(f)
+            noms_ok = {d["nom"] for d in final["details"] if d.get("installe")}
+            self.assertIn("Sherlock", noms_ok)
+
 
 class TestInstallerParFamille(unittest.TestCase):
     """Installer par famille (pour tenir dans un petit disque)."""

@@ -144,6 +144,9 @@ def main(arguments=None):
                       help="fichier où écrire le compte rendu")
     inst.add_argument("--dest", help="dossier où poser TOUS les outils (ex. /opt/vigie-outils) : "
                       "évite d'avoir à régler soi-même PIPX_HOME, GOPATH, GOBIN et le PATH")
+    inst.add_argument("--reprendre", metavar="RAPPORT",
+                      help="fichier rapport d'une install précédente : ne réessaie QUE les "
+                      "outils qui avaient échoué (relance ciblée, bien plus rapide)")
 
     commandes.add_parser("modules", help="lister les contrôles disponibles")
     commandes.add_parser("outils", help="lister les outils externes")
@@ -320,6 +323,20 @@ def main(arguments=None):
             print(f"({avant - len(choisis)} outils payants écartés)")
         if not choisis:
             raise SystemExit(f"Aucun outil pour : {args.famille or args.categorie}")
+        # Relance ciblée : on garde les outils déjà prêts tels quels, on ne réessaie
+        # que ceux qui avaient échoué. Beaucoup plus rapide qu'une install complète.
+        anciens_ok = []
+        if getattr(args, "reprendre", None) and os.path.exists(args.reprendre):
+            import json as _json
+            with open(args.reprendre, encoding="utf-8") as fichier:
+                precedent = _json.load(fichier)
+            details = precedent.get("details", [])
+            deja = {d["nom"] for d in details if d.get("installe")}
+            anciens_ok = [d for d in details if d.get("installe")]
+            avant_reprise = len(choisis)
+            choisis = [o for o in choisis if o["nom"] not in deja]
+            print(f"Reprise : {len(deja)} outils déjà prêts gardés, "
+                  f"{avant_reprise - len(choisis)} ignorés ; {len(choisis)} à réessayer.\n")
         if args.limite:
             choisis = choisis[:args.limite]
         print(f"{len(choisis)} outils à traiter"
@@ -327,7 +344,9 @@ def main(arguments=None):
               + (f", {args.parallele} à la fois" if args.parallele > 1 and not args.a_blanc
                  else "") + "\n")
         debut = time.monotonic()
-        comptes = installeur.installer(choisis, args.a_blanc, parallele=args.parallele)
+        nouveaux = installeur.installer(choisis, args.a_blanc, parallele=args.parallele)
+        # Le rapport final garde les outils déjà prêts + le résultat des réessais.
+        comptes = anciens_ok + nouveaux
         bilan = installeur.resume(comptes)
         import json as _json
         with open(args.rapport, "w", encoding="utf-8") as fichier:
