@@ -1,10 +1,10 @@
 {
   "resume": {
-    "total": 3,
+    "total": 2,
     "installes": 0,
     "prets": 0,
     "coquilles": 0,
-    "echecs": 3,
+    "echecs": 2,
     "par_methode": {}
   },
   "details": [
@@ -23,14 +23,6 @@
       "binaire": "",
       "methode": "brew (documenté)",
       "raison": "à blanc : brew install maigret"
-    },
-    {
-      "nom": "ArchiveBox",
-      "installe": false,
-      "repond": false,
-      "binaire": "",
-      "methode": "pipx (documenté)",
-      "raison": "à blanc : pipx install archivebox"
     }
   ]
 }

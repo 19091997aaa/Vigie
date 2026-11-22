@@ -132,6 +132,8 @@ def main(arguments=None):
 
     inst = commandes.add_parser("installer", help="installer en masse les outils du catalogue")
     inst.add_argument("--categorie", help="n'installer qu'une catégorie (nom exact)")
+    inst.add_argument("--famille", choices=["diag", "audit", "secu", "gate"],
+                      help="n'installer qu'une famille (diag = diagnostic gratuit, etc.)")
     inst.add_argument("--tous", action="store_true", help="tout le catalogue")
     inst.add_argument("--a-blanc", action="store_true",
                       help="n'installe rien : affiche ce qui serait tenté")
@@ -286,25 +288,33 @@ def main(arguments=None):
         return
 
     if args.commande == "installer":
-        from . import installeur
+        from . import installeur, registre
         outils_catalogue = installeur.charger()
-        if not args.categorie and not args.tous:
-            print("Catégories du catalogue (utilise --categorie \"...\" ou --tous) :\n")
+        if not args.categorie and not args.tous and not args.famille:
+            print("Choisis : --famille diag|audit|secu|gate, --categorie \"...\", ou --tous\n")
+            print("Familles :")
+            for fam, liste in registre.par_famille().items():
+                print(f"  {len(liste):4}  {fam} — {registre.FAMILLES[fam]}")
+            print("\nCatégories :")
             for nom, nombre in sorted(installeur.categories(outils_catalogue).items(),
                                       key=lambda couple: -couple[1]):
                 print(f"  {nombre:4}  {nom}")
             return
-        choisis = (outils_catalogue if args.tous else
-                   [o for o in outils_catalogue if o["categorie"] == args.categorie])
+        if args.famille:
+            noms_famille = {o["nom"].lower() for o in registre.par_famille()[args.famille]}
+            choisis = [o for o in outils_catalogue if o["nom"].lower() in noms_famille]
+        elif args.tous:
+            choisis = outils_catalogue
+        else:
+            choisis = [o for o in outils_catalogue if o["categorie"] == args.categorie]
         # On n'installe jamais les outils payants (Robin, uncover, PentAGI, mcp-scan…).
-        from . import registre
         payants = registre.noms_payants()
         avant = len(choisis)
         choisis = [o for o in choisis if o["nom"].lower() not in payants]
         if avant - len(choisis):
             print(f"({avant - len(choisis)} outils payants écartés)")
         if not choisis:
-            raise SystemExit(f"Aucun outil dans la catégorie : {args.categorie}")
+            raise SystemExit(f"Aucun outil pour : {args.famille or args.categorie}")
         if args.limite:
             choisis = choisis[:args.limite]
         print(f"{len(choisis)} outils à traiter"
