@@ -113,6 +113,13 @@ if [ -d "$racine/vigie" ]; then echo "  [ok] Vigie présent"
 else echo "  [!] dossier vigie introuvable à côté de ce script"; exit 1; fi
 
 titre "Installation de TOUS les outils non payants (ça peut prendre un moment)"
+# L'install dure longtemps : sans ça, les droits « sudo » expirent au bout de ~15 min
+# et les outils apt installés ensuite (nmap, clamav…) échouent. On garde sudo actif.
+if [ -n "$SUDO" ]; then
+  ( while true; do sudo -n true 2>/dev/null || exit; sleep 50; done ) &
+  SUDO_KEEPALIVE=$!
+  trap 'kill "$SUDO_KEEPALIVE" 2>/dev/null' EXIT
+fi
 dest_arg=""
 if [ -n "$dest" ]; then
   echo "  Les outils seront posés dans : $dest"

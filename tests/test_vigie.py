@@ -1531,8 +1531,14 @@ class TestInstallTousNonPayants(unittest.TestCase):
         from vigie import installeur
         outil = {"nom": "ExifTool", "lien": "https://github.com/exiftool/exiftool"}
         essais = installeur.methodes(outil, install="sudo apt install libimage-exiftool-perl")
-        self.assertTrue(any(cmd[:4] == ["sudo", "apt-get", "install", "-y"]
-                            for _, cmd in essais))
+        apt = [cmd for lib, cmd in essais if lib.startswith("apt (documenté)")]
+        self.assertTrue(apt, "aucune commande apt reconnue")
+        for cmd in apt:
+            self.assertEqual(cmd[:2], ["sudo", "apt-get"])
+            self.assertIn("install", cmd)
+            # apt doit ATTENDRE le verrou au lieu d'échouer tout de suite.
+            self.assertIn("DPkg::Lock::Timeout=300", cmd)
+            self.assertEqual(cmd[-1], "libimage-exiftool-perl")
 
     def test_payants_exclus_du_registre(self):
         from vigie import registre
