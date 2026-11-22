@@ -16,6 +16,7 @@ Pour brancher un nouvel outil :
 import os
 import shutil
 import subprocess
+import sys
 
 from .modeles import ControleImpossible
 
@@ -283,6 +284,31 @@ def disponible(nom):
     return trouver(CATALOGUE[nom]["commande"]) is not None
 
 
+# Sous Linux, la commande à montrer selon ce que la documentation de l'outil indique.
+_AFFICHAGE = [("apt", "sudo apt install {}"), ("pipx", "pipx install {}"),
+              ("go", "go install {}"), ("npm", "npm install -g {}")]
+
+
+def astuce_installation(nom, systeme=None):
+    """La commande d'installation à montrer pour cet outil, sur CE système.
+
+    Le catalogue note la commande macOS (Homebrew). « brew » n'existe pas sous Linux :
+    on y montre la commande écrite dans la documentation de l'outil (jamais un paquet
+    deviné sur son nom), sinon on renvoie vers l'installeur Linux de Vigie.
+    """
+    texte = CATALOGUE[nom]["installation"]
+    if (systeme or sys.platform) == "darwin" or not texte.startswith("brew "):
+        return texte
+    from . import installeur
+    doc = installeur._install_documentee({"nom": nom, "lien": CATALOGUE[nom]["depot"]})
+    motifs = {libelle.split()[0]: motif for libelle, motif, _ in installeur.DOCUMENTEES}
+    for genre, modele in _AFFICHAGE:
+        trouve = motifs[genre].search(doc)
+        if trouve and not trouve.group(1).startswith("-"):
+            return modele.format(trouve.group(1))
+    return "installeur Linux de Vigie (bash installer-linux.command)"
+
+
 def executer(nom, arguments, delai=300, dossier=None):
     """Lance un outil du catalogue et renvoie ce qu'il affiche.
 
@@ -293,7 +319,7 @@ def executer(nom, arguments, delai=300, dossier=None):
     chemin = trouver(outil["commande"])
     if not chemin:
         raise ControleImpossible(
-            f"l'outil {nom} n'est pas installé ({outil['installation']})")
+            f"l'outil {nom} n'est pas installé ({astuce_installation(nom)})")
     environnement = dict(os.environ, PATH=chemin_recherche())
     try:
         resultat = subprocess.run([chemin] + list(arguments), capture_output=True, text=True,
@@ -314,5 +340,5 @@ def etat():
         "actif": outil["actif"],
         "attaque": outil.get("attaque", False),
         "licence": outil["licence"],
-        "installation": outil["installation"],
+        "installation": astuce_installation(nom),
     } for nom, outil in CATALOGUE.items()]

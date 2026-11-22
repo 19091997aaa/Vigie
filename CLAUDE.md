@@ -118,7 +118,12 @@ meilleurs. Fichiers : `vigie/lanceur.py`, `vigie/banc.py`, `vigie/comparaison.py
 `vigie/decouverte.py` (devine la ligne de lancement d'un outil en lisant son aide).
 
 Installation en masse des outils du catalogue : `vigie/installeur.py` +
-`installer-mac.command` / `installer-windows.ps1`.
+`installer-mac.command` / `installer-windows.ps1` / `installer-linux.command`.
+`vigie/presence.py` dit quels outils du catalogue sont **installés sur la machine**
+(badge « installé » dans l'onglet « Lancer un outil », et `python3 -m vigie registre`).
+Attention : **le nom d'un outil n'est pas toujours sa commande** (ClamAV → `clamscan`,
+The Sleuth Kit → `fls`, Fail2ban → `fail2ban-client`) ; `vigie outils` ne liste que
+la quarantaine d'outils de l'enchaînement automatique, pas les 216.
 
 Principe : **Vigie ne copie le code d'aucun outil**. Il appelle les outils installés
 sur la machine (chaque outil garde sa licence, se met à jour seul, et Vigie continue
