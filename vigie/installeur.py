@@ -25,6 +25,24 @@ def charger(chemin=CATALOGUE):
         return json.load(fichier)
 
 
+def preparer_dest(dossier):
+    """Pose pipx/go/npm sur un dossier précis (ex. /opt/vigie-outils) sans que la
+    personne touche aux variables d'environnement.
+
+    Renvoie le dossier des exécutables (pour l'afficher). Les sous-processus
+    d'installation lisent os.environ, donc on règle tout ici une fois pour toutes.
+    """
+    dossier = os.path.abspath(os.path.expanduser(dossier))
+    bin_dir = os.path.join(dossier, "bin")
+    os.makedirs(bin_dir, exist_ok=True)
+    os.environ["PIPX_HOME"] = os.path.join(dossier, "pipx")
+    os.environ["PIPX_BIN_DIR"] = bin_dir
+    os.environ["GOPATH"] = os.path.join(dossier, "go")
+    os.environ["GOBIN"] = bin_dir
+    os.environ["PATH"] = bin_dir + os.pathsep + os.environ.get("PATH", "")
+    return bin_dir
+
+
 def categories(outils):
     """Les catégories et le nombre d'outils dans chacune."""
     compte = {}
