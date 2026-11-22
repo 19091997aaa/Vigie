@@ -1551,3 +1551,17 @@ class TestInstallTousNonPayants(unittest.TestCase):
         lancables = sum(1 for o in registre.non_payants()
                         if lancer_seul.ligne_lancement(o["nom"], "cible.fr"))
         self.assertGreaterEqual(lancables, 70)
+
+
+class TestInstallerParFamille(unittest.TestCase):
+    """Installer par famille (pour tenir dans un petit disque)."""
+
+    def test_famille_diag_a_blanc(self):
+        import io
+        from contextlib import redirect_stdout
+        tampon = io.StringIO()
+        with redirect_stdout(tampon):
+            cli.main(["installer", "--famille", "diag", "--a-blanc", "--limite", "2"])
+        texte = tampon.getvalue()
+        self.assertIn("à blanc", texte)
+        self.assertIn("payants écartés", texte)
