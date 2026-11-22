@@ -1523,6 +1523,147 @@ class TestInterfaceOutils(unittest.TestCase):
         with self.assertRaises(lancer_seul.Refus):
             interface_outils.lancer("nom=Sherlock&cible=")
 
+    def test_page_montre_les_outils_installes(self):
+        # Les outils présents sur la machine sont marqués « installé » et comptés ;
+        # dans la liste à lancer, ils viennent en tête avec un « ✓ ».
+        from vigie import interface_outils, presence
+        with mock.patch.object(presence, "etat", return_value={"Sherlock": True}):
+            p = interface_outils.page()
+        self.assertIn("m-installe'>installé", p)
+        self.assertIn("<b>1</b> outil sur\n216 est installé", p)
+        self.assertIn("— 1 installé</h2>", p)
+        self.assertIn("✓ Sherlock", p)
+        premier = re.search(r"<optgroup label='Diagnostic[^']*'><option value='([^']+)'", p)
+        self.assertEqual(premier.group(1), "Sherlock")
+
+
+class TestPresence(unittest.TestCase):
+    """Est-ce qu'un outil est installé sur la machine ? (presence.py)"""
+
+    def test_commande_lue_dans_l_usage(self):
+        from vigie import presence
+        lire = presence.binaire_usage
+        self.assertEqual(lire("clamscan [options] {fichier/dossier}  (antivirus)"), "clamscan")
+        self.assertEqual(lire("fail2ban-client ; surveille les logs"), "fail2ban-client")
+        self.assertEqual(lire("sudo bettercap -iface eth0 ; modules"), "bettercap")
+        self.assertEqual(lire("python3 -m garak --model_type ..."), "garak")
+        self.assertEqual(lire("theHarvester -d {cible} -l 500"), "theHarvester")
+        self.assertEqual(lire("hydra -l user -P passlist.txt ssh://cible"), "hydra")
+
+    def test_une_phrase_n_est_pas_une_commande(self):
+        # Sinon Vigie chercherait un programme « suite » ou « serveur » sur la machine.
+        from vigie import presence
+        for phrase in ("suite complète d'audit de sécurité WiFi",
+                       "serveur DNS filtrant réseau (bloque pubs)",
+                       "gestionnaire de mots de passe LOCAL",
+                       "framework red team agentique IA (tests)",
+                       "SURTOUT via interface web (sf.py -l host:port)",
+                       "python main.py cli -m gpt-4.1",       # un script, pas l'outil
+                       "./reconftw.sh -d {domaine} -r",       # lancé depuis son dossier
+                       "docker run -it projectdiscovery/x"):
+            self.assertIsNone(presence.binaire_usage(phrase), phrase)
+
+    def test_le_nom_de_l_outil_n_est_pas_toujours_sa_commande(self):
+        from vigie import presence
+        self.assertIn("clamscan", presence.binaires_possibles("ClamAV"))
+        self.assertIn("fls", presence.binaires_possibles("The Sleuth Kit"))
+        self.assertIn("hydra", presence.binaires_possibles("THC-Hydra"))
+        self.assertIn("nmap", presence.binaires_possibles("Nmap"))
+        # Dépôt au nom trop vague (« opnsense/core ») : on ne cherche pas « core ».
+        self.assertNotIn("core", presence.binaires_possibles("OPNsense"))
+
+    def _machine(self, *commandes):
+        """Une fausse machine : seuls ces exécutables existent."""
+        dossier = tempfile.mkdtemp()
+        for commande in commandes:
+            chemin = os.path.join(dossier, commande)
+            with open(chemin, "w") as f:
+                f.write("#!/bin/sh\necho ok\n")
+            os.chmod(chemin, 0o755)
+        return [mock.patch.dict(os.environ, {"PATH": dossier}),
+                mock.patch.object(outils, "DOSSIERS_OUTILS", [])]
+
+    def test_outil_installe_via_apt_est_vu(self):
+        from vigie import presence
+        rustines = self._machine("clamscan", "tcpdump")
+        for r in rustines:
+            r.start()
+        try:
+            self.assertTrue(presence.installe("ClamAV"))
+            self.assertTrue(presence.installe("tcpdump"))
+            self.assertFalse(presence.installe("YARA"))
+        finally:
+            for r in rustines:
+                r.stop()
+
+    def test_aucun_faux_positif_sur_une_machine_vide(self):
+        from vigie import presence
+        rustines = self._machine()
+        for r in rustines:
+            r.start()
+        try:
+            etats = presence.etat(verifies={})
+        finally:
+            for r in rustines:
+                r.stop()
+        self.assertEqual([n for n, v in etats.items() if v], [])
+        self.assertGreater(len(etats), 200)
+
+    def test_commande_verifiee_par_l_installation(self):
+        # Le rapport d'installation dit quelle commande a vraiment démarré : on la reprend.
+        from vigie import presence
+        with tempfile.TemporaryDirectory() as d:
+            chemin = os.path.join(d, "vigie-installation.json")
+            with open(chemin, "w", encoding="utf-8") as f:
+                json.dump({"details": [
+                    {"nom": "SpiderFoot", "installe": True, "repond": True, "binaire": "sf"},
+                    {"nom": "Datashare", "installe": True, "repond": False, "binaire": ""},
+                ]}, f)
+            verifies = presence.rapport_installation(chemin)
+        self.assertEqual(verifies, {"spiderfoot": "sf"})
+        self.assertIn("sf", presence.binaires_possibles("SpiderFoot", verifies))
+        self.assertEqual(presence.rapport_installation("/nulle/part.json"), {})
+
+    def test_registre_en_ligne_de_commande_marque_les_installes(self):
+        import io
+        from contextlib import redirect_stdout
+        from vigie import registre
+        tampon = io.StringIO()
+        with redirect_stdout(tampon):
+            registre._principal(["secu"], statut={"ClamAV": True})
+        texte = tampon.getvalue()
+        self.assertIn("- ClamAV  [installé]", texte)
+        self.assertIn("1 est installé sur cette machine.", texte)
+
+    def test_installeur_essaie_la_vraie_commande(self):
+        # apt pose le paquet « clamav », mais la commande est « clamscan » : l'outil
+        # ne doit plus passer pour « installé mais ne démarre pas ».
+        outil = {"nom": "ClamAV", "lien": "https://github.com/Cisco-Talos/clamav"}
+        with mock.patch.object(installeur, "_lancer", return_value=(True, "", "")), \
+                mock.patch.object(installeur, "repond", side_effect=lambda b: b == "clamscan"):
+            compte = installeur.installer_un(outil)
+        self.assertTrue(compte["repond"])
+        self.assertEqual(compte["binaire"], "clamscan")
+
+
+class TestAstuceInstallation(unittest.TestCase):
+    """« brew install » n'existe pas sous Linux : on montre la commande de la doc."""
+
+    def test_linux_montre_apt(self):
+        self.assertEqual(outils.astuce_installation("nmap", "linux"), "sudo apt install nmap")
+        self.assertEqual(outils.astuce_installation("hydra", "linux"), "sudo apt install hydra")
+
+    def test_mac_inchange(self):
+        self.assertEqual(outils.astuce_installation("nmap", "darwin"), "brew install nmap")
+
+    def test_pipx_inchange_partout(self):
+        self.assertEqual(outils.astuce_installation("sherlock", "linux"),
+                         "pipx install sherlock-project")
+
+    def test_jamais_brew_sous_linux(self):
+        for nom in outils.CATALOGUE:
+            self.assertFalse(outils.astuce_installation(nom, "linux").startswith("brew"), nom)
+
 
 class TestInstallTousNonPayants(unittest.TestCase):
     """Installation en masse : méthode apt + exclusion des payants + plus d'outils lançables."""
@@ -1633,6 +1774,30 @@ class TestInstallTousNonPayants(unittest.TestCase):
                 final = json.load(f)
             noms_ok = {d["nom"] for d in final["details"] if d.get("installe")}
             self.assertIn("Sherlock", noms_ok)
+
+    def test_reprendre_reverifie_ceux_qui_ne_demarraient_pas(self):
+        # Un outil « installé mais ne démarre pas » n'est PAS gardé tel quel : souvent on
+        # cherchait la mauvaise commande (clamav au lieu de clamscan). Il est revérifié.
+        import json
+        import os
+        import subprocess
+        import sys
+        import tempfile
+        rapport = {"resume": {}, "details": [
+            {"nom": "Sherlock", "installe": True, "repond": True},
+            {"nom": "ClamAV", "installe": True, "repond": False},
+        ]}
+        with tempfile.TemporaryDirectory() as d:
+            chemin = os.path.join(d, "prec.json")
+            with open(chemin, "w", encoding="utf-8") as f:
+                json.dump(rapport, f)
+            res = subprocess.run(
+                [sys.executable, "-m", "vigie", "installer", "--tous", "--a-blanc",
+                 "--reprendre", chemin, "--rapport", os.path.join(d, "out.json")],
+                capture_output=True, text=True,
+                cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            self.assertIn("Reprise : 1 outils déjà prêts gardés", res.stdout)
+            self.assertIn("ClamAV", res.stdout)          # il repart dans la liste
 
 
 class TestInstallerParFamille(unittest.TestCase):

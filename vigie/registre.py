@@ -124,15 +124,19 @@ def par_famille(chemin=_DOCS):
     return groupes
 
 
-def _principal(argv):
+def _principal(argv, statut=None):
+    """statut (optionnel) : {nom : True/False/None}, ce qui est installé sur la machine
+    (voir presence.etat). Donné par « vigie registre » ; absent, rien n'est marqué."""
     groupes = par_famille()
     familles = argv or ORDRE
-    total, payants = 0, 0
+    total, payants, installes = 0, 0, 0
     for f in familles:
         liste = sorted(groupes.get(f, []), key=lambda x: x["nom"].lower())
         print(f"\n=== {FAMILLES.get(f, f)}  ({len(liste)}) ===")
         for o in liste:
             marques = []
+            if statut and statut.get(o["nom"]):
+                marques.append("installé"); installes += 1
             if o["payant"]:
                 marques.append("PAYANT"); payants += 1
             if o["attaque"]:
@@ -143,6 +147,9 @@ def _principal(argv):
             suffixe = f"  [{', '.join(marques)}]" if marques else ""
             print(f"  - {o['nom']}{suffixe}")
     print(f"\n{total} outils ({payants} payants, non installés).")
+    if statut is not None:
+        verbe = "sont installés" if installes > 1 else "est installé"
+        print(f"{installes} {verbe} sur cette machine.")
     return 0
 
 

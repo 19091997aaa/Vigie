@@ -331,8 +331,11 @@ def main(arguments=None):
             with open(args.reprendre, encoding="utf-8") as fichier:
                 precedent = _json.load(fichier)
             details = precedent.get("details", [])
-            deja = {d["nom"] for d in details if d.get("installe")}
-            anciens_ok = [d for d in details if d.get("installe")]
+            # Seuls les outils PRÊTS (installés ET qui démarrent) sont gardés : ceux qui
+            # « ne démarraient pas » sont revérifiés (souvent, on cherchait le mauvais nom
+            # de commande : clamav au lieu de clamscan).
+            anciens_ok = [d for d in details if d.get("installe") and d.get("repond")]
+            deja = {d["nom"] for d in anciens_ok}
             avant_reprise = len(choisis)
             choisis = [o for o in choisis if o["nom"] not in deja]
             print(f"Reprise : {len(deja)} outils déjà prêts gardés, "
@@ -376,11 +379,13 @@ def main(arguments=None):
             genre = "actif" if outil["actif"] else "passif"
             print(f"{outil['nom']:13} {etat}  {branche:10}  {genre:6}  {outil['role']}")
             print(f"{'':13} licence : {outil['licence']} | installation : {outil['installation']}")
+        print("\nCe sont les outils de l'enchaînement automatique. Les 216 du catalogue "
+              "(clamav, yara, tcpdump…) : « python3 -m vigie registre ».")
         return
 
     if args.commande == "registre":
-        from . import registre
-        return registre._principal(args.familles)
+        from . import presence, registre
+        return registre._principal(args.familles, statut=presence.etat())
 
     if args.commande == "outil":
         from . import lancer_seul

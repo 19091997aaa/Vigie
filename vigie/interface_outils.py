@@ -1,15 +1,16 @@
 """L'onglet « Lancer un outil » : choisir UN outil du catalogue et le lancer seul.
 
-On voit les 216 outils non payants rangés par famille. Les outils PASSIFS (diag,
-sécurisation) se lancent ici, un par un, sur la cible saisie. Les outils ACTIFS ou
-offensifs ne se lancent PAS ici : ils renvoient vers l'onglet « Outils manuels », qui
-exige l'autorisation signée (règles d'or). Tous les garde-fous sont dans lancer_seul.py.
+On voit les 216 outils non payants rangés par famille, et ceux qui sont INSTALLÉS sur
+cette machine (presence.py). Les outils PASSIFS (diag, sécurisation) se lancent ici, un
+par un, sur la cible saisie. Les outils ACTIFS ou offensifs ne se lancent PAS ici : ils
+renvoient vers l'onglet « Outils manuels », qui exige l'autorisation signée (règles
+d'or). Tous les garde-fous sont dans lancer_seul.py.
 """
 import html
 import secrets
 import threading
 
-from . import __version__, lancer_seul, rapport, registre
+from . import __version__, lancer_seul, presence, rapport, registre
 
 LANCEMENTS = {}
 VERROU = threading.Lock()
@@ -26,6 +27,8 @@ CSS = """
 .m-auto { background: #fcf0dc; color: #9a5f00; }
 .m-payant { background: #eceef1; color: #5c6676; }
 .m-pret { background: #e6f2ec; color: #2e7d4f; }
+.m-installe { background: #2e7d4f; color: #fff; }
+.compte-installes { font-size: 15px; margin: 6px 0 0; }
 """
 
 
@@ -34,8 +37,10 @@ def _champs(corps):
     return urllib.parse.parse_qs(corps, keep_blank_values=True)
 
 
-def _options_passifs():
-    """Un <select> des outils passifs non payants, groupés par famille."""
+def _options_passifs(etats=None):
+    """Un <select> des outils passifs non payants, groupés par famille.
+    Ceux qui sont installés ici viennent en tête, marqués « ✓ »."""
+    etats = etats or {}
     groupes = registre.par_famille()
     etiquettes = {"diag": "Diagnostic gratuit (OSINT passif)",
                   "secu": "Sécurisation (défensif, local)"}
@@ -46,14 +51,16 @@ def _options_passifs():
         if not passifs:
             continue
         options = "".join(
-            f"<option value='{html.escape(o['nom'])}'>{html.escape(o['nom'])}"
+            f"<option value='{html.escape(o['nom'])}'>"
+            f"{'✓ ' if etats.get(o['nom']) else ''}{html.escape(o['nom'])}"
             f" — {html.escape(o['categorie'][:48])}</option>"
-            for o in sorted(passifs, key=lambda x: x["nom"].lower()))
+            for o in sorted(passifs, key=lambda x: (not etats.get(x["nom"]), x["nom"].lower())))
         morceaux.append(f"<optgroup label='{etiquettes[fam]}'>{options}</optgroup>")
     return "".join(morceaux)
 
 
-def _catalogue_html():
+def _catalogue_html(etats=None):
+    etats = etats or {}
     e = html.escape
     groupes = registre.par_famille()
     titres = registre.FAMILLES
@@ -68,8 +75,12 @@ def _catalogue_html():
                 marque = "<span class='marque m-auto'>autorisation</span>"
             else:
                 marque = "<span class='marque m-pret'>lançable</span>"
+            if etats.get(o["nom"]):
+                marque += "<span class='marque m-installe'>installé</span>"
             items.append(f"<li>{e(o['nom'])}{marque}</li>")
-        blocs.append(f"<div class='fam'><h2>{e(titres[fam])} ({len(liste)})</h2>"
+        installes = sum(1 for o in liste if etats.get(o["nom"]))
+        blocs.append(f"<div class='fam'><h2>{e(titres[fam])} ({len(liste)})"
+                     f" — {installes} installé{'s' if installes > 1 else ''}</h2>"
                      f"<ul class='liste-outils'>{''.join(items)}</ul></div>")
     return "".join(blocs)
 
@@ -80,6 +91,9 @@ def page(message="", ok=""):
         bandeau = f"<div class='erreur'>{html.escape(message)}</div>"
     elif ok:
         bandeau = f"<div class='bandeau'>{html.escape(ok)}</div>"
+    etats = presence.etat()
+    gratuits = [o["nom"] for o in registre.non_payants()]
+    installes = sum(1 for nom in gratuits if etats.get(nom))
     return f"""<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -91,11 +105,15 @@ def page(message="", ok=""):
 Les outils <b>actifs</b> ou offensifs se lancent dans
 <a href="/manuel">Outils manuels</a>, avec autorisation signée.</p>
 <form method="post" action="/outil/lancer">
-<label>Outil<select name="nom">{_options_passifs()}</select></label>
+<label>Outil<select name="nom">{_options_passifs(etats)}</select></label>
 <label>Cible<input name="cible" placeholder="exemple.fr ou un pseudo" required></label>
 <button type="submit">Lancer cet outil</button>
 </form></div>
-<div class="familles"><h2>Tous les outils du catalogue</h2>{_catalogue_html()}</div>
+<div class="familles"><h2>Tous les outils du catalogue</h2>
+<p class="compte-installes"><b>{installes}</b> {'outils' if installes > 1 else 'outil'} sur
+{len(gratuits)} {'sont installés' if installes > 1 else 'est installé'} sur cette machine
+(marqués <span class='marque m-installe'>installé</span>).</p>
+{_catalogue_html(etats)}</div>
 <div class="corps"><p><a href="/">Accueil</a> · <a href="/manuel">Outils manuels</a></p></div>
 </main></body></html>"""
 

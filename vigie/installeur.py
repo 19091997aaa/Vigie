@@ -203,8 +203,15 @@ def installer_un(outil, a_blanc=False):
         if not reussi:
             raisons.append(f"{libelle} : {message}")
             continue
-        # Installé n'est pas prêt : on lance l'exécutable pour le vérifier.
-        for binaire in binaires_poses(libelle, sortie, proprietaire, depot_nom, commande):
+        # Installé n'est pas prêt : on lance l'exécutable pour le vérifier. Le nom du
+        # paquet n'est pas toujours celui de la commande (clamav -> clamscan, sleuthkit
+        # -> fls, fail2ban -> fail2ban-client) : on essaie aussi les commandes connues
+        # de l'outil, sinon il passe à tort pour « installé mais ne démarre pas ».
+        from . import presence
+        candidats = binaires_poses(libelle, sortie, proprietaire, depot_nom, commande)
+        candidats += [b for b in presence.binaires_possibles(outil["nom"])
+                      if b not in candidats]
+        for binaire in candidats:
             if repond(binaire):
                 return {"nom": outil["nom"], "installe": True, "repond": True,
                         "binaire": binaire, "methode": libelle, "raison": ""}

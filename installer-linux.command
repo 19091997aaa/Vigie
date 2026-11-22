@@ -149,7 +149,10 @@ if [ -n "$avant" ] && [ -n "$apres" ]; then
 fi
 
 titre "Vérification : ce que Vigie voit maintenant"
-(cd "$racine" && python3 -m vigie outils 2>/dev/null | grep -i "installé" | head -40) || true
+# Vigie regarde lui-même quels outils du catalogue sont sur la machine (y compris
+# ceux posés à la main avec apt : clamav, yara, tcpdump…).
+(cd "$racine" && python3 -m vigie registre 2>/dev/null | tail -1) || true
+echo "  Le détail (outil par outil) : onglet « Lancer un outil » de l'interface."
 
 cat <<'TXT'
 
