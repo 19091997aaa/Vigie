@@ -135,8 +135,11 @@ DOCUMENTEES = [
     ("npm (documenté)", re.compile(r"\bnpm (?:install|i) -g\s+" + PAQUET), ["npm", "install", "-g"]),
     # Linux (Debian/Ubuntu/Kali) : le paquet est celui écrit dans la doc de l'outil,
     # jamais deviné. -y pour ne pas bloquer sur une question.
+    # DPkg::Lock::Timeout : apt ATTEND le verrou (jusqu'à 5 min) au lieu d'échouer
+    # tout de suite si une mise à jour automatique l'occupe. C'est ce qui faisait
+    # rater nmap, tcpdump, clamav… alors qu'ils sont bien dans les dépôts Ubuntu.
     ("apt (documenté)", re.compile(r"\bapt(?:-get)? install\s+" + PAQUET),
-     ["sudo", "apt-get", "install", "-y"]),
+     ["sudo", "apt-get", "-o", "DPkg::Lock::Timeout=300", "install", "-y"]),
 ]
 
 
