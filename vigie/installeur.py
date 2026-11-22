@@ -254,9 +254,10 @@ def resume(comptes_rendus):
     """Trois états, pas deux : installé ne veut pas dire utilisable."""
     reussis = [c for c in comptes_rendus if c["installe"]]
     prets = [c for c in reussis if c.get("repond")]
+    # .get : un compte rendu repris d'un ancien rapport peut ne pas porter « methode ».
     return {"total": len(comptes_rendus), "installes": len(reussis),
             "prets": len(prets),
             "coquilles": len(reussis) - len(prets),
             "echecs": len(comptes_rendus) - len(reussis),
-            "par_methode": {m: sum(1 for c in reussis if c["methode"] == m)
-                            for m in sorted({c["methode"] for c in reussis})}}
+            "par_methode": {m: sum(1 for c in reussis if c.get("methode", "") == m)
+                            for m in sorted({c.get("methode", "") for c in reussis})}}

@@ -119,7 +119,13 @@ if [ -n "$dest" ]; then
   dest_arg="--dest $dest"
 fi
 # Vigie installe tout le catalogue, outils payants écartés, et écrit un bilan.
-(cd "$racine" && python3 -m vigie installer --tous --parallele 6 $dest_arg \
+# Si une install précédente existe, on ne réessaie QUE ce qui avait échoué (rapide).
+reprise_arg=""
+if [ -f "$HOME/vigie-installation.json" ]; then
+  reprise_arg="--reprendre $HOME/vigie-installation.json"
+  echo "  (relance ciblée : seuls les outils encore manquants seront réessayés)"
+fi
+(cd "$racine" && python3 -m vigie installer --tous --parallele 6 $dest_arg $reprise_arg \
     --rapport "$HOME/vigie-installation.json")
 
 titre "Nettoyage des caches de compilation (récupère de la place)"
