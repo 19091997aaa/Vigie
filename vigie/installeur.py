@@ -34,11 +34,21 @@ def preparer_dest(dossier):
     """
     dossier = os.path.abspath(os.path.expanduser(dossier))
     bin_dir = os.path.join(dossier, "bin")
-    os.makedirs(bin_dir, exist_ok=True)
+    go_dir = os.path.join(dossier, "go")
+    cache = os.path.join(dossier, "cache")
+    tmp = os.path.join(dossier, "tmp")
+    for d in (bin_dir, go_dir, cache, tmp, os.path.join(dossier, "pipx")):
+        os.makedirs(d, exist_ok=True)
     os.environ["PIPX_HOME"] = os.path.join(dossier, "pipx")
     os.environ["PIPX_BIN_DIR"] = bin_dir
-    os.environ["GOPATH"] = os.path.join(dossier, "go")
+    os.environ["GOPATH"] = go_dir
     os.environ["GOBIN"] = bin_dir
+    # Les CACHES vont aussi sur le disque, sinon ils remplissent / (le cache de
+    # compilation Go peut peser plusieurs Go) : c'est ce qui a saturé le système.
+    os.environ["GOMODCACHE"] = os.path.join(go_dir, "pkg", "mod")
+    os.environ["GOCACHE"] = os.path.join(cache, "go-build")
+    os.environ["PIP_CACHE_DIR"] = os.path.join(cache, "pip")
+    os.environ["TMPDIR"] = tmp
     os.environ["PATH"] = bin_dir + os.pathsep + os.environ.get("PATH", "")
     return bin_dir
 
