@@ -112,6 +112,11 @@ def non_payants(chemin=_DOCS):
     return [o for o in charger(chemin) if not o["payant"]]
 
 
+def noms_payants(chemin=_DOCS):
+    """Les noms (en minuscules) des outils payants, à ne pas installer."""
+    return {o["nom"].lower() for o in charger(chemin) if o["payant"]}
+
+
 def par_famille(chemin=_DOCS):
     groupes = {f: [] for f in ORDRE}
     for o in charger(chemin):
