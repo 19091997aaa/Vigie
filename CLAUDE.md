@@ -137,6 +137,14 @@ jamais écrits). `vigie/modules/complet.py` = les nouveaux branchements.
 ceux qui ne peuvent pas tourner (AdGuard Home, Pi-hole, Web-Check, Datashare, Flowsint,
 InVID, geo-sleuth, IVRE, auto-archiver, Toutatis) et **Robin, écarté (dark web)**.
 
+**Conséquences pour le dirigeant (24/11/2026)** : demande d'Anass, chaque constat non
+« Correct » a un onglet **Conséquences** (ce qu'un attaquant peut faire / ce que ça coûte /
+côté loi / côté assurance / exemple réel sourcé) à côté de l'onglet **À corriger
+(technique)**. Données dans `vigie/consequences.py` (une clé = la clé du constat ; un
+nouveau constat = ajouter sa fiche, un test le vérifie). Sources : `docs/sources-consequences.md`.
+Règle : toujours « peut », aucun montant d'amende par constat (plafonds une seule fois dans
+le cadre légal). La phrase d'en-tête suit la lettre : un D dit clairement qu'il faut agir.
+
 Principe : **Vigie ne copie le code d'aucun outil**. Il appelle les outils installés
 sur la machine (chaque outil garde sa licence, se met à jour seul, et Vigie continue
 de marcher si l'un manque). Pour brancher un nouvel outil GitHub : voir la section
