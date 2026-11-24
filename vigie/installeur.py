@@ -180,19 +180,38 @@ def methodes(outil, install=None):
                 continue
             vus.add(tuple(commande))
             essais.append((libelle, commande))
-    essais += [
-        ("pipx (dépôt)", ["pipx", "install", f"git+https://github.com/{proprietaire}/{nom}"]),
-        ("go (dépôt)", ["go", "install", f"github.com/{proprietaire}/{nom}@latest"]),
-    ]
+    # Repli sur le dépôt exact, SEULEMENT dans le langage de l'outil. Avant, Vigie
+    # essayait pipx ET go sur tous les dépôts : sur un outil Docker, Node ou Rust, ça
+    # ne pouvait que rater, avec des messages d'erreur trompeurs. Sans aucune
+    # documentation, on ne connaît pas le langage : on essaie les deux.
+    python, go = _langages(texte)
+    if python:
+        essais.append(("pipx (dépôt)",
+                       ["pipx", "install", f"git+https://github.com/{proprietaire}/{nom}"]))
+    if go:
+        essais.append(("go (dépôt)", ["go", "install", f"github.com/{proprietaire}/{nom}@latest"]))
     return essais
+
+
+_PYTHON = re.compile(r"\bpip[x3]?\b|python|\buv\b|setup\.py|pyproject|requirements", re.I)
+_GO = re.compile(r"\bgo (?:install|build|get)\b|golang|\(go\)|\bGo\b")
+
+
+def _langages(install):
+    """(python ?, go ?) d'après la ligne d'installation documentée de l'outil."""
+    if not (install or "").strip():
+        return True, True
+    return bool(_PYTHON.search(install)), bool(_GO.search(install))
 
 
 def installer_un(outil, a_blanc=False):
     """Essaie les méthodes l'une après l'autre, puis vérifie que l'outil démarre vraiment."""
     essais = methodes(outil)
     if not essais:
+        raison = ("pas de dépôt" if not depot(outil.get("lien", "")) else
+                  "pas de méthode automatique sûre (s'installe à la main, voir sa doc)")
         return {"nom": outil["nom"], "installe": False, "repond": False, "binaire": "",
-                "methode": "", "raison": "pas de dépôt"}
+                "methode": "", "raison": raison}
     if a_blanc:
         return {"nom": outil["nom"], "installe": False, "repond": False, "binaire": "",
                 "methode": essais[0][0], "raison": "à blanc : " + " ".join(essais[0][1])}

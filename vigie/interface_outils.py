@@ -10,7 +10,7 @@ import html
 import secrets
 import threading
 
-from . import __version__, lancer_seul, presence, rapport, registre
+from . import __version__, fiches_outils, lancer_seul, presence, rapport, registre
 
 LANCEMENTS = {}
 VERROU = threading.Lock()
@@ -29,6 +29,16 @@ CSS = """
 .m-pret { background: #e6f2ec; color: #2e7d4f; }
 .m-installe { background: #2e7d4f; color: #fff; }
 .compte-installes { font-size: 15px; margin: 6px 0 0; }
+.refus { padding: 13px 16px; border-radius: 10px; border-left: 4px solid #b3261e;
+  background: #fbeceb; color: #5a1410; margin: 4px 0 14px; line-height: 1.5; }
+.refus b { color: #8a1d16; }
+.reussi { padding: 13px 16px; border-radius: 10px; border-left: 4px solid #1e7a46;
+  background: #e6f2ec; margin: 4px 0 14px; line-height: 1.5; }
+.explication { padding: 13px 16px; border-radius: 10px; border-left: 4px solid #9a5f00;
+  background: #fcf0dc; margin: 4px 0 14px; line-height: 1.5; }
+.explication p, .reussi p { margin: 4px 0; }
+.aide-outil { font-size: 14px; color: #3c4656; margin: -4px 0 10px; min-height: 1.4em; }
+details.brut summary { cursor: pointer; font-weight: 700; margin: 12px 0 6px; }
 """
 
 
@@ -51,12 +61,41 @@ def _options_passifs(etats=None):
         if not passifs:
             continue
         options = "".join(
-            f"<option value='{html.escape(o['nom'])}'>"
-            f"{'✓ ' if etats.get(o['nom']) else ''}{html.escape(o['nom'])}"
-            f" — {html.escape(o['categorie'][:48])}</option>"
+            _option(o, etats.get(o["nom"]))
             for o in sorted(passifs, key=lambda x: (not etats.get(x["nom"]), x["nom"].lower())))
         morceaux.append(f"<optgroup label='{etiquettes[fam]}'>{options}</optgroup>")
     return "".join(morceaux)
+
+
+def aide(o):
+    """Une phrase d'aide pour un outil : à quoi il sert et ce qu'il attend."""
+    f = fiches_outils.fiche(o["nom"], o)
+    role = f.get("role") or o.get("categorie", "")
+    if f.get("mode") != "cible":
+        quoi = {"service": "service à installer, ne se lance pas d'ici",
+                "appli": "logiciel à ouvrir soi-même",
+                "windows": "Windows seulement",
+                "capture": "capture réseau, à lancer à la main",
+                "ressource": "règles pour un autre outil",
+                "compte": "demande un compte ou une clé",
+                "agent": "compétence pour assistant IA",
+                "a_la_main": "demande une préparation"}.get(f["mode"], "à la main")
+        return f"Ça {role}. ({quoi})"
+    attendu = fiches_outils.CIBLES.get(f.get("cible"))
+    if not attendu:
+        return f"Ça {role}."
+    if f["cible"] == "aucune":
+        return f"Ça {role}. Pas de cible à taper."
+    return f"Ça {role}. Cible : {attendu[0]}, par exemple {attendu[1]}."
+
+
+def _option(o, installe):
+    e = html.escape
+    f = fiches_outils.fiche(o["nom"], o)
+    a_la_main = "" if f.get("mode") == "cible" else " (à la main)"
+    return (f"<option value='{e(o['nom'])}' data-aide='{e(aide(o), quote=True)}'>"
+            f"{'✓ ' if installe else ''}{e(o['nom'])}{a_la_main}"
+            f" — {e((f.get('role') or o['categorie'])[:60])}</option>")
 
 
 def _catalogue_html(etats=None):
@@ -88,7 +127,8 @@ def _catalogue_html(etats=None):
 def page(message="", ok=""):
     bandeau = ""
     if message:
-        bandeau = f"<div class='erreur'>{html.escape(message)}</div>"
+        bandeau = ("<div class='refus'><b>Pourquoi ça ne part pas :</b><br>"
+                   f"{html.escape(message)}</div>")
     elif ok:
         bandeau = f"<div class='bandeau'>{html.escape(ok)}</div>"
     etats = presence.etat()
@@ -105,10 +145,22 @@ def page(message="", ok=""):
 Les outils <b>actifs</b> ou offensifs se lancent dans
 <a href="/manuel">Outils manuels</a>, avec autorisation signée.</p>
 <form method="post" action="/outil/lancer">
-<label>Outil<select name="nom">{_options_passifs(etats)}</select></label>
-<label>Cible<input name="cible" placeholder="exemple.fr ou un pseudo" required></label>
+<label>Outil<select name="nom" id="choix-outil">{_options_passifs(etats)}</select></label>
+<p class="aide-outil" id="aide-outil"></p>
+<label>Cible<input name="cible" placeholder="exemple.fr ou un pseudo"></label>
 <button type="submit">Lancer cet outil</button>
-</form></div>
+</form>
+<script>
+(function () {{
+  var choix = document.getElementById("choix-outil");
+  var aide = document.getElementById("aide-outil");
+  function maj() {{
+    var o = choix.options[choix.selectedIndex];
+    aide.textContent = o ? (o.getAttribute("data-aide") || "") : "";
+  }}
+  choix.addEventListener("change", maj); maj();
+}})();
+</script></div>
 <div class="familles"><h2>Tous les outils du catalogue</h2>
 <p class="compte-installes"><b>{installes}</b> {'outils' if installes > 1 else 'outil'} sur
 {len(gratuits)} {'sont installés' if installes > 1 else 'est installé'} sur cette machine
@@ -120,29 +172,39 @@ Les outils <b>actifs</b> ou offensifs se lancent dans
 
 def lancer(corps):
     """Lance un outil passif en arrière-plan. Renvoie l'identifiant de suivi.
-    Lève lancer_seul.Refus (raison en clair) si le lancement n'est pas permis."""
+    Lève lancer_seul.Refus (raison en clair, en français) si le lancement n'est pas
+    permis ou ne peut pas marcher : outil actif, service, mauvaise cible…"""
     c = _champs(corps)
     nom = (c.get("nom", [""])[0] or "").strip()[:80]
     cible = (c.get("cible", [""])[0] or "").strip()[:200]
     lancer_seul.verifier_lancable(nom, autorisation_ok=False)   # refuse actif/payant/inconnu
-    if not cible:
-        raise lancer_seul.Refus("Indique une cible.")
+    prepa = lancer_seul.preparer(nom, cible)                    # explique tout refus
     ident = secrets.token_urlsafe(9)
     with VERROU:
-        LANCEMENTS[ident] = {"etat": "en_cours", "outil": nom, "cible": cible, "resultat": ""}
+        LANCEMENTS[ident] = {"etat": "en_cours", "outil": nom,
+                             "cible": prepa["cible"] or "cet ordinateur",
+                             "resultat": "", "explication": [], "brut": "",
+                             "reussi": False, "commande": ""}
 
     def travail():
         try:
             compte = lancer_seul.lancer(nom, cible)
-            if not compte.get("lance"):
-                etat = {"etat": "erreur", "resultat": compte.get("raison", "non lancé")}
-            else:
-                note = "" if compte["verifiee"] else \
-                    "(ligne de lancement devinée du catalogue, à confirmer)\n\n"
-                etat = {"etat": "fini", "outil": compte["outil"],
-                        "resultat": note + (compte.get("traduction") or "Rien à afficher.")}
+            reussi = bool(compte.get("lance")) and not compte.get("code") \
+                and bool((compte.get("sortie") or "").strip())
+            brut = (compte.get("sortie") or "")
+            if compte.get("erreurs") and compte["erreurs"] not in brut:
+                brut += "\n" + compte["erreurs"]
+            if compte.get("absent"):
+                brut = "Raison notée à l'installation : " + (
+                    lancer_seul.raison_installation(compte["outil"]) or "aucune (pas encore "
+                    "d'installation sur cette machine)")
+            etat = {"etat": "fini" if compte.get("lance") else "erreur",
+                    "outil": compte["outil"], "reussi": reussi,
+                    "explication": compte.get("explication", []),
+                    "resultat": compte.get("traduction") if reussi else "",
+                    "brut": brut.strip(), "commande": compte.get("commande", "")}
         except Exception as erreur:
-            etat = {"etat": "erreur", "resultat": str(erreur)}
+            etat = {"etat": "erreur", "explication": [str(erreur)]}
         with VERROU:
             LANCEMENTS[ident].update(etat)
     threading.Thread(target=travail, daemon=True).start()
@@ -155,13 +217,38 @@ def page_resultat(ident):
     if not etat:
         return None
     e = html.escape
-    rafraichir = "<meta http-equiv='refresh' content='4'>" if etat["etat"] == "en_cours" else ""
-    titre = {"en_cours": "En cours…", "fini": "Terminé", "erreur": "Arrêté"}[etat["etat"]]
+    en_cours = etat["etat"] == "en_cours"
+    rafraichir = "<meta http-equiv='refresh' content='4'>" if en_cours else ""
+    if en_cours:
+        titre = "En cours…"
+    elif etat.get("reussi"):
+        titre = "Terminé"
+    else:
+        titre = "N'a pas marché" if etat["etat"] == "erreur" or etat.get("explication") \
+            else "Terminé"
+    morceaux = []
+    if en_cours:
+        morceaux.append("<p>L'outil tourne. Cette page se met à jour toute seule.</p>")
+    phrases = etat.get("explication") or []
+    if phrases:
+        classe = "reussi" if etat.get("reussi") else "explication"
+        intro = "" if etat.get("reussi") else "<p><b>Ce qui s'est passé :</b></p>"
+        morceaux.append(f"<div class='{classe}'>{intro}"
+                        + "".join(f"<p>{e(p)}</p>" for p in phrases) + "</div>")
+    if etat.get("resultat"):
+        morceaux.append(f"<h2>Résumé</h2><pre>{e(etat['resultat'])}</pre>")
+    if etat.get("brut") or etat.get("commande"):
+        detail = ""
+        if etat.get("commande"):
+            detail += f"Commande : {etat['commande']}\n\n"
+        detail += etat.get("brut") or ""
+        morceaux.append("<details class='brut'><summary>Détail technique (sortie brute de "
+                        f"l'outil, en anglais)</summary><pre>{e(detail)}</pre></details>")
     return f"""<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8">{rafraichir}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vigie - {e(etat['outil'])}</title><style>{rapport.CSS}{CSS}</style></head><body><main>
 <div class="couv"><div class="enseigne">{rapport.LOGO}<div class="mot">Vigie<small>Sécurité</small></div></div>
 <h1>{e(etat['outil'])} sur {e(etat['cible'])}</h1><div class="meta"><span>{titre}</span></div></div>
-<div class="corps"><pre>{e(etat['resultat'] or 'Cette page se met à jour toute seule.')}</pre>
+<div class="corps">{''.join(morceaux)}
 <p><a href="/outils-un">Lancer un autre outil</a> · <a href="/">Accueil</a></p></div></main></body></html>"""

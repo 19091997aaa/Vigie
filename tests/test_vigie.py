@@ -712,7 +712,7 @@ class Installeur(unittest.TestCase):
         essais = installeur.methodes(outil, install="pipx install maigret (ou pip3 install "
                                                     "maigret ; brew install maigret ; docker)")
         self.assertEqual([libelle for libelle, _ in essais],
-                         ["brew (documenté)", "pipx (documenté)", "pipx (dépôt)", "go (dépôt)"])
+                         ["brew (documenté)", "pipx (documenté)", "pipx (dépôt)"])
         self.assertEqual(installeur.methodes({"nom": "X", "lien": ""}), [])
 
     def test_jamais_un_paquet_choisi_sur_son_seul_nom(self):
@@ -732,7 +732,7 @@ class Installeur(unittest.TestCase):
                       documente)
         self.assertFalse(any(c[0] == "npm" for _, c in documente))
         # « pip install -r requirements.txt » n'est pas un nom de paquet
-        self.assertEqual(len(installeur.methodes(outil, install="pip3 install -r req.txt")), 2)
+        self.assertEqual(len(installeur.methodes(outil, install="pip3 install -r req.txt")), 1)
 
     def test_binaire_go_lu_dans_le_module(self):
         commande = ["go", "install", "github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"]
@@ -1812,3 +1812,156 @@ class TestInstallerParFamille(unittest.TestCase):
         texte = tampon.getvalue()
         self.assertIn("à blanc", texte)
         self.assertIn("payants écartés", texte)
+
+
+class TestExplicationsEnFrancais(unittest.TestCase):
+    """Chaque lancement d'outil dit en français pourquoi ça marche ou pas."""
+
+    def test_chaque_outil_lancable_a_sa_fiche(self):
+        from vigie import fiches_outils, registre
+        for o in registre.charger():
+            if o["famille"] in ("diag", "secu") and not o["payant"]:
+                f = fiches_outils.FICHES.get(o["nom"].lower())
+                self.assertIsNotNone(f, f"{o['nom']} : pas de fiche en clair")
+                self.assertIn(f["mode"], fiches_outils.MODES, o["nom"])
+                self.assertIn(f["cible"], fiches_outils.CIBLES, o["nom"])
+                self.assertTrue(f["role"], o["nom"])
+
+    def test_reconnaitre_la_cible(self):
+        from vigie.fiches_outils import type_de
+        self.assertEqual(type_de("https://ex.fr/a"), "url")
+        self.assertEqual(type_de("contact@ex.fr"), "email")
+        self.assertEqual(type_de("06 12 34 56 78"), "telephone")
+        self.assertEqual(type_de("192.168.1.1"), "ip")
+        self.assertEqual(type_de("/home/moi/photo.jpg"), "chemin")
+        self.assertEqual(type_de("pavillon-noir.tech"), "domaine")
+        self.assertEqual(type_de("eldjango30"), "pseudo")
+        self.assertEqual(type_de("deux mots"), "texte")
+
+    def test_service_explique_au_lieu_de_lancer(self):
+        # Cas réel du 24/11/2026 : AdGuard Home lancé sur un pseudo.
+        from vigie import lancer_seul
+        with self.assertRaises(lancer_seul.Refus) as refus:
+            lancer_seul.preparer("AdGuard Home", "eldjango30")
+        self.assertIn("service", str(refus.exception))
+        self.assertIn("eldjango30", str(refus.exception))
+
+    def test_archivebox_explique_sa_preparation(self):
+        # Cas réel du 24/11/2026 : ArchiveBox sur un pseudo -> erreurs anglaises brutes.
+        from vigie import lancer_seul
+        with self.assertRaises(lancer_seul.Refus) as refus:
+            lancer_seul.preparer("ArchiveBox", "eldjango30")
+        self.assertIn("archivebox init", str(refus.exception))
+
+    def test_mauvaise_cible_expliquee(self):
+        from vigie import lancer_seul
+        for nom, cible, attendu in (("Sherlock", "https://ex.fr", "pseudo"),
+                                    ("Holehe", "eldjango30", "adresse e-mail"),
+                                    ("ExifTool", "pavillon-noir.tech", "fichier")):
+            with self.assertRaises(lancer_seul.Refus) as refus:
+                lancer_seul.preparer(nom, cible)
+            self.assertIn(attendu, str(refus.exception), nom)
+
+    def test_cible_arrangee_quand_sans_risque(self):
+        from vigie import lancer_seul
+        prepa = lancer_seul.preparer("Subfinder", "https://pavillon-noir.tech/contact")
+        self.assertEqual(prepa["cible"], "pavillon-noir.tech")
+        self.assertTrue(prepa["remarques"])
+        self.assertEqual(lancer_seul.preparer("Lighthouse", "ex.fr")["cible"], "https://ex.fr")
+        self.assertEqual(lancer_seul.preparer("PhoneInfoga", "06 12 34 56 78")["cible"],
+                         "+33612345678")
+        lynis = lancer_seul.preparer("Lynis", "")
+        self.assertEqual(lynis["ligne"][0], "lynis")
+
+    def test_windows_capture_ressource_compte(self):
+        from vigie import lancer_seul
+        for nom, mot in (("HardeningKitty", "Windows"), ("tcpdump", "carte réseau"),
+                         ("Sigma", "pas un programme"), ("GHunt", "ghunt login"),
+                         ("Ghidra", "logiciel")):
+            with self.assertRaises(lancer_seul.Refus) as refus:
+                lancer_seul.preparer(nom, "x")
+            self.assertIn(mot, str(refus.exception), nom)
+
+    def test_erreurs_traduites(self):
+        from vigie import erreurs
+        self.assertIn("DNS", erreurs.expliquer("curl: (6) Could not resolve host: x")[0])
+        self.assertIn("Python", erreurs.expliquer("ModuleNotFoundError: No module named 'x'")[0])
+        self.assertIn("ligne", erreurs.expliquer("error: unrecognized arguments: -z")[0])
+        self.assertEqual(erreurs.expliquer("tout va bien"), [])
+
+    def test_echecs_d_installation_traduits(self):
+        from vigie import erreurs
+        self.assertIn("relancer", erreurs.expliquer_installation(
+            "apt (documenté) : E: Could not get lock /var/lib/dpkg/lock-frontend")[0])
+        self.assertIn("Mac", erreurs.expliquer_installation("brew (documenté) : brew absent")[0])
+        self.assertIn("pas un", erreurs.expliquer_installation(
+            "pipx (dépôt) : ERROR: neither 'setup.py' nor 'pyproject.toml' found")[0])
+
+    def test_outil_absent_explique_l_installation_ratee(self):
+        from vigie import lancer_seul, presence
+        vrai = presence.echecs_installation
+        presence.echecs_installation = lambda chemin=None: {
+            "sherlock": "pipx (documenté) : pipx absent"}
+        try:
+            phrases = lancer_seul.expliquer("Sherlock", {"absent": True,
+                                                         "commande_absente": "sherlock"})
+        finally:
+            presence.echecs_installation = vrai
+        texte = " ".join(phrases)
+        self.assertIn("n'est pas installé", texte)
+        self.assertIn("pipx", texte)
+        self.assertIn("installeur", texte)
+
+    def test_echec_au_lancement_explique(self):
+        from vigie import lancer_seul
+        phrases = lancer_seul.expliquer("Subfinder", {
+            "lance": True, "code": 1, "verifiee": True, "sortie": "",
+            "erreurs": "Temporary failure in name resolution"})
+        self.assertIn("DNS", " ".join(phrases))
+        inconnu = lancer_seul.expliquer("X", {"lance": True, "code": 2, "verifiee": False,
+                                              "sortie": "boum"})
+        self.assertIn("devinée", " ".join(inconnu))
+
+    def test_rapport_d_installation_lu(self):
+        import json
+        import tempfile
+        from vigie import presence
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            json.dump({"details": [{"nom": "Maigret", "repond": False, "raison": "npm ERR!"},
+                                   {"nom": "Sherlock", "repond": True}]}, f)
+        self.assertEqual(presence.echecs_installation(f.name), {"maigret": "npm ERR!"})
+
+    def test_pas_de_repli_pipx_go_hors_langage(self):
+        # Avant : pipx ET go essayés sur tous les dépôts, même Docker ou Node.
+        from vigie import installeur
+        outil = {"nom": "Uptime Kuma", "lien": "https://github.com/louislam/uptime-kuma"}
+        self.assertEqual(installeur.methodes(
+            outil, install="docker louislam/uptime-kuma ; npm ; git clone (Node.js 18+)"), [])
+        self.assertIn("pas de méthode", installeur.installer_un(outil)["raison"])
+        go = installeur.methodes({"nom": "G", "lien": "https://github.com/a/g"},
+                                 install="go build ./...")
+        self.assertEqual([l for l, _ in go], ["go (dépôt)"])
+
+    def test_page_resultat_explique_et_garde_le_brut(self):
+        from vigie import interface_outils
+        interface_outils.LANCEMENTS["essai-explication"] = {
+            "etat": "erreur", "outil": "Subfinder", "cible": "ex.fr", "reussi": False,
+            "explication": ["Subfinder s'est arrêté en erreur.", "Problème de DNS."],
+            "resultat": "", "brut": "Temporary failure in name resolution",
+            "commande": "subfinder -d ex.fr"}
+        try:
+            p = interface_outils.page_resultat("essai-explication")
+        finally:
+            del interface_outils.LANCEMENTS["essai-explication"]
+        self.assertIn("Ce qui s'est passé", p)
+        self.assertIn("Problème de DNS.", p)
+        self.assertIn("<details", p)
+        self.assertIn("Temporary failure", p)
+
+    def test_page_montre_a_quoi_sert_l_outil(self):
+        from vigie import interface_outils
+        p = interface_outils.page()
+        self.assertIn("data-aide=", p)
+        self.assertIn("Cible : un pseudo", p)
+        with self.assertRaises(interface_outils.lancer_seul.Refus):
+            interface_outils.lancer("nom=AdGuard+Home&cible=eldjango30")

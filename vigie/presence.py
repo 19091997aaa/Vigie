@@ -83,6 +83,18 @@ def rapport_installation(chemin=RAPPORT):
             if isinstance(d, dict) and d.get("nom") and d.get("repond") and d.get("binaire")}
 
 
+def echecs_installation(chemin=RAPPORT):
+    """{nom en minuscules : raison} des outils dont la dernière installation a raté.
+    Vide s'il n'y a pas encore eu d'installation sur cette machine."""
+    try:
+        with open(os.path.expanduser(chemin), encoding="utf-8") as fichier:
+            details = json.load(fichier).get("details", [])
+    except (OSError, ValueError, AttributeError):
+        return {}
+    return {d["nom"].lower(): d.get("raison") or "raison non notée" for d in details
+            if isinstance(d, dict) and d.get("nom") and not d.get("repond")}
+
+
 def binaires_possibles(nom, verifies=None):
     """Les commandes dont la présence prouve que l'outil est installé (sans doublon)."""
     cle = (nom or "").strip().lower()
