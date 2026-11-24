@@ -129,6 +129,9 @@ def repond(binaire, delai=25):
 DOCS = os.path.join(os.path.dirname(__file__), "docs_outils.json")
 # Un nom de paquet : lettres, chiffres, - _ . et d'éventuelles options entre crochets.
 PAQUET = r"([A-Za-z0-9][A-Za-z0-9._-]*(?:\[[A-Za-z0-9,_-]+\])?)"
+# Jetons qui ressemblent à un paquet mais n'en sont pas : début d'une URL VCS
+# (« git+https://… ») ou d'une autre commande. On ne les installe jamais tels quels.
+_PAS_UN_PAQUET = {"git", "pip", "pip3", "pipx", "http", "https", "sudo", "python", "python3"}
 DOCUMENTEES = [
     ("brew (documenté)", re.compile(r"\bbrew install\s+" + PAQUET), ["brew", "install"]),
     ("pipx (documenté)", re.compile(r"\bpip[x3]? install\s+(?:--upgrade\s+|-U\s+)?" + PAQUET),
@@ -178,7 +181,12 @@ def methodes(outil, install=None):
     for libelle, motif, debut in DOCUMENTEES:
         for paquet in motif.findall(texte):
             commande = debut + [paquet]
-            if paquet.startswith("-") or tuple(commande) in vus:
+            # « pipx install git+https://… » : la regex s'arrête au « + » et ne
+            # garde que « git ». On installerait alors le FAUX paquet nommé « git »
+            # (même piège que les 63 faux outils du 21/11). On jette ces jetons qui
+            # ne sont pas des noms de paquet : le repli sur le dépôt exact (plus bas,
+            # « pipx install git+https://github.com/owner/repo ») installe le vrai.
+            if paquet.lower() in _PAS_UN_PAQUET or paquet.startswith("-") or tuple(commande) in vus:
                 continue
             vus.add(tuple(commande))
             essais.append((libelle, commande))

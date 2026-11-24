@@ -808,6 +808,16 @@ class Installeur(unittest.TestCase):
         # « pip install -r requirements.txt » n'est pas un nom de paquet
         self.assertEqual(len(installeur.methodes(outil, install="pip3 install -r req.txt")), 1)
 
+    def test_git_plus_url_ne_devient_pas_le_faux_paquet_git(self):
+        # Bug : « pipx install git+https://github.com/owner/repo » dans la doc faisait
+        # capturer « git » (la regex s'arrête au +), d'où « pipx install git » — le FAUX
+        # paquet PyPI « git ». On ne garde que le repli sur le dépôt exact de l'outil.
+        outil = {"nom": "NetExec", "lien": "https://github.com/Pennyw0rth/NetExec"}
+        commandes = [c for _, c in installeur.methodes(
+            outil, install="pipx install git+https://github.com/Pennyw0rth/NetExec")]
+        self.assertNotIn(["pipx", "install", "git"], commandes)
+        self.assertIn(["pipx", "install", "git+https://github.com/Pennyw0rth/NetExec"], commandes)
+
     def test_binaire_go_lu_dans_le_module(self):
         commande = ["go", "install", "github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"]
         self.assertEqual(installeur.binaires_poses("go (documenté)", "", "p", "subfinder", commande),
