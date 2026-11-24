@@ -403,7 +403,8 @@ def main(arguments=None):
         else:
             choisis = [o for o in outils_catalogue if o["categorie"] == args.categorie]
         # On n'installe jamais les outils payants (Robin, uncover, PentAGI, mcp-scan…).
-        payants = registre.noms_payants()
+        from . import recettes
+        payants = registre.noms_payants() - recettes.GRATUITS_MALGRE_CLE
         avant = len(choisis)
         choisis = [o for o in choisis if o["nom"].lower() not in payants]
         if avant - len(choisis):
@@ -422,6 +423,11 @@ def main(arguments=None):
             # « ne démarraient pas » sont revérifiés (souvent, on cherchait le mauvais nom
             # de commande : clamav au lieu de clamscan).
             anciens_ok = [d for d in details if d.get("installe") and d.get("repond")]
+            # Sauf ceux installés de travers (dnstwist sans son module DNS) : on les refait.
+            a_reparer = set(recettes.a_reparer())
+            if a_reparer:
+                print("À réparer : " + ", ".join(sorted(a_reparer)))
+                anciens_ok = [d for d in anciens_ok if d["nom"].lower() not in a_reparer]
             deja = {d["nom"] for d in anciens_ok}
             avant_reprise = len(choisis)
             choisis = [o for o in choisis if o["nom"] not in deja]

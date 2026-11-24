@@ -14,6 +14,14 @@ import re
 
 # (motif, explication). L'ordre compte : du plus précis au plus général.
 MOTIFS = [
+    # --- Outils précis (avant les motifs généraux) ----------------------------
+    (r"missing DNSPython",
+     "dnstwist a été installé sans son module DNS (dnspython). Relancer l'installeur de "
+     "Vigie : il l'ajoute tout seul. En attendant, Vigie le fait passer par le DNS de la "
+     "machine, plus lent."),
+    (r"undefined method [`']exists\?'",
+     "Cette version de l'outil est trop ancienne pour le Ruby installé sur la machine "
+     "(Ruby 3.2 et plus). Il faut une version plus récente de l'outil."),
     # --- Réseau -----------------------------------------------------------
     (r"temporary failure in name resolution|could not resolve host|name or service not "
      r"known|nodename nor servname|getaddrinfo failed|no such host|NXDOMAIN|"

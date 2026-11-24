@@ -13,7 +13,7 @@ import os
 import re
 import tempfile
 
-from .. import outils
+from .. import outils, reseau
 from ..modeles import IMPORTANT, INFO, Constat, ControleImpossible, OK
 from . import sousdomaines
 
@@ -51,7 +51,11 @@ def lire_sortie(texte):
             "titre": (d.get("title") or "").strip(),
             "serveur": d.get("webserver", ""),
             "technos": d.get("tech") or [],
-            "chiffre": (d.get("scheme") == "https"),
+            # httpx essaie d'abord https, puis http si https n'a pas répondu à temps. Une
+            # adresse vue en http mais REDIRIGÉE vers https est bien chiffrée (cas réel du
+            # 24/11/2026 : www passait pour « non chiffré » à cause d'un https trop lent).
+            "chiffre": (d.get("scheme") == "https"
+                        or str(d.get("final_url") or d.get("url") or "").startswith("https://")),
         })
     return sites
 
@@ -62,15 +66,22 @@ def _hote(url):
 
 def analyser(cible):
     domaine = cible.domaine
-    with tempfile.TemporaryDirectory() as dossier:
-        fichier = os.path.join(dossier, "adresses.txt")
-        with open(fichier, "w", encoding="utf-8") as sortie:
-            sortie.write("\n".join(adresses(domaine)) + "\n")
-        texte = outils.executer("httpx", [
-            "-l", fichier, "-json", "-silent", "-no-color", "-title", "-tech-detect",
-            "-status-code", "-web-server", "-follow-redirects",
-            "-rate-limit", "5", "-timeout", "15"], delai=300, dossier=dossier)
-    sites = lire_sortie(texte)
+    liste = adresses(domaine)
+    sites = []
+    # Deux essais : un réseau qui hoquette (pare-feu, box) ne doit pas donner « rien ».
+    for _ in range(2):
+        with tempfile.TemporaryDirectory() as dossier:
+            fichier = os.path.join(dossier, "adresses.txt")
+            with open(fichier, "w", encoding="utf-8") as sortie:
+                sortie.write("\n".join(liste) + "\n")
+            texte = outils.executer("httpx", [
+                "-l", fichier, "-json", "-silent", "-no-color", "-title", "-tech-detect",
+                "-status-code", "-web-server", "-follow-redirects",
+                "-rate-limit", "5", "-timeout", "15", "-retries", "2"], delai=300,
+                dossier=dossier)
+        sites = lire_sortie(texte)
+        if sites:
+            break
     brut = {"sites": sites}
     if not sites:
         raise ControleImpossible("aucune adresse de la société n'a répondu à httpx")
@@ -110,13 +121,29 @@ def analyser(cible):
             "site principal, ou fermé s'il ne sert plus.",
             "Vérifier qui s'occupe de chacun de ces sites.", cle="sites_annexes"))
 
-    en_clair = [s for s in sites if not s["chiffre"]]
-    for site in en_clair:
-        constats.append(Constat(
-            BLOC, IMPORTANT, f"{_hote(site['url'])} n'est pas chiffré",
-            "Ce site ne répond qu'en connexion non protégée : ce que les visiteurs y "
-            "saisissent peut être lu sur un Wi-Fi public.",
-            "Activer HTTPS sur cette adresse."))
+    # Recoupement AVANT de noter : httpx seul ne suffit pas pour un point « important ».
+    # Vigie refait lui-même une connexion chiffrée vers l'adresse (deux essais).
+    brut["https_recoupe"] = {}
+    for site in [s for s in sites if not s["chiffre"]]:
+        hote = _hote(site["url"])
+        verdict = reseau.https_repond(hote)
+        brut["https_recoupe"][hote] = verdict
+        if verdict == reseau.OUI:
+            continue  # httpx s'est trompé (réponse trop lente) : rien à signaler
+        if verdict == reseau.NON:
+            constats.append(Constat(
+                BLOC, IMPORTANT, f"{hote} n'est pas chiffré",
+                "Ce site ne répond qu'en connexion non protégée : ce que les visiteurs y "
+                "saisissent peut être lu sur un Wi-Fi public. Vérifié deux fois.",
+                "Activer HTTPS sur cette adresse.", cle=f"https_{hote}"))
+        else:
+            constats.append(Constat(
+                BLOC, INFO, f"{hote} : connexion chiffrée à confirmer",
+                "httpx n'a vu cette adresse qu'en connexion non protégée, mais la "
+                "vérification de Vigie n'a pas eu de réponse claire (réseau lent ou "
+                "coupé). À vérifier à la relecture en ouvrant https://" + hote + ".",
+                "Ouvrir l'adresse en https dans un navigateur pour confirmer.",
+                cle=f"https_{hote}", hors_note=True))
 
     if not constats:
         constats.append(Constat(BLOC, OK, "Le site ne dévoile pas ses logiciels",

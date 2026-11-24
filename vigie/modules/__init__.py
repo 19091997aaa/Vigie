@@ -96,7 +96,7 @@ MODULES = {
                   "actif": False, "defaut": False,
                   "nom": "Compte Instagram de la société (Instaloader)"},
     "pseudos_societe": {"fonction": complet.analyser_pseudos_societe, "bloc": "Exposition",
-                        "actif": False, "defaut": False, "delai": 3600,
+                        "actif": False, "defaut": False, "delai": 1000,
                         "nom": "Le nom de la société sur les réseaux (Sherlock, Maigret, "
                                "user-scanner, Social Analyzer)"},
     "numeros_publics": {"fonction": complet.analyser_phoneinfoga, "bloc": "Exposition",
@@ -115,7 +115,8 @@ MODULES = {
 # Réglages de durée et de navigateur des contrôles déjà existants.
 for _nom, _reglage in {"toutes_pages": {"chrome": True, "delai": 900},
                        "qualite_site": {"chrome": True}, "accessibilite": {"chrome": True},
-                       "apercu": {"chrome": True}, "pseudos": {"delai": 3600},
+                       "apercu": {"chrome": True}, "pseudos": {"delai": 1200},
+                       "liens": {"delai": 420},
                        "domaines": {"delai": 900}}.items():
     MODULES[_nom].update(_reglage)
 

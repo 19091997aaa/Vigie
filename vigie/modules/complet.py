@@ -166,17 +166,32 @@ def lire_whatweb(data):
     return {"technos": technos, "avec_version": avec_version}
 
 
-def analyser_whatweb(cible):
+def _whatweb_une_fois(url):
+    """(infos ou None, résultat brut de l'outil)."""
     with tempfile.TemporaryDirectory() as dossier:
         journal = os.path.join(dossier, "whatweb.json")
-        outils.executer("whatweb", ["--color=never", "--no-errors", "-a", "1",
-                                    f"--log-json={journal}", _url(cible)],
-                        delai=120, dossier=dossier)
+        # Pas de « --no-errors » : quand WhatWeb ne voit rien, on veut savoir pourquoi.
+        resultat = outils.executer_detail(
+            "whatweb", ["--color=never", "-a", "1", "--open-timeout", "20",
+                        "--read-timeout", "30", f"--log-json={journal}", url],
+            delai=120, dossier=dossier)
         try:
             with open(journal, encoding="utf-8") as lu:
-                infos = lire_whatweb(json.load(lu))
-        except (OSError, json.JSONDecodeError):
-            raise ControleImpossible("WhatWeb n'a rien écrit (site injoignable ?)")
+                return lire_whatweb(json.load(lu)), resultat
+        except (OSError, json.JSONDecodeError, ValueError):
+            return None, resultat
+
+
+def analyser_whatweb(cible):
+    infos, resultat = _whatweb_une_fois(_url(cible))
+    if infos is None:  # deuxième essai : un hoquet du réseau ne suffit pas à conclure
+        infos, resultat = _whatweb_une_fois(_url(cible))
+    if infos is None:
+        if reseau.https_repond(cible.domaine) == reseau.OUI:
+            raise ControleImpossible(
+                "WhatWeb n'a rien écrit alors que le site répond bien (vérifié par Vigie) : "
+                "c'est l'outil qui coince — " + outils.pourquoi(resultat))
+        raise ControleImpossible("WhatWeb n'a rien écrit — " + outils.pourquoi(resultat))
     if not infos["technos"]:
         return [], {"whatweb": infos}
     texte = ", ".join(infos["technos"][:12])
@@ -293,12 +308,25 @@ def analyser_uncover(cible):
     resultat = outils.executer_detail("uncover", ["-q", cible.domaine, "-silent", "-l", "100"],
                                       delai=180)
     services = lire_uncover(resultat.stdout)
+    source = "moteurs configurés"
     if not services and re.search(r"key|api|credential", resultat.stderr or "", re.I):
-        raise ControleImpossible(
-            "il faut une clé d'accès à Shodan, Censys ou Fofa (gratuite limitée ou payante), "
-            "à écrire dans le fichier de réglages d'uncover")
+        # Sans clé : la base GRATUITE de Shodan (InternetDB), interrogée sur l'adresse IP
+        # du site. Rien n'est envoyé à la société : on lit ce que Shodan a déjà noté.
+        try:
+            ips = [ip for ip in reseau.dns(cible.domaine, "A") if re.fullmatch(r"[\d.]+", ip)]
+        except ControleImpossible:
+            ips = []
+        if not ips:
+            raise ControleImpossible(
+                "il faut une clé d'accès à Shodan, Censys ou Fofa (gratuite limitée ou "
+                "payante), à écrire dans le fichier de réglages d'uncover")
+        source = "Shodan InternetDB (gratuit, sans clé)"
+        for ip in ips[:4]:
+            libre = outils.executer_detail("uncover", ["-e", "shodan-idb", "-q", ip,
+                                                       "-silent", "-l", "100"], delai=120)
+            services += [s for s in lire_uncover(libre.stdout) if s not in services]
     ports = sorted({s.rsplit(":", 1)[1] for s in services}, key=int)
-    brut = {"services": len(services), "ports": ports}
+    brut = {"services": len(services), "ports": ports, "source": source}
     if not services:
         return [Constat(BLOC, OK, "Rien d'indexé par Shodan et Censys au nom du domaine",
                         "Les moteurs qui recensent les machines visibles sur internet ne "
@@ -488,17 +516,13 @@ def analyser_pseudos_societe(cible):
         raise ControleImpossible("aucun outil de recherche de pseudo installé (Sherlock…)")
     constats, brut = [], {}
     for pseudo in candidats:
-        par_outil = {}
-        for nom, fonction in installes:
-            try:
-                par_outil[nom] = fonction(pseudo)
-            except ControleImpossible:
-                continue
+        # Les quatre outils en même temps, 5 minutes au plus chacun (pseudos.DELAI_OUTIL).
+        par_outil, ecartes = pseudos.lancer_ensemble(pseudo, installes)
         sites = pseudos.recouper(par_outil)
         exiges = 2 if len(par_outil) > 1 else 1
         probables = sorted(s["site"] for s in sites.values() if len(s["vu_par"]) >= exiges)
         brut[pseudo] = {"par_outil": {n: len(c) for n, c in par_outil.items()},
-                        "probables": probables}
+                        "probables": probables, "ecartes": ecartes}
         if not probables:
             continue
         constats.append(Constat(

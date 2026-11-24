@@ -10,6 +10,7 @@ Donnée personnelle : ce module ne tourne que si le dirigeant a donné ses pseud
 ET son accord écrit. Jamais sur un tiers. Les bases de FUITES que certains outils
 interrogent (HudsonRock...) sont écartées : interdites hors offre payante.
 """
+import concurrent.futures
 import json
 import os
 import re
@@ -24,6 +25,13 @@ PSEUDO = re.compile(r"[A-Za-z0-9._-]{2,40}")
 LIGNE = re.compile(r"^\[\+\]\s*(.+?):\s*(https?://\S+)\s*$")
 MAXIMUM_AFFICHE = 25
 SOURCES_FUITES = ("hudsonrock", "haveibeenpwned", "dehashed", "leakcheck", "intelx", "breach")
+# Bornes par outil (cas réel du 24/11/2026 : 13 minutes pour les quatre, l'un après
+# l'autre). Désormais ils tournent EN MÊME TEMPS, 5 minutes au plus chacun, et chacun
+# interroge au plus ~400 sites avec 10 secondes par site. Au-delà, on garde ce que
+# l'outil a déjà trouvé (Sherlock, Social Analyzer) ou on passe sans lui.
+DELAI_OUTIL = 300
+ATTENTE_SITE = "10"
+MAIGRET_SITES = "300"
 
 
 def _site(nom):
@@ -59,16 +67,16 @@ def lire_user_scanner(data):
 def _sherlock(pseudo):
     with tempfile.TemporaryDirectory() as dossier:
         return lire_sortie(outils.executer(
-            "sherlock", [pseudo, "--print-found", "--no-color", "--timeout", "15"],
-            delai=900, dossier=dossier))
+            "sherlock", [pseudo, "--print-found", "--no-color", "--timeout", ATTENTE_SITE],
+            delai=DELAI_OUTIL, dossier=dossier, partiel=True))
 
 
 def _maigret(pseudo):
     with tempfile.TemporaryDirectory() as dossier:
-        outils.executer("maigret", [pseudo, "--top-sites", "500", "--timeout", "15",
-                                    "--no-color", "--no-progressbar", "--no-recursion",
-                                    "-J", "simple", "--folderoutput", dossier],
-                        delai=900, dossier=dossier)
+        outils.executer("maigret", [pseudo, "--top-sites", MAIGRET_SITES, "--timeout",
+                                    ATTENTE_SITE, "--no-color", "--no-progressbar",
+                                    "--no-recursion", "-J", "simple", "--folderoutput", dossier],
+                        delai=DELAI_OUTIL, dossier=dossier)
         chemin = os.path.join(dossier, f"report_{pseudo}_simple.json")
         try:
             with open(chemin, encoding="utf-8") as fichier:
@@ -80,8 +88,9 @@ def _maigret(pseudo):
 def _user_scanner(pseudo):
     with tempfile.TemporaryDirectory() as dossier:
         chemin = os.path.join(dossier, "resultat.json")
-        outils.executer("user-scanner", ["-u", pseudo, "-f", "json", "-o", chemin, "-t", "10",
-                                         "--no-nsfw"], delai=900, dossier=dossier)
+        outils.executer("user-scanner", ["-u", pseudo, "-f", "json", "-o", chemin, "-t",
+                                         ATTENTE_SITE, "--no-nsfw"], delai=DELAI_OUTIL,
+                        dossier=dossier)
         try:
             with open(chemin, encoding="utf-8") as fichier:
                 return lire_user_scanner(json.load(fichier))
@@ -113,12 +122,31 @@ def _social_analyzer(pseudo):
         return lire_social_analyzer(outils.executer(
             "social-analyzer", ["--username", pseudo, "--mode", "fast", "--output", "json",
                                 "--filter", "good", "--method", "find", "--top", "100"],
-            delai=900, dossier=dossier))
+            delai=DELAI_OUTIL, dossier=dossier, partiel=True))
 
 
 OUTILS = (("Sherlock", "sherlock", _sherlock), ("Maigret", "maigret", _maigret),
           ("user-scanner", "user-scanner", _user_scanner),
           ("Social Analyzer", "social-analyzer", _social_analyzer))
+
+
+def lancer_ensemble(pseudo, choisis):
+    """Lance les outils choisis [(nom, fonction)] EN MÊME TEMPS sur un pseudo.
+
+    Renvoie ({outil: [comptes]}, {outil: raison}) : un outil qui échoue ou dépasse son
+    délai n'empêche pas les autres de rendre leurs résultats."""
+    par_outil, ecartes = {}, {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(choisis))) as equipe:
+        taches = {equipe.submit(fonction, pseudo): nom for nom, fonction in choisis}
+        for tache in concurrent.futures.as_completed(taches):
+            nom = taches[tache]
+            try:
+                par_outil[nom] = tache.result()
+            except ControleImpossible as empechement:
+                ecartes[nom] = str(empechement)
+    # Ordre stable pour le rapport : celui de OUTILS.
+    ordre = [nom for nom, _ in choisis]
+    return {n: par_outil[n] for n in ordre if n in par_outil}, ecartes
 
 
 def recouper(par_outil):
@@ -146,12 +174,13 @@ def analyser(cible):
     for pseudo in cible.pseudos:
         if not PSEUDO.fullmatch(pseudo):
             raise ControleImpossible(f"pseudo invalide : {pseudo}")
-        par_outil = {}
-        for nom, commande, fonction in OUTILS:
-            if outils.disponible(commande):
-                par_outil[nom] = fonction(pseudo)
-        if not par_outil:
+        choisis = [(nom, fonction) for nom, commande, fonction in OUTILS
+                   if outils.disponible(commande)]
+        if not choisis:
             raise ControleImpossible("aucun outil de recherche de pseudo installé (Sherlock...)")
+        par_outil, _ = lancer_ensemble(pseudo, choisis)
+        if not par_outil:
+            raise ControleImpossible("aucun outil de recherche de pseudo n'a répondu à temps")
         sites = recouper(par_outil)
         brut[pseudo] = {"par_outil": {n: len(c) for n, c in par_outil.items()},
                         "sites": sorted(sites.values(), key=lambda s: -len(s["vu_par"]))}

@@ -6,6 +6,7 @@ import json
 import os
 import re
 import ssl
+import subprocess
 import sys
 import tempfile
 import threading
@@ -53,8 +54,18 @@ def pas_de_telechargement(*a, **k):
     raise OSError("pas d'internet pendant les essais")
 
 
+def resultat(sortie="", erreurs="", code=0):
+    """Ce que renvoie outils.executer_detail : code de retour, sortie, messages d'erreur."""
+    return subprocess.CompletedProcess(["outil"], code, sortie, erreurs)
+
+
 class Base(unittest.TestCase):
     def setUp(self):
+        # Aucun essai ne se connecte pour de vrai : la vérification HTTPS de Vigie répond
+        # « on ne sait pas », sauf si l'essai dit autre chose.
+        self._sauve_https = reseau.https_repond
+        reseau.https_repond = lambda *a, **k: reseau.INCONNU
+        self.addCleanup(setattr, reseau, "https_repond", self._sauve_https)
         self._sauve = (reseau.dns, site._ouvrir, site._jours_certificat, outils.executer,
                        metadonnees._ouvrir)
         # Aucun essai ne télécharge pour de vrai, et aucun résultat d'un essai ne
@@ -183,7 +194,7 @@ class Pseudos(Base):
     def test_avec_accord(self):
         appels = []
 
-        def faux(nom, arguments, delai=0, dossier=None):
+        def faux(nom, arguments, delai=0, dossier=None, partiel=False):
             appels.append((nom, arguments))
             return self.SORTIE
         outils.executer = faux
@@ -235,13 +246,13 @@ class Domaines(Base):
         self.assertTrue(any(i["mx"] for i in imitateurs))
 
     def test_constat_important_si_mail(self):
-        outils.executer = lambda *a, **k: self.SORTIE
+        outils.executer_detail = lambda *a, **k: resultat(self.SORTIE)
         constats, _ = domaines.analyser(CIBLE)
         self.assertEqual(constats[0].niveau, IMPORTANT)
         self.assertIn("2 domaines", constats[0].titre)
 
     def test_aucun_imitateur(self):
-        outils.executer = lambda *a, **k: "[]"
+        outils.executer_detail = lambda *a, **k: resultat("[]")
         constats, _ = domaines.analyser(CIBLE)
         self.assertEqual(constats[0].niveau, OK)
 
@@ -251,12 +262,38 @@ class Domaines(Base):
         self.assertEqual(args[-1], "ex.fr")
         self.assertEqual(args[args.index("--nameservers") + 1], ",".join(reseau.SERVEURS_DNS))
 
-    def test_sortie_vide_dit_comment_reparer(self):
-        # Cas réel : dnstwist installé sans son module DNS ne renvoie rien.
-        outils.executer = lambda *a, **k: ""
+    def test_sans_module_dns_relance_sur_le_dns_de_la_machine(self):
+        # Vraie cause du 24/11/2026 : dnstwist posé sans dnspython refuse --nameservers
+        # et s'arrête en 0 s (code 2). Vigie le relance sans cette option.
+        appels = []
+
+        def faux(nom, arguments, **k):
+            appels.append(arguments)
+            if "--nameservers" in arguments:
+                return resultat("", "usage: dnstwist ...\ndnstwist: error: missing DNSPython "
+                                    "library\n", 2)
+            return resultat(self.SORTIE)
+        outils.executer_detail = faux
+        constats, brut = domaines.analyser(CIBLE)
+        self.assertEqual(len(appels), 2)
+        self.assertNotIn("--nameservers", appels[1])
+        self.assertIn("2 domaines", constats[0].titre)
+        self.assertIn("sans module DNS", brut["note"])
+
+    def test_aucune_reponse_dns_n_est_pas_aucun_imitateur(self):
+        # Avec --registered, une sortie vide = pas même le domaine de la société n'a
+        # répondu : c'est le DNS qui coince, pas « aucun imitateur ».
+        outils.executer_detail = lambda *a, **k: resultat("")
         with self.assertRaises(ControleImpossible) as empechement:
             domaines.analyser(CIBLE)
-        self.assertIn("dnstwist[full]", str(empechement.exception))
+        self.assertIn("aucune réponse DNS", str(empechement.exception))
+
+    def test_erreur_expliquee_en_francais(self):
+        outils.executer_detail = lambda *a, **k: resultat(
+            "", "Traceback (most recent call last):\nModuleNotFoundError: No module named 'x'", 1)
+        with self.assertRaises(ControleImpossible) as empechement:
+            domaines.analyser(CIBLE)
+        self.assertIn("réinstaller", str(empechement.exception))
 
 
 class Catalogue(unittest.TestCase):
@@ -477,6 +514,7 @@ class Interface(Base):
         reseau.dns = faux_dns(BON_DNS)
         self.site_propre()
         outils.executer = lambda *a, **k: "[]"   # dnstwist : aucun imitateur, sans réseau
+        outils.executer_detail = lambda *a, **k: resultat("[]")
         with tempfile.TemporaryDirectory() as sortie:
             base = self.demarrer(sortie)
             accueil = urllib.request.urlopen(base + "/").read().decode()
@@ -899,7 +937,25 @@ class LotDix(Base):
         self.assertIn("WordPress", par_cle["cms"].titre)
         self.assertIn("PHP 8.3", par_cle["versions_visibles"].explication)
         self.assertIn("test.ex.fr", par_cle["sites_annexes"].explication)  # www = redirection
+        # test.ex.fr : httpx ne l'a vu qu'en clair, la vérification de Vigie ne sait pas
+        # trancher -> « à confirmer », hors note. Jamais « important » sur un seul avis.
+        douteux = next(c for c in constats if "test.ex.fr" in c.titre)
+        self.assertEqual((douteux.niveau, douteux.hors_note), (INFO, True))
+        # Refus net, deux fois : là, c'est important.
+        reseau.https_repond = lambda *a, **k: reseau.NON
+        constats, _ = technos.analyser(CIBLE)
         self.assertTrue(any(c.niveau == IMPORTANT and "test.ex.fr" in c.titre for c in constats))
+        # Vigie arrive à se connecter en chiffré : httpx s'est trompé, rien à signaler.
+        reseau.https_repond = lambda *a, **k: reseau.OUI
+        constats, brut = technos.analyser(CIBLE)
+        self.assertFalse(any("test.ex.fr" in c.titre for c in constats))
+        self.assertEqual(brut["https_recoupe"], {"test.ex.fr": reseau.OUI})
+
+    def test_technos_redirection_vers_https_n_est_pas_en_clair(self):
+        # Cas réel du 24/11/2026 : www vu en http par httpx, mais redirigé vers https.
+        ligne = json.dumps({"input": "www.ex.fr", "url": "http://www.ex.fr",
+                            "final_url": "https://ex.fr/", "scheme": "http", "tech": []})
+        self.assertTrue(technos.lire_sortie(ligne)[0]["chiffre"])
 
     SSLYZE = {"server_scan_results": [{"connectivity_status": "COMPLETED", "scan_result": {
         "tls_1_0_cipher_suites": {"result": {"accepted_cipher_suites": []}},
@@ -2246,6 +2302,258 @@ class DiagComplet(Base):
         # Avant, l'adresse du dirigeant atterrissait dans la mauvaise case (bug corrigé).
         self.assertEqual(recu["cible"].emails, ["j@ex.fr"])
 
+
+class Fiabilite(Base):
+    """Diagnostic complet du 24/11/2026 sur pavillon-noir.tech (VM Ubuntu derrière un
+    pare-feu de labo) : faux positifs, outils muets en 0 s, outils trop longs."""
+
+    def test_https_repond_oui_non_inconnu(self):
+        reseau.https_repond = self._sauve_https
+        vrai = reseau._poignee_tls
+        self.addCleanup(setattr, reseau, "_poignee_tls", vrai)
+        reseau._poignee_tls = lambda hote, delai: True
+        self.assertEqual(reseau.https_repond("ex.fr"), reseau.OUI)
+
+        def refus(hote, delai):
+            raise ConnectionRefusedError()
+        reseau._poignee_tls = refus
+        self.assertEqual(reseau.https_repond("ex.fr"), reseau.NON)
+
+        def en_clair(hote, delai):
+            raise ssl.SSLError("[SSL: WRONG_VERSION_NUMBER] wrong version number")
+        reseau._poignee_tls = en_clair
+        self.assertEqual(reseau.https_repond("ex.fr"), reseau.NON)
+
+        def lent(hote, delai):
+            raise TimeoutError("timed out")
+        reseau._poignee_tls = lent
+        self.assertEqual(reseau.https_repond("ex.fr"), reseau.INCONNU)
+        # Un essai lent puis un refus : pas de conclusion.
+        reponses = iter([TimeoutError(), ConnectionRefusedError()])
+
+        def melange(hote, delai):
+            raise next(reponses)
+        reseau._poignee_tls = melange
+        self.assertEqual(reseau.https_repond("ex.fr"), reseau.INCONNU)
+
+    def test_sslyze_reessaie_puis_dit_que_le_site_repond(self):
+        appels = []
+        echec = {"server_scan_results": [{"connectivity_status": "ERROR",
+                                          "connectivity_error_trace": "Traceback\nTimeout"}]}
+
+        def faux(nom, arguments, **k):
+            appels.append(nom)
+            return ecrit_fichier("--json_out", echec)(nom, arguments)
+        outils.executer = faux
+        reseau.https_repond = lambda *a, **k: reseau.OUI
+        with self.assertRaises(ControleImpossible) as empechement:
+            chiffrement.analyser(CIBLE)
+        self.assertEqual(appels, ["sslyze", "sslyze"])          # 2 essais
+        self.assertIn("répond bien en connexion chiffrée", str(empechement.exception))
+        self.assertIn("Timeout", str(empechement.exception))
+
+    def test_sslyze_deuxieme_essai_reussi(self):
+        reussite = LotDix.SSLYZE
+        echec = {"server_scan_results": [{"connectivity_status": "ERROR"}]}
+        reponses = iter([echec, reussite])
+        outils.executer = lambda nom, arguments, **k: ecrit_fichier(
+            "--json_out", next(reponses))(nom, arguments)
+        constats, _ = chiffrement.analyser(CIBLE)
+        self.assertIn("certificat", {c.cle for c in constats})
+
+    def test_whatweb_dit_pourquoi(self):
+        from vigie.modules import complet
+        appels = []
+
+        def faux(nom, arguments, **k):
+            appels.append(arguments)
+            return resultat("", "/usr/share/whatweb/lib/x.rb: undefined method `exists?' "
+                                "for File:Class", 1)
+        outils.executer_detail = faux
+        reseau.https_repond = lambda *a, **k: reseau.OUI
+        with self.assertRaises(ControleImpossible) as empechement:
+            complet.analyser_whatweb(CIBLE)
+        self.assertEqual(len(appels), 2)
+        self.assertNotIn("--no-errors", appels[0])
+        message = str(empechement.exception)
+        self.assertIn("répond bien", message)
+        self.assertIn("Ruby", message)
+        self.assertNotIn("injoignable", message)
+
+    def test_dnsrecon_repli_sur_le_dns_de_la_machine(self):
+        appels = []
+        fiches = [{"type": "AAAA", "address": "2001:db8::1"}]
+
+        def faux(nom, arguments, **k):
+            appels.append(list(arguments))
+            if "-n" in arguments:
+                return resultat("[-] Could not resolve domain: ex.fr\n", "", 1)
+            return ecrit_fichier("-j", fiches)(nom, arguments) or resultat()
+        outils.executer_detail = faux
+        from vigie.modules import complements
+        constats, brut = complements.analyser_dns(CIBLE)
+        self.assertEqual(len(appels), 2)
+        self.assertNotIn("-n", appels[1])
+        self.assertEqual(brut["dns_complet"]["ipv6"], ["2001:db8::1"])
+
+    def test_dnsrecon_raison_en_francais(self):
+        outils.executer_detail = lambda *a, **k: resultat(
+            "[-] Could not resolve domain: ex.fr\n", "", 1)
+        from vigie.modules import complements
+        with self.assertRaises(ControleImpossible) as empechement:
+            complements.analyser_dns(CIBLE)
+        self.assertIn("pare-feu", str(empechement.exception))
+        self.assertNotIn("Could not", str(empechement.exception))
+
+    def test_linkchecker_borne_en_temps_et_en_liens(self):
+        from vigie.modules import liens
+        vus = {}
+
+        def faux(nom, arguments, delai=0, dossier=None, partiel=False):
+            with open(arguments[arguments.index("-f") + 1], encoding="utf-8") as lu:
+                vus["reglages"] = lu.read()
+            vus.update(delai=delai, partiel=partiel)
+            return LotDeux.LINKCHECKER
+        outils.executer = faux
+        constats, brut = liens.analyser(CIBLE)
+        self.assertIn("maxrunseconds=240", vus["reglages"])
+        self.assertIn("maxnumurls=400", vus["reglages"])
+        self.assertTrue(vus["partiel"])
+        # LinkChecker s'arrête seul à 4 min : le délai de Vigie passe après, et le
+        # contrôle tient dans son propre délai (modules/__init__.py).
+        self.assertGreater(vus["delai"], 240)
+        self.assertGreater(MODULES["liens"]["delai"], vus["delai"])
+        self.assertIn("liens_casses", {c.cle for c in constats})
+
+    def test_resultat_partiel_garde_a_l_expiration(self):
+        vrai = subprocess.run
+
+        def trop_long(*a, **k):
+            raise subprocess.TimeoutExpired(a[0], 1, output=b"[+] GitHub: https://github.com/x\n")
+        outils_trouver = outils.trouver
+        self.addCleanup(setattr, outils, "trouver", outils_trouver)
+        outils.trouver = lambda commande: "/bin/true"
+        with mock.patch.object(subprocess, "run", trop_long):
+            fini = outils.executer_detail("sherlock", ["x"], delai=1, partiel=True)
+            with self.assertRaises(ControleImpossible):
+                outils.executer_detail("sherlock", ["x"], delai=1)
+        self.assertIsNone(fini.returncode)
+        self.assertIn("github.com/x", fini.stdout)
+        self.assertIs(subprocess.run, vrai)
+
+    def test_outils_de_pseudo_en_parallele_et_bornes(self):
+        import threading as fils
+        demarres, tous_la = [], fils.Barrier(3, timeout=5)
+
+        def outil(nom, comptes):
+            def lancer(pseudo):
+                demarres.append(nom)
+                tous_la.wait()  # bloque si les outils tournaient l'un après l'autre
+                if comptes is None:
+                    raise ControleImpossible("l'outil maigret n'a pas répondu en 300 secondes")
+                return comptes
+            return lancer
+        par_outil, ecartes = pseudos.lancer_ensemble("ex", [
+            ("Sherlock", outil("Sherlock", [{"site": "GitHub", "adresse": "a"}])),
+            ("Maigret", outil("Maigret", None)),
+            ("user-scanner", outil("user-scanner", [{"site": "github", "adresse": "a"}]))])
+        self.assertEqual(sorted(demarres), ["Maigret", "Sherlock", "user-scanner"])
+        self.assertEqual(list(par_outil), ["Sherlock", "user-scanner"])
+        self.assertIn("300 secondes", ecartes["Maigret"])
+        self.assertLessEqual(pseudos.DELAI_OUTIL, 300)
+        self.assertLessEqual(MODULES["pseudos_societe"]["delai"], 1000)
+
+
+class Recettes(unittest.TestCase):
+    """Installation sous Ubuntu des outils que la doc fait rater (24/11/2026)."""
+
+    def test_recettes_prevues(self):
+        from vigie import recettes
+        for nom in ("EyeWitness", "Metagoofil", "uncover", "sitespeed.io", "Unlighthouse",
+                    "PhoneInfoga", "dnstwist"):
+            self.assertIsNotNone(recettes.pour(nom, "linux"), nom)
+        self.assertIsNone(recettes.pour("nmap", "linux"))
+        self.assertIn("uncover", recettes.GRATUITS_MALGRE_CLE)
+
+    def test_plus_de_sudo_apt_eyewitness_sous_linux(self):
+        for nom in ("eyewitness", "metagoofil", "sitespeed.io", "unlighthouse", "phoneinfoga"):
+            astuce = outils.astuce_installation(nom, systeme="linux")
+            self.assertNotIn("apt", astuce, nom)
+            self.assertIn("installeur Linux de Vigie", astuce)
+
+    def test_empreintes(self):
+        from vigie import recettes
+        sommes = recettes.lire_sommes(
+            "6173dfc4ec009a6fe688068bac5a250646f5a8f56409098f5edcc7e404b12a52  "
+            "phoneinfoga_Linux_x86_64.tar.gz\nligne sans intérêt\n")
+        self.assertEqual(list(sommes), ["phoneinfoga_Linux_x86_64.tar.gz"])
+
+    def test_extraction_ne_sort_jamais_du_dossier(self):
+        import io
+        import tarfile
+        from vigie import recettes
+        with tempfile.TemporaryDirectory() as dossier:
+            archive = os.path.join(dossier, "a.tar.gz")
+            with tarfile.open(archive, "w:gz") as tar:
+                for nom, contenu in (("node-v22/bin/node", b"ok"), ("node-v22/../../piege", b"x")):
+                    info = tarfile.TarInfo(nom)
+                    info.size = len(contenu)
+                    tar.addfile(info, io.BytesIO(contenu))
+            recettes._extraire_tout(archive, os.path.join(dossier, "node22"))
+            self.assertTrue(os.path.exists(os.path.join(dossier, "node22", "bin", "node")))
+            self.assertFalse(os.path.exists(os.path.join(dossier, "piege")))
+
+    def test_recette_passe_avant_la_doc_et_la_doc_reste_en_secours(self):
+        from vigie import installeur, recettes
+        vrais = (dict(recettes.RECETTES), installeur.repond, installeur._installer_par_doc)
+        self.addCleanup(lambda: (recettes.RECETTES.clear(), recettes.RECETTES.update(vrais[0]),
+                                 setattr(installeur, "repond", vrais[1]),
+                                 setattr(installeur, "_installer_par_doc", vrais[2])))
+        installeur.repond = lambda binaire, delai=25: binaire == "eyewitness"
+        installeur._installer_par_doc = lambda outil, a_blanc=False: {
+            "nom": outil["nom"], "installe": False, "repond": False, "binaire": "",
+            "methode": "", "raison": "apt (documenté) : Unable to locate package eyewitness"}
+        recettes.RECETTES["eyewitness"] = ("recette", lambda: (True, "", ["eyewitness"]),
+                                           recettes.TOUS)
+        compte = installeur.installer_un({"nom": "EyeWitness",
+                                          "lien": "https://github.com/RedSiege/EyeWitness"})
+        self.assertEqual((compte["installe"], compte["repond"], compte["methode"]),
+                         (True, True, "recette"))
+        recettes.RECETTES["eyewitness"] = ("recette", lambda: (False, "git : refusé", []),
+                                           recettes.TOUS)
+        compte = installeur.installer_un({"nom": "EyeWitness",
+                                          "lien": "https://github.com/RedSiege/EyeWitness"})
+        self.assertFalse(compte["installe"])
+        self.assertIn("git : refusé", compte["raison"])
+        self.assertIn("Unable to locate", compte["raison"])
+
+    def test_lanceur_executable(self):
+        from vigie import recettes
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "bin", "outil")
+            recettes.ecrire_lanceur(chemin, ['exec echo "bonjour $@"'])
+            sortie = subprocess.run([chemin, "Anass"], capture_output=True, text=True).stdout
+        self.assertEqual(sortie.strip(), "bonjour Anass")
+
+    def test_node_trop_vieux_pose_node_22_a_part(self):
+        from vigie import recettes
+        appels = []
+        vrais = (recettes.version_node, recettes.node_a_part, recettes._lancer)
+        self.addCleanup(lambda: (setattr(recettes, "version_node", vrais[0]),
+                                 setattr(recettes, "node_a_part", vrais[1]),
+                                 setattr(recettes, "_lancer", vrais[2])))
+        recettes.version_node = lambda commande="node": 18   # Ubuntu 24.04
+        with tempfile.TemporaryDirectory() as dossier:
+            recettes.node_a_part = lambda: (os.path.join(dossier, "node22", "bin"), "")
+            recettes._lancer = lambda commande, **k: appels.append(commande) or (True, "", "")
+            with mock.patch.dict(os.environ, {"VIGIE_OUTILS_RACINE": dossier,
+                                              "PIPX_BIN_DIR": os.path.join(dossier, "bin")}):
+                reussi, _, binaires = recettes.pour("sitespeed.io", "linux")[1]()
+            self.assertTrue(reussi)
+            self.assertIn("--prefix", appels[0])
+            self.assertTrue(appels[0][0].endswith(os.path.join("node22", "bin", "npm")))
+            with open(os.path.join(dossier, "bin", "sitespeed.io"), encoding="utf-8") as lu:
+                self.assertIn("node22", lu.read())
 
 class Consequences(unittest.TestCase):
     """L'onglet « Conséquences » : attaquant, entreprise, loi, assurance (24/11/2026)."""

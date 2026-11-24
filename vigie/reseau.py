@@ -1,6 +1,8 @@
 """Accès réseau partagés par les modules. Tout ce qui sort vers internet passe ici."""
 import json
 import re
+import socket
+import ssl
 import urllib.parse
 import urllib.request
 
@@ -45,3 +47,47 @@ def dns(nom, typ):
                 resultats.append(_nettoie_txt(valeur) if typ == "TXT" else valeur)
         return resultats
     raise ErreurReseau(f"DNS injoignable : {derniere_erreur}")
+
+
+# Réponses possibles de https_repond().
+OUI, NON, INCONNU = "oui", "non", "inconnu"
+
+
+def _poignee_tls(hote, delai):
+    """Une poignée de main chiffrée sur le port 443, comme un navigateur qui arrive.
+
+    Le certificat n'est PAS vérifié ici : on veut seulement savoir si l'adresse parle
+    en chiffré. Un certificat faux est un autre problème, relevé par d'autres contrôles.
+    """
+    contexte = ssl.create_default_context()
+    contexte.check_hostname = False
+    contexte.verify_mode = ssl.CERT_NONE
+    with socket.create_connection((hote, 443), timeout=delai) as brut:
+        with contexte.wrap_socket(brut, server_hostname=hote):
+            return True
+
+
+def https_repond(hote, essais=2, delai=10):
+    """L'adresse répond-elle en connexion chiffrée (HTTPS) ? Vérification de Vigie lui-même.
+
+    Sert à recouper un outil qui dit « pas chiffré » ou « injoignable » avant d'en faire
+    un constat (cas réel du 24/11/2026 : httpx disait www non chiffré alors que le
+    certificat et la redirection étaient bons). Réponses :
+      OUI     : la poignée de main chiffrée a réussi ;
+      NON     : refus net, deux fois (rien n'écoute en chiffré, ou le serveur parle en clair) ;
+      INCONNU : pas de réponse claire (délai dépassé, réseau coupé) : à confirmer.
+    """
+    refus = 0
+    for _ in range(max(1, essais)):
+        try:
+            if _poignee_tls(hote, delai):
+                return OUI
+        except ConnectionRefusedError:
+            refus += 1
+        except ssl.SSLError as erreur:
+            # « wrong version number » : le port 443 répond, mais en clair.
+            if "wrong version number" in str(erreur).lower() or "http request" in str(erreur).lower():
+                refus += 1
+        except OSError:
+            pass  # délai dépassé, nom introuvable, réseau coupé : on ne conclut pas
+    return NON if refus >= max(1, essais) else INCONNU

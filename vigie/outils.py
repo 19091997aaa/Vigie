@@ -360,6 +360,11 @@ def astuce_installation(nom, systeme=None):
     deviné sur son nom), sinon on renvoie vers l'installeur Linux de Vigie.
     """
     texte = CATALOGUE[nom]["installation"]
+    from . import recettes
+    if (systeme or sys.platform) != "darwin" and recettes.pour(nom, "linux"):
+        # Outils que la doc fait rater sous Ubuntu (« sudo apt install eyewitness »
+        # n'existe pas) : l'installeur Linux a une recette pour eux.
+        return "installeur Linux de Vigie (bash installer-linux.command)"
     if (systeme or sys.platform) == "darwin" or not texte.startswith("brew "):
         return texte
     from . import installeur
@@ -372,20 +377,24 @@ def astuce_installation(nom, systeme=None):
     return "installeur Linux de Vigie (bash installer-linux.command)"
 
 
-def executer(nom, arguments, delai=300, dossier=None, entree=None):
+def executer(nom, arguments, delai=300, dossier=None, entree=None, partiel=False):
     """Lance un outil du catalogue et renvoie ce qu'il affiche.
 
     Les arguments sont passés en liste, jamais via un shell : une valeur saisie
     par l'utilisateur ne peut pas devenir une commande.
     """
-    return executer_detail(nom, arguments, delai, dossier, entree).stdout
+    options = {"partiel": True} if partiel else {}
+    return executer_detail(nom, arguments, delai, dossier, entree, **options).stdout
 
 
-def executer_detail(nom, arguments, delai=300, dossier=None, entree=None):
+def executer_detail(nom, arguments, delai=300, dossier=None, entree=None, partiel=False):
     """Comme executer(), mais renvoie tout : code de retour, sortie, messages d'erreur.
 
     entree : texte envoyé à l'outil (une liste de noms, pour dnsx). Sans entree, le
     clavier est coupé : un outil qui pose une question ne bloque pas le diagnostic.
+    partiel : si l'outil dépasse son délai, on garde ce qu'il a déjà affiché (code de
+    retour None) au lieu de tout perdre. Sherlock, par exemple, écrit chaque compte
+    trouvé au fil de l'eau : 4 minutes de recherche valent mieux que rien.
     """
     outil = CATALOGUE[nom]
     chemin = trouver(outil["commande"])
@@ -398,8 +407,31 @@ def executer_detail(nom, arguments, delai=300, dossier=None, entree=None):
                               timeout=delai, cwd=dossier, env=environnement,
                               errors="replace", input=entree,
                               stdin=None if entree is not None else subprocess.DEVNULL)
-    except subprocess.TimeoutExpired:
-        raise ControleImpossible(f"l'outil {nom} n'a pas répondu en {delai} secondes")
+    except subprocess.TimeoutExpired as depassement:
+        if not partiel:
+            raise ControleImpossible(f"l'outil {nom} n'a pas répondu en {delai} secondes")
+        return subprocess.CompletedProcess([chemin] + list(arguments), None,
+                                           _texte(depassement.stdout), _texte(depassement.stderr))
+
+
+def _texte(contenu):
+    if isinstance(contenu, bytes):
+        return contenu.decode("utf-8", errors="replace")
+    return contenu or ""
+
+
+def pourquoi(resultat):
+    """Pourquoi un outil n'a rien donné, en français : l'explication d'un message connu
+    (vigie/erreurs.py), sinon la dernière ligne de l'outil telle quelle."""
+    from . import erreurs
+    texte = (resultat.stderr or "") + "\n" + (resultat.stdout or "")
+    explications = erreurs.expliquer(texte, maximum=1)
+    if explications:
+        return explications[0]
+    lignes = [l.strip() for l in texte.splitlines() if l.strip()]
+    if lignes:
+        return "message de l'outil : " + lignes[-1][:160]
+    return f"l'outil s'est arrêté sans rien dire (code {resultat.returncode})"
 
 
 def etat():
