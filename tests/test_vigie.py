@@ -498,6 +498,32 @@ class Interface(Base):
             with self.assertRaises(urllib.error.HTTPError) as refus:
                 urllib.request.urlopen(base + "/diagnostic", data=b"domaine=%3Bls")
             self.assertEqual(refus.exception.code, 400)
+
+    def test_chaque_page_a_le_retour_accueil(self):
+        reseau.dns = faux_dns(BON_DNS)
+        self.site_propre()
+        outils.executer = lambda *a, **k: "[]"
+        with tempfile.TemporaryDirectory() as sortie:
+            base = self.demarrer(sortie)
+            reponse = urllib.request.urlopen(base + "/diagnostic", data=b"domaine=ex.fr")
+            suivi = reponse.geturl()
+            for _ in range(100):
+                etat = json.loads(urllib.request.urlopen(suivi + "/etat").read())
+                if etat["etat"] != "en_cours":
+                    break
+                time.sleep(0.05)
+            pages = ["/", "/outils-un", "/comparer", "/manuel", suivi[len(base):],
+                     "/rapport/" + etat["rapport"]]
+            for chemin in pages:
+                texte = urllib.request.urlopen(base + chemin).read().decode()
+                self.assertIn('class="vigie-accueil" href="/"', texte, chemin)
+                self.assertEqual(texte.count('class="vigie-nav"'), 1, chemin)
+            with self.assertRaises(urllib.error.HTTPError) as introuvable:
+                urllib.request.urlopen(base + "/nexiste-pas")
+            self.assertIn("vigie-accueil", introuvable.exception.read().decode())
+            # Le rapport enregistré (celui qui part chez le client) reste sans la barre.
+            with open(os.path.join(sortie, etat["rapport"], "rapport.html"), encoding="utf-8") as f:
+                self.assertNotIn("vigie-nav", f.read())
             with self.assertRaises(urllib.error.HTTPError) as absent:
                 urllib.request.urlopen(base + "/rapport/..%2F..%2Fetc")
             self.assertEqual(absent.exception.code, 404)
