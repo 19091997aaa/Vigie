@@ -3,7 +3,7 @@ import html
 import json
 import os
 
-from . import __version__, scenarios
+from . import __version__, consequences, scenarios
 from .modeles import CRITIQUE, IMPORTANT, INFO, OK, fusionner, note, trier
 
 LIBELLES = {CRITIQUE: "Critique", IMPORTANT: "Important", INFO: "À savoir", OK: "Correct"}
@@ -23,6 +23,12 @@ def construire(societe, cible, date, constats, brut, non_realises, autorisation)
     # La note globale est celle du domaine le plus faible : on vaut son maillon faible.
     # Ainsi elle tombe toujours sur une lettre déjà affichée, et jamais sous le pire bloc.
     notes_blocs = {nom: note(liste) for nom, liste in blocs.items()}
+
+    def _avec_consequences(constat):
+        donnees = constat.en_dict()
+        donnees["consequences"] = consequences.pour(donnees)
+        return donnees
+
     return {
         "outil": "Vigie",
         "version": __version__,
@@ -31,7 +37,7 @@ def construire(societe, cible, date, constats, brut, non_realises, autorisation)
         "date": date,
         "note_globale": min(notes_blocs.values()) if notes_blocs else None,
         "scenarios": scenarios.scenarios_pour([c.en_dict() for c in constats]),
-        "blocs": {nom: {"note": notes_blocs[nom], "constats": [c.en_dict() for c in trier(liste)]}
+        "blocs": {nom: {"note": notes_blocs[nom], "constats": [_avec_consequences(c) for c in trier(liste)]}
                   for nom, liste in blocs.items()},
         "non_realises": non_realises,
         "autorisation": autorisation,
@@ -45,6 +51,37 @@ def _compte(rapport):
         for constat in bloc["constats"]:
             compte[constat["niveau"]] = compte.get(constat["niveau"], 0) + 1
     return compte
+
+
+def _consequences(constat):
+    """Les conséquences d'un constat (rapport récent : déjà calculées ; ancien : recalculées)."""
+    if "consequences" in constat:
+        return constat["consequences"] or {}
+    return consequences.pour(constat)
+
+
+def _a_consequences(rapport):
+    return any(_consequences(c) for bloc in rapport["blocs"].values() for c in bloc["constats"])
+
+
+def _texte_consequences(fiche, retrait):
+    lignes = []
+    for nom, libelle in consequences.RUBRIQUES:
+        if fiche.get(nom):
+            lignes.append(f"{retrait}- {libelle} : {fiche[nom]}")
+    exemple = fiche.get("exemple")
+    if exemple:
+        lignes.append(f"{retrait}- Exemple réel : {exemple['texte']} "
+                      f"(Source : {exemple['source']}, {exemple['url']})")
+    return lignes
+
+
+def _texte_cadre():
+    cadre = consequences.CADRE_GENERAL
+    lignes = [cadre["titre"].upper() + " :"]
+    lignes += [f"- {point}" for point in cadre["points"]]
+    lignes += [f"  {cadre['note']}", ""]
+    return lignes
 
 
 def en_texte(rapport, public="technique"):
@@ -84,6 +121,15 @@ def en_texte(rapport, public="technique"):
             lignes.append(f"- {scenario['titre']}")
             lignes.append(f"  {scenario['texte']}")
         lignes.append("")
+    if public == "executif" and _a_consequences(rapport):
+        lignes.append("LES CONSÉQUENCES, POINT PAR POINT :")
+        for bloc in rapport["blocs"].values():
+            for constat in bloc["constats"]:
+                fiche = _consequences(constat)
+                if fiche:
+                    lignes.append(f"* [{LIBELLES[constat['niveau']]}] {constat['titre']}")
+                    lignes += _texte_consequences(fiche, "  ")
+        lignes.append("")
     for nom, bloc in rapport["blocs"].items():
         lignes += [f"=== {nom.upper()} : {bloc['note']} / 100  (classe {_lettre(bloc['note'])}) ===",
                    f"  {_strategie_bloc(bloc)}", ""]
@@ -94,11 +140,18 @@ def en_texte(rapport, public="technique"):
             lignes.append(f"   {constat['explication']}")
             if constat.get("hors_note"):
                 lignes.append("   (Pour information : ce point ne compte pas dans la note.)")
+            fiche = _consequences(constat)
+            if fiche:
+                lignes.append("   Conséquences :")
+                lignes += _texte_consequences(fiche, "   ")
             if constat["correction"]:
-                lignes.append(f"   Correction : {constat['correction']}")
+                lignes.append(f"   À corriger (partie technique, pour votre prestataire) : "
+                              f"{constat['correction']}")
             if constat.get("sources"):
                 lignes.append(f"   Relevé par : {', '.join(constat['sources'])}")
             lignes.append("")
+    if _a_consequences(rapport):
+        lignes += _texte_cadre()
     if public == "executif":
         lignes += ["Le détail de chaque point et les contrôles non réalisés figurent dans "
                    "le rapport technique joint.", ""]
@@ -223,11 +276,11 @@ h2 { font-size:13px; font-weight:800; letter-spacing:.12em; text-transform:upper
 h2::after { content:""; flex:1; height:1px; background:var(--trait); }
 h2 .scoreb { flex:none; font-size:12px; font-weight:800; letter-spacing:0; color:var(--navy);
   background:var(--fond); padding:3px 10px; border-radius:999px; text-transform:none; }
-.constat { border:1px solid var(--trait); border-left:4px solid var(--gris); border-radius:12px;
+.constat, .csq-carte { border:1px solid var(--trait); border-left:4px solid var(--gris); border-radius:12px;
   padding:16px 20px; margin:14px 0; break-inside:avoid; }
 .etiquette { display:inline-block; font-size:11px; font-weight:800; letter-spacing:.08em;
   text-transform:uppercase; padding:3px 9px; border-radius:6px; margin-bottom:8px; }
-.constat h3 { font-size:17px; font-weight:700; margin:0 0 6px; }
+.constat h3, .csq-carte h3 { font-size:17px; font-weight:700; margin:0 0 6px; }
 .constat p { margin:0 0 8px; color:#333c49; }
 .correction { background:var(--fond); border-radius:8px; padding:10px 13px; font-size:14.5px;
   margin:10px 0 0 !important; }
@@ -282,6 +335,38 @@ footer { padding:22px 40px 30px; font-size:12.5px; color:var(--gris);
 .carte .nom { font-size:15.5px; font-weight:700; margin:0 0 2px; }
 .carte .compte { font-size:12.5px; color:var(--gris); margin:0 0 7px; }
 .carte .strat { font-size:13.5px; color:#43494f; margin:0; }
+.onglets { margin:12px 0 0; }
+.onglets > input { position:absolute; opacity:0; pointer-events:none; }
+.onglets > label { display:inline-block; font-size:13px; font-weight:700; padding:6px 13px;
+  border:1px solid var(--trait); border-bottom:0; border-radius:8px 8px 0 0; color:var(--gris);
+  background:#f6f8fb; cursor:pointer; margin-right:4px; }
+.onglets > input:checked + label { background:#fff; color:var(--navy);
+  box-shadow:inset 0 3px 0 var(--or); }
+.onglets > input:focus-visible + label { outline:2px solid var(--navy); }
+.panneau { display:none; border:1px solid var(--trait); border-radius:0 8px 8px 8px;
+  padding:12px 15px; font-size:14.5px; }
+.onglets > .o-csq:checked ~ .p-csq, .onglets > .o-tech:checked ~ .p-tech { display:block; }
+.panneau .titre-print { display:none; }
+.panneau p { margin:0; }
+.csq { margin:0; }
+.csq dt { font-size:12px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
+  color:var(--navy); margin:10px 0 2px; }
+.csq dt:first-child { margin-top:0; }
+.csq dd { margin:0; color:#333c49; }
+.csq dt.loi, .csq dt.assurance { color:#8a1d16; }
+.csq dt.exemple { color:#2f5fa7; }
+.csq .src { display:block; font-size:12.5px; color:var(--gris); margin-top:2px; }
+.csq .src a { color:var(--gris); }
+.p-tech .qui { font-size:12.5px; color:var(--gris); margin:0 0 4px; }
+.conseq-liste .csq-carte h3 { font-size:16px; }
+.cadre-legal { margin:24px 40px 8px; padding:18px 22px; background:#fbfaf6;
+  border:1px solid #eadfc4; border-radius:12px; font-size:14px; }
+.cadre-legal h2 { margin:0 0 8px; } .cadre-legal h2::after { background:#eadfc4; }
+.cadre-legal ul { margin:0; padding-left:18px; } .cadre-legal li { margin:5px 0; color:#43494f; }
+.cadre-legal .note { font-size:12.5px; color:var(--gris); margin:10px 0 0; }
+@media print { .onglets > label { display:none; } .panneau { display:block !important;
+  border-radius:8px; margin-top:8px; } .panneau .titre-print { display:block; font-weight:800;
+  font-size:12px; text-transform:uppercase; color:var(--navy); margin:0 0 4px; } }
 @media print { body{background:#fff;} main{box-shadow:none; margin:0; max-width:none; border-radius:0;} }
 """
 
@@ -313,18 +398,33 @@ def _lettre(note):
     return "F"
 
 
+# La phrase d'en-tête suit la lettre : un D ne doit jamais sonner rassurant (demande
+# d'Anass du 24/11/2026). A/B rassurent, C alerte, D/E/F disent clairement d'agir.
+VERDICTS = {
+    "A": "Très bon niveau. Rien d'urgent : gardez ces bons réglages.",
+    "B": "Bon niveau. Quelques corrections à faire, sans urgence.",
+    "C": "Niveau moyen. Des failles qu'un escroc peut utiliser sont ouvertes : "
+         "à corriger dans les prochaines semaines.",
+    "D": "Niveau insuffisant. Votre entreprise est exposée : des failles sérieuses sont "
+         "ouvertes aujourd'hui, il faut les corriger rapidement.",
+    "E": "Niveau faible. Votre entreprise est très exposée : une mise en sécurité est "
+         "urgente.",
+    "F": "Niveau critique. Votre entreprise est grandement exposée : il faut agir sans "
+         "attendre.",
+}
+VERDICT_CRITIQUE = ("Au moins une faille critique est ouverte aujourd'hui : "
+                    "elle est à corriger sans attendre.")
+
+
 def _verdict(rapport):
-    """Une phrase de décision en tête, façon « niveau de menace » d'Intruder."""
-    compte = _compte(rapport)
+    """Une phrase de décision en tête, alignée sur la lettre (jamais plus douce qu'elle)."""
     if rapport["note_globale"] is None:
         return ""
-    if compte.get(CRITIQUE):
-        return ("Des failles critiques sont ouvertes aujourd'hui : une mise en sécurité "
-                "est nécessaire sans attendre.")
-    if compte.get(IMPORTANT):
-        return ("Pas de faille critique, mais des points importants à corriger pour "
-                "réduire votre exposition.")
-    return "Aucune faille majeure. Quelques réglages à surveiller, sans urgence."
+    lettre = _lettre(rapport["note_globale"])
+    if _compte(rapport).get(CRITIQUE) and lettre in ("A", "B", "C"):
+        # une faille critique l'emporte sur une bonne note d'ensemble
+        return VERDICT_CRITIQUE
+    return VERDICTS[lettre]
 
 
 def _priorites(rapport):
@@ -395,13 +495,25 @@ def _perimetre(rapport):
     return f"Périmètre : {liste} — {methode}."
 
 
+STRATEGIES = {
+    "B": "Correct : quelques corrections à prévoir, sans urgence.",
+    "C": "Des failles exploitables : à corriger dans les semaines qui viennent.",
+    "D": "Exposé : des corrections sont nécessaires rapidement.",
+    "E": "Très exposé : à traiter en priorité.",
+    "F": "Très exposé : à traiter en priorité, sans attendre.",
+}
+
+
 def _strategie_bloc(bloc):
-    """Une ligne de stratégie par domaine, déduite de ce qui a été trouvé (jamais inventée)."""
+    """Une ligne de stratégie par domaine, alignée sur sa lettre (jamais inventée)."""
     niveaux = {c["niveau"] for c in bloc["constats"]}
     if CRITIQUE in niveaux:
         return "Des points critiques à traiter ici en priorité."
+    lettre = _lettre(bloc["note"])
+    if lettre in STRATEGIES:
+        return STRATEGIES[lettre]
     if IMPORTANT in niveaux:
-        return "Pas de critique, mais des corrections importantes à planifier."
+        return "Bon niveau, mais un point important à corriger."
     if INFO in niveaux:
         return "Rien de grave ; quelques réglages à surveiller."
     return "Domaine conforme, rien à faire."
@@ -429,15 +541,84 @@ def _synthese_blocs(rapport):
             f'<div class="cartes">{"".join(cartes)}</div></section>')
 
 
+def _html_consequences(fiche):
+    e = html.escape
+    lignes = "".join(f'<dt class="{nom}">{e(libelle)}</dt><dd>{e(fiche[nom])}</dd>'
+                     for nom, libelle in consequences.RUBRIQUES if fiche.get(nom))
+    exemple = fiche.get("exemple")
+    if exemple:
+        lignes += (f'<dt class="exemple">Exemple réel</dt><dd>{e(exemple["texte"])} '
+                   f'<span class="src">Source : <a href="{e(exemple["url"])}">'
+                   f'{e(exemple["source"])}</a></span></dd>')
+    return f'<dl class="csq">{lignes}</dl>'
+
+
+def _onglets(constat, numero):
+    """Deux onglets sous chaque constat : « Conséquences » (pour le dirigeant, ouvert par
+    défaut) et « À corriger » (la partie technique, pour le prestataire)."""
+    e = html.escape
+    fiche = _consequences(constat)
+    correction = constat.get("correction") or ""
+    if not fiche and not correction:
+        return ""
+    if not fiche:
+        return (f'<p class="correction"><b>À corriger (partie technique) :</b> '
+                f'{e(correction)}</p>')
+    panneau_csq = (f'<div class="panneau p-csq"><p class="titre-print">Conséquences</p>'
+                   f'{_html_consequences(fiche)}</div>')
+    if not correction:
+        return panneau_csq.replace('class="panneau p-csq"',
+                                   'class="panneau p-csq" style="display:block;margin-top:12px"')
+    nom = f"o{numero}"
+    return (f'<div class="onglets">'
+            f'<input type="radio" class="o-csq" name="{nom}" id="{nom}c" checked>'
+            f'<label for="{nom}c">Conséquences</label>'
+            f'<input type="radio" class="o-tech" name="{nom}" id="{nom}t">'
+            f'<label for="{nom}t">À corriger (technique)</label>'
+            f'{panneau_csq}'
+            f'<div class="panneau p-tech"><p class="titre-print">À corriger (technique)</p>'
+            f'<p class="qui">Partie technique, à transmettre à votre prestataire informatique.</p>'
+            f'<p>{e(correction)}</p></div></div>')
+
+
+def _cadre_legal(rapport):
+    """Le cadre légal et assurance, une seule fois (plafonds donnés avec leur contexte)."""
+    if not _a_consequences(rapport):
+        return ""
+    e = html.escape
+    cadre = consequences.CADRE_GENERAL
+    points = "".join(f"<li>{e(point)}</li>" for point in cadre["points"])
+    return (f'<section class="cadre-legal"><h2>{e(cadre["titre"])}</h2><ul>{points}</ul>'
+            f'<p class="note">{e(cadre["note"])}</p></section>')
+
+
+def _conseq_executif(rapport):
+    """Version dirigeant : les conséquences de chaque point à régler, sans la technique."""
+    if not _a_consequences(rapport):
+        return ""
+    e = html.escape
+    cartes = []
+    for bloc in rapport["blocs"].values():
+        for constat in bloc["constats"]:
+            fiche = _consequences(constat)
+            if fiche:
+                cartes.append(
+                    f'<section class="csq-carte {constat["niveau"]}">'
+                    f'<span class="etiquette">{e(LIBELLES[constat["niveau"]])}</span>'
+                    f'<h3>{e(constat["titre"])}</h3>{_html_consequences(fiche)}</section>')
+    return (f'<div class="corps conseq-liste"><h2>Les conséquences, point par point</h2>'
+            f'{"".join(cartes)}</div>')
+
+
 def _corps_detaille(rapport):
     """Le détail par constat + contrôles non réalisés — le cœur du rapport technique."""
     e = html.escape
-    corps = []
+    corps, numero = [], 0
     for nom, bloc in rapport["blocs"].items():
         corps.append(f'<h2>{e(nom)}<span class="scoreb">{bloc["note"]} / 100</span></h2>')
         for constat in bloc["constats"]:
-            correction = (f'<p class="correction"><b>À corriger :</b> {e(constat["correction"])}</p>'
-                          if constat["correction"] else "")
+            numero += 1
+            correction = _onglets(constat, numero)
             sources = (f'<p class="sources">Relevé par&nbsp;: {e(", ".join(constat["sources"]))}.</p>'
                        if constat.get("sources") else "")
             if constat.get("hors_note"):
@@ -466,12 +647,13 @@ def en_html(rapport, public="technique"):
         f'{e(LIBELLES[n].lower())}</span>'
         for n in (CRITIQUE, IMPORTANT, INFO, OK) if n in compte)
     if public == "executif":
-        corps_html = ('<section class="suite">Le détail de chaque point — explication, '
+        corps_html = _conseq_executif(rapport) + _cadre_legal(rapport) + (
+                      '<section class="suite">Le détail de chaque point — explication, '
                       'correction, outil l\'ayant relevé — et les contrôles non réalisés '
                       'figurent dans le <b>rapport technique</b> joint.</section>')
         etiquette_doc = "Rapport exécutif"
     else:
-        corps_html = _corps_detaille(rapport)
+        corps_html = _corps_detaille(rapport) + _cadre_legal(rapport)
         etiquette_doc = "Rapport technique"
     autorisation = rapport["autorisation"]
     cadre = ("Contrôles réalisés à partir d'informations publiques, sans action sur vos machines."
