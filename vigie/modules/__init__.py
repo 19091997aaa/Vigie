@@ -6,9 +6,15 @@ Si le contrôle ne peut pas se faire, la fonction lève ControleImpossible.
 
 "actif"   = le module touche aux machines du client (scan de ports, recherche
             de failles). Jamais lancé sans autorisation signée.
-"defaut"  = lancé quand on ne précise pas la liste des modules.
+"defaut"  = lancé quand on ne précise pas la liste des modules (diagnostic rapide).
+
+Pour le diagnostic COMPLET (les 42 outils de la famille « diag gratuit », voir
+vigie/diag_gratuit.py), trois réglages de plus, lus par cli.lancer :
+"delai"   = secondes avant d'abandonner le contrôle (10 minutes si absent) ;
+"chrome"  = il ouvre un navigateur : au plus 2 à la fois, sinon la machine sature ;
+"apres"   = contrôles à attendre, parce qu'il relit ce qu'ils ont trouvé.
 """
-from . import (accessibilite, adresses, apercu, archives, bibliotheques, complements, checkdmarc_mod, chiffrement,
+from . import (accessibilite, adresses, apercu, archives, bibliotheques, complements, checkdmarc_mod, chiffrement, complet,
                comptes_mail, conformite, domaines, liens, mail, metadonnees, pseudos,
                qualite_site, site, sousdomaines, technos, telephone)
 
@@ -62,8 +68,62 @@ MODULES = {
                "defaut": True, "nom": "Capture de la page d'accueil (gowitness)"},
     "pseudos": {"fonction": pseudos.analyser, "bloc": "Exposition", "actif": False,
                 "defaut": False, "nom": "Comptes publics du dirigeant (Sherlock, Maigret, user-scanner)"},
+    # --- Diagnostic complet (24/11/2026) : le reste de la famille « diag gratuit ». ---
+    "sousdomaines_amass": {"fonction": complet.analyser_amass, "bloc": "Exposition",
+                           "actif": False, "defaut": False, "apres": ["sousdomaines"],
+                           "nom": "Adresses annexes, 2e avis (Amass, mode passif)"},
+    "alias_dns": {"fonction": complet.analyser_dnsx, "bloc": "Exposition", "actif": False,
+                  "defaut": False, "apres": ["sousdomaines", "sousdomaines_amass"],
+                  "nom": "Adresses annexes qui répondent encore (dnsx)"},
+    "technos_whatweb": {"fonction": complet.analyser_whatweb, "bloc": "Exposition",
+                        "actif": False, "defaut": False,
+                        "nom": "Logiciels visibles du site, 2e avis (WhatWeb)"},
+    "vitesse": {"fonction": complet.analyser_sitespeed, "bloc": "Exposition", "actif": False,
+                "defaut": False, "chrome": True,
+                "nom": "Vitesse de la page d'accueil (sitespeed.io)"},
+    "captures": {"fonction": complet.analyser_eyewitness, "bloc": "Exposition",
+                 "actif": False, "defaut": False, "chrome": True,
+                 "nom": "Capture de la page d'accueil, 2e avis (EyeWitness)"},
+    "moteurs_exposition": {"fonction": complet.analyser_uncover, "bloc": "Exposition",
+                           "actif": False, "defaut": False,
+                           "nom": "Ce que Shodan et Censys ont déjà vu (uncover)"},
+    "documents_publics": {"fonction": complet.analyser_metagoofil, "bloc": "Exposition",
+                          "actif": False, "defaut": False,
+                          "nom": "Documents de la société trouvés par Google (Metagoofil)"},
+    "photos": {"fonction": complet.analyser_exiv2, "bloc": "Exposition", "actif": False,
+               "defaut": False, "nom": "Position GPS des photos du site (Exiv2)"},
+    "instagram": {"fonction": complet.analyser_instaloader, "bloc": "Exposition",
+                  "actif": False, "defaut": False,
+                  "nom": "Compte Instagram de la société (Instaloader)"},
+    "pseudos_societe": {"fonction": complet.analyser_pseudos_societe, "bloc": "Exposition",
+                        "actif": False, "defaut": False, "delai": 3600,
+                        "nom": "Le nom de la société sur les réseaux (Sherlock, Maigret, "
+                               "user-scanner, Social Analyzer)"},
+    "numeros_publics": {"fonction": complet.analyser_phoneinfoga, "bloc": "Exposition",
+                        "actif": False, "defaut": False,
+                        "nom": "Numéros affichés sur le site (PhoneInfoga)"},
+    "archive_page": {"fonction": complet.analyser_archivebox, "bloc": "Exposition",
+                     "actif": False, "defaut": False, "chrome": True, "delai": 900,
+                     "nom": "Copie datée de la page d'accueil (ArchiveBox)"},
+    "google_dirigeant": {"fonction": complet.analyser_ghunt, "bloc": "Exposition",
+                         "actif": False, "defaut": False,
+                         "nom": "Compte Google du dirigeant, avec son accord (GHunt)"},
     "conformite": {"fonction": conformite.analyser, "bloc": "Conformité assureur",
                    "actif": False, "defaut": False, "nom": "Conformité assureur (questionnaire)"},
 }
 
+# Réglages de durée et de navigateur des contrôles déjà existants.
+for _nom, _reglage in {"toutes_pages": {"chrome": True, "delai": 900},
+                       "qualite_site": {"chrome": True}, "accessibilite": {"chrome": True},
+                       "apercu": {"chrome": True}, "pseudos": {"delai": 3600},
+                       "domaines": {"delai": 900}}.items():
+    MODULES[_nom].update(_reglage)
+
 PAR_DEFAUT = [nom for nom, module in MODULES.items() if module["defaut"]]
+
+# Le diagnostic complet : tout ce qui n'est pas actif, sauf le questionnaire assureur
+# (il demande des réponses du client). Les contrôles sur la personne du dirigeant
+# (pseudos, holehe, téléphone, GHunt) y figurent : sans son accord écrit, ils disent
+# simplement pourquoi ils ne tournent pas.
+COMPLET = [nom for nom, module in MODULES.items()
+           if not module["actif"] and nom != "conformite"]

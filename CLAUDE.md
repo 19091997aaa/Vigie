@@ -127,6 +127,16 @@ la quarantaine d'outils de l'enchaînement automatique, pas les 216.
 
 **Explications en français (24/11/2026)** : `vigie/fiches_outils.py` donne pour chaque outil lançable seul son rôle, la cible attendue (domaine, URL, pseudo, e-mail, téléphone, fichier, dossier, aucune) et son mode (cible / service / appli / Windows / capture / règles / compte / à la main). « Lancer un outil » vérifie la cible AVANT de lancer et explique en français si ça ne colle pas ; `vigie/erreurs.py` traduit les erreurs courantes des outils et des installations. La sortie brute reste dans « Détail technique ». Un message d'erreur non reconnu = ajouter un motif dans `erreurs.py`.
 
+**Diagnostic complet (24/11/2026)** : demande d'Anass, les **42 outils du diag gratuit
+tournent ensemble** (choix « Complet » par défaut dans l'interface, `--complet` en
+commande). `cli.lancer` lance les contrôles en parallèle (6 à la fois, 2 Chrome au plus,
+délai par contrôle, un plantage n'arrête plus le diagnostic). `vigie/indices.py` tire du
+domaine les entrées des outils (réseaux sociaux du site, nom de la société, numéros —
+jamais écrits). `vigie/modules/complet.py` = les nouveaux branchements.
+`vigie/diag_gratuit.py` = une ligne par outil des 42 dans le rapport technique, y compris
+ceux qui ne peuvent pas tourner (AdGuard Home, Pi-hole, Web-Check, Datashare, Flowsint,
+InVID, geo-sleuth, IVRE, auto-archiver, Toutatis) et **Robin, écarté (dark web)**.
+
 Principe : **Vigie ne copie le code d'aucun outil**. Il appelle les outils installés
 sur la machine (chaque outil garde sa licence, se met à jour seul, et Vigie continue
 de marcher si l'un manque). Pour brancher un nouvel outil GitHub : voir la section

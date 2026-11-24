@@ -21,6 +21,9 @@ class Cible:
     emails: list = field(default_factory=list)      # adresses du dirigeant, données par lui
     telephones: list = field(default_factory=list)  # numéros du dirigeant, donnés par lui
     reponses: dict = field(default_factory=dict)  # réponses au questionnaire assureur (id -> oui/non)
+    # Ce que les contrôles déjà finis ont trouvé ({module: données}), pour nourrir les
+    # suivants (dnsx relit les adresses annexes de Subfinder et Amass). Rempli par cli.lancer.
+    indices: dict = field(default_factory=dict)
 
 
 @dataclass

@@ -108,7 +108,50 @@ def en_texte(rapport, public="technique"):
         lignes += [f"- {element['module']} : {element['raison']}"
                    for element in rapport["non_realises"]]
         lignes.append("")
+    if rapport.get("outils_diag"):
+        lignes.append(_titre_outils(rapport["outils_diag"]) + " :")
+        for ligne in rapport["outils_diag"]:
+            duree = f" ({_duree(ligne['duree'])})" if ligne.get("duree") is not None else ""
+            lignes.append(f"- {ligne['outil']} — {ETATS_OUTILS.get(ligne['etat'], ligne['etat'])}"
+                          f"{duree} : {ligne['texte']}")
+        lignes.append("")
     return "\n".join(lignes)
+
+
+# Pour la section « Les outils du diagnostic gratuit » (voir vigie/diag_gratuit.py).
+ETATS_OUTILS = {"lance": "Lancé", "absent": "Pas installé", "non_realise": "Pas réalisé",
+                "echec": "En échec", "jamais": "Pas lançable ici", "hors_liste": "Non demandé",
+                "ecarte": "Écarté par la règle légale"}
+
+
+def _duree(secondes):
+    secondes = int(round(secondes or 0))
+    return f"{secondes} s" if secondes < 60 else f"{secondes // 60} min {secondes % 60:02d} s"
+
+
+def _titre_outils(lignes):
+    lances = sum(1 for l in lignes if l["etat"] == "lance")
+    return f"Les {len(lignes)} outils du diagnostic gratuit ({lances} lancés avec succès)"
+
+
+def _section_outils(rapport):
+    """Une ligne par outil de la famille « diagnostic gratuit », même ceux qui n'ont pas
+    tourné : rien n'est passé sous silence (relecture d'Anass)."""
+    lignes = rapport.get("outils_diag")
+    if not lignes:
+        return ""
+    e = html.escape
+    corps = [f'<h2>{e(_titre_outils(lignes))}</h2>',
+             '<p class="sources">Pour la relecture : ce que chaque outil a donné, ou '
+             'pourquoi il n\'a pas tourné.</p><ul class="outilsdiag">']
+    for ligne in lignes:
+        duree = (f' <span class="duree">{e(_duree(ligne["duree"]))}</span>'
+                 if ligne.get("duree") is not None else "")
+        corps.append(f'<li class="{e(ligne["etat"])}"><b>{e(ligne["outil"])}</b> '
+                     f'<span class="etat">{e(ETATS_OUTILS.get(ligne["etat"], ligne["etat"]))}'
+                     f'</span>{duree}<br><span class="texte">{e(ligne["texte"])}</span></li>')
+    corps.append("</ul>")
+    return "".join(corps)
 
 
 # Le logo de Vigie : un œil dans un bouclier (vigilance + protection). SVG, net à toute taille.
@@ -198,6 +241,14 @@ h2 .scoreb { flex:none; font-size:12px; font-weight:800; letter-spacing:0; color
 .pastille.INFO{background:#2f5fa7;} .pastille.OK{background:#2e7d4f;}
 .nonfait { list-style:none; padding:0; margin:0; }
 .nonfait li { font-size:14px; color:var(--gris); padding:7px 0; border-bottom:1px solid var(--trait); }
+.outilsdiag { list-style:none; padding:0; margin:0; }
+.outilsdiag li { font-size:14px; padding:8px 0 8px 12px; border-bottom:1px solid var(--trait);
+  border-left:4px solid #cfd6e1; }
+.outilsdiag li.lance { border-left-color:#1e7a46; }
+.outilsdiag li.absent, .outilsdiag li.non_realise { border-left-color:#b7791f; }
+.outilsdiag li.echec, .outilsdiag li.ecarte { border-left-color:#b3261e; }
+.outilsdiag .etat { font-weight:700; margin-left:6px; }
+.outilsdiag .duree, .outilsdiag .texte { color:var(--gris); }
 .menace { margin:0 40px; padding:22px 24px; background:#fdf6f5; border:1px solid #f0cfca;
   border-left:5px solid #b3261e; border-radius:12px; }
 .menace h2 { margin:0 0 4px; color:#8a1d16; }
@@ -319,7 +370,10 @@ def _menace(rapport):
 
 def _capture(rapport):
     """La page d'accueil telle que la voit un visiteur (module apercu), si elle a été prise."""
-    apercu = (rapport.get("brut") or {}).get("apercu", {}).get("apercu") or {}
+    brut = rapport.get("brut") or {}
+    # gowitness d'abord ; EyeWitness (diagnostic complet) prend le relais s'il a raté.
+    apercu = ((brut.get("apercu") or {}).get("apercu")
+              or (brut.get("captures") or {}).get("apercu") or {})
     if not apercu.get("image_base64"):
         return ""
     type_image = "image/png" if apercu.get("type") == "image/png" else "image/jpeg"
@@ -399,6 +453,7 @@ def _corps_detaille(rapport):
         corps += [f'<li>{e(element["module"])} — {e(element["raison"])}</li>'
                   for element in rapport["non_realises"]]
         corps.append("</ul>")
+    corps.append(_section_outils(rapport))
     return f'<div class="corps">{"".join(corps)}</div>'
 
 

@@ -43,8 +43,8 @@ ce sera une étape ultérieure.
 | `python3 -m vigie modules` | Liste les contrôles disponibles |
 | `python3 -m vigie outils` | Liste les outils externes : installés, branchés, licence |
 
-Options utiles de `diagnostic` : `--societe`, `--modules mail,site` ou
-`--modules tous`, `--pseudo` et `--accord-dirigeant`, `--autorisation fichier.pdf`,
+Options utiles de `diagnostic` : `--societe`, `--complet` (les 42 outils du diagnostic
+gratuit, 30 min à 1 h), `--modules mail,site` ou `--modules tous`, `--pseudo` et `--accord-dirigeant`, `--autorisation fichier.pdf`,
 `--sortie dossier`.
 
 ## Ce qui existe
@@ -64,6 +64,22 @@ Options utiles de `diagnostic` : `--societe`, `--modules mail,site` ou
 | `adresses` | Exposition | Adresses mail visibles publiquement (comptées, sans source de fuite) | theHarvester |
 | `apercu` | — | Capture de la page d'accueil, en tête du rapport | gowitness + Chrome |
 | `pseudos` | Exposition | Comptes publics du dirigeant, via Sherlock | Pseudos et accord écrit |
+
+### Diagnostic complet (24/11/2026)
+
+Choix par défaut dans l'interface (« Complet »), ou `--complet` en commande. Il lance
+**les 42 outils de la famille « diagnostic gratuit »**, 6 à la fois (2 au plus qui
+ouvrent Chrome), avec un délai par outil. Chaque outil reçoit l'entrée qu'il attend,
+tirée du domaine (`vigie/indices.py`) : comptes de réseaux sociaux affichés sur le
+site, nom de la société, numéros affichés (en mémoire seulement), adresses annexes
+trouvées par Subfinder et Amass. Nouveaux contrôles : `vigie/modules/complet.py`
+(Amass passif, dnsx, WhatWeb, sitespeed.io, EyeWitness, uncover, Metagoofil, Exiv2,
+Instaloader, PhoneInfoga, ArchiveBox, GHunt, et Sherlock/Maigret/user-scanner/Social
+Analyzer sur le nom de la société).
+
+Le rapport technique finit par **une ligne par outil des 42** (`vigie/diag_gratuit.py`) :
+lancé (avec sa durée), à installer, pas réalisé (et pourquoi), pas lançable ici
+(service, appli, extension…) ou écarté par la règle légale (Robin : dark web).
 
 Tous sont lancés par défaut, sauf `pseudos` et `conformite`. Un outil absent ne bloque
 rien : son contrôle est listé « non réalisé ». Premier essai réel complet : 21/11/2026
