@@ -30,6 +30,46 @@ from .modules import MODULES, PAR_DEFAUT
 
 NOM_RAPPORT = re.compile(r"[a-z0-9_-]{3,120}")
 
+
+# Barre du haut, ajoutée à toutes les pages servies par l'interface (pas aux rapports
+# enregistrés sur le disque : ceux-là partent chez le client). Un clic sur « ← Accueil »
+# ou sur le logo Vigie ramène toujours à la page d'accueil.
+NAVIGATION = """<nav class="vigie-nav" aria-label="Navigation Vigie">
+<a class="vigie-accueil" href="/">&larr; Accueil</a>
+<a href="/outils-un">Lancer un outil</a>
+<a href="/comparer">Comparer des outils</a>
+<a href="/manuel">Outils manuels</a>
+</nav>
+<style>
+.vigie-nav { position:sticky; top:0; z-index:50; display:flex; flex-wrap:wrap; gap:6px 18px;
+  align-items:center; padding:10px 18px; background:#0d1e38; font:600 15px/1.4 -apple-system,
+  "Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+.vigie-nav a { color:#dfe6f1; text-decoration:none; }
+.vigie-nav a:hover { color:#fff; text-decoration:underline; }
+.vigie-nav .vigie-accueil { background:#e0a43b; color:#13294b; padding:7px 14px;
+  border-radius:8px; font-weight:800; }
+.vigie-nav .vigie-accueil:hover { color:#13294b; background:#f0b54c; text-decoration:none; }
+.enseigne { cursor:pointer; }
+@media print { .vigie-nav { display:none; } .enseigne { cursor:auto; } }
+</style>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".enseigne").forEach(function (e) {
+    e.title = "Retour à l'accueil";
+    e.addEventListener("click", function () { location.href = "/"; });
+  });
+});
+</script>
+"""
+
+
+def ajouter_navigation(contenu):
+    """Pose la barre « ← Accueil » en haut d'une page HTML."""
+    debut = re.search(r"<body[^>]*>", contenu)
+    if debut:
+        return contenu[:debut.end()] + NAVIGATION + contenu[debut.end():]
+    return NAVIGATION + contenu
+
 CSS_FORM = """
 .corps { padding:30px 40px 10px; }
 form { display:grid; gap:18px; margin:4px 0 8px; }
@@ -282,6 +322,8 @@ def fabrique(sortie, code):
             pass
 
         def _envoyer(self, statut, contenu, entetes=(), type_="text/html"):
+            if type_ == "text/html" and contenu:
+                contenu = ajouter_navigation(contenu)
             donnees = contenu.encode("utf-8")
             self.send_response(statut)
             self.send_header("Content-Type", f"{type_}; charset=utf-8")
