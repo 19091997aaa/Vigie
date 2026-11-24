@@ -2554,3 +2554,125 @@ class Recettes(unittest.TestCase):
             self.assertTrue(appels[0][0].endswith(os.path.join("node22", "bin", "npm")))
             with open(os.path.join(dossier, "bin", "sitespeed.io"), encoding="utf-8") as lu:
                 self.assertIn("node22", lu.read())
+
+class Consequences(unittest.TestCase):
+    """L'onglet « Conséquences » : attaquant, entreprise, loi, assurance (24/11/2026)."""
+
+    def test_chaque_cle_de_constat_a_ses_consequences(self):
+        from vigie import consequences
+        from vigie.questionnaire import QUESTIONS
+        dossier = os.path.join(os.path.dirname(__file__), "..", "vigie")
+        cles = set()
+        for racine, _, fichiers in os.walk(dossier):
+            for nom in fichiers:
+                if nom.endswith(".py"):
+                    with open(os.path.join(racine, nom), encoding="utf-8") as f:
+                        cles |= set(re.findall(r'cle\s*=\s*"([a-z0-9_]+)"(?!\s*\+)', f.read()))
+        # clés qui ne portent QUE des constats « Correct » : rien à expliquer
+        seulement_ok = {"lighthouse", "archive_page", "metadonnees", "archives", "liens"}
+        manquantes = sorted(c for c in cles - seulement_ok
+                            if c not in consequences.CONSEQUENCES)
+        self.assertEqual(manquantes, [])
+        for question in QUESTIONS:
+            if question["id"] != "prestataire_securite":   # « non » n'y est pas un défaut
+                self.assertIn(question["id"], consequences.CONSEQUENCES_ASSUREUR)
+        for cle in ("spf", "dmarc", "dkim", "mx", "marque"):
+            self.assertIn(cle, consequences.CONSEQUENCES)
+
+    def test_constat_sans_cle_reconnu_par_son_titre(self):
+        from vigie import consequences
+        constat = {"niveau": IMPORTANT, "cle": "", "titre": "vieux.ex.fr n'est pas chiffré"}
+        self.assertIn("attaquant", consequences.pour(constat))
+        marque = {"niveau": INFO, "cle": "marque_ex", "titre": "x"}
+        self.assertIn("attaquant", consequences.pour(marque))
+
+    def test_un_constat_correct_n_a_pas_de_consequences(self):
+        from vigie import consequences
+        self.assertEqual(consequences.pour({"niveau": OK, "cle": "hsts", "titre": "x"}), {})
+
+    def test_questionnaire_assureur_rappelle_la_fausse_declaration(self):
+        from vigie import consequences
+        fiche = consequences.pour({"niveau": CRITIQUE, "cle": "assureur_mfa_distance",
+                                   "titre": "x"})
+        self.assertIn("L.113-9", fiche["assurance"])
+
+    def test_ton_mesure_et_sources(self):
+        from vigie import consequences
+        fiches = list(consequences.CONSEQUENCES.values()) \
+            + list(consequences.CONSEQUENCES_ASSUREUR.values())
+        for fiche in fiches:
+            self.assertTrue(set(fiche) <= {nom for nom, _ in consequences.RUBRIQUES})
+            for texte in fiche.values():
+                # aucun montant d'amende par constat : les plafonds sont dans le cadre général
+                self.assertNotIn("amende", texte.lower())
+                self.assertNotIn("vous allez", texte.lower())
+        for exemple in consequences.EXEMPLES.values():
+            self.assertTrue(exemple["url"].startswith("https://"))
+            self.assertTrue(exemple["source"] and exemple["texte"])
+        cadre = " ".join(consequences.CADRE_GENERAL["points"])
+        for texte in ("art. 32", "art. 33", "art. 83", "226-17", "NIS2", "L.12-10-1"):
+            self.assertIn(texte, cadre)
+
+    def _rapport(self, constats):
+        return rapport.construire("S", "ex.fr", "2026-11-24", constats, {}, [], None)
+
+    def test_le_rapport_porte_les_onglets(self):
+        hsts = Constat("Exposition", IMPORTANT, "HSTS absent", "x", "Ajouter l'en-tête.",
+                       cle="hsts")
+        bon = Constat("Exposition", OK, "Certificat valide", "x", cle="certificat")
+        r = self._rapport([hsts, bon])
+        donnees = r["blocs"]["Exposition"]["constats"]
+        self.assertIn("Wi-Fi", donnees[0]["consequences"]["attaquant"])
+        self.assertEqual(donnees[1]["consequences"], {})
+        technique = rapport.en_html(r)
+        self.assertIn(">Conséquences</label>", technique)
+        self.assertIn(">À corriger (technique)</label>", technique)
+        self.assertIn("prestataire", technique)
+        self.assertIn("Ce que disent la loi et les assureurs", technique)
+        executif = rapport.en_html(r, public="executif")
+        self.assertIn("Les conséquences, point par point", executif)
+        texte = rapport.en_texte(r, public="executif")
+        self.assertIn("LES CONSÉQUENCES, POINT PAR POINT", texte)
+        self.assertIn("Ce qu'un attaquant peut faire", rapport.en_texte(r))
+
+    def test_ancien_rapport_sans_consequences_s_affiche(self):
+        r = self._rapport([Constat("Exposition", IMPORTANT, "t", "x", "y", cle="hsts")])
+        for constat in r["blocs"]["Exposition"]["constats"]:
+            del constat["consequences"]
+        self.assertIn(">Conséquences</label>", rapport.en_html(r))
+
+    def test_exemple_reel_affiche_avec_sa_source(self):
+        r = self._rapport([Constat("Exposition", CRITIQUE, "DMARC absent", "x", "y",
+                                   cle="dmarc")])
+        html_ = rapport.en_html(r)
+        self.assertIn("Exemple réel", html_)
+        self.assertIn("cybermalveillance", html_.lower())
+
+
+class Verdict(unittest.TestCase):
+    """La phrase d'en-tête suit la lettre : un D n'est jamais rassurant (24/11/2026)."""
+
+    def _verdict(self, constats):
+        r = rapport.construire("S", "ex.fr", "2026-11-24", constats, {}, [], None)
+        return r, rapport._verdict(r)
+
+    def test_un_d_sans_critique_dit_qu_il_faut_agir(self):
+        importants = [Constat("Exposition", IMPORTANT, f"p{i}", "x", cle=f"k{i}")
+                      for i in range(4)] + [Constat("Exposition", INFO, "i", "x", cle="i")]
+        r, verdict = self._verdict(importants)          # 100 - 40 - 2 = 58 -> D
+        self.assertEqual(rapport._lettre(r["note_globale"]), "D")
+        self.assertNotIn("Pas de", verdict)
+        self.assertIn("exposée", verdict)
+        strat = rapport._strategie_bloc(r["blocs"]["Exposition"])
+        self.assertNotIn("Pas de critique", strat)
+        self.assertIn("rapidement", strat)
+
+    def test_un_b_rassure(self):
+        _, verdict = self._verdict([Constat("Exposition", IMPORTANT, f"p{i}", "x", cle=f"k{i}")
+                                    for i in range(2)])          # 80 -> B
+        self.assertIn("Bon niveau", verdict)
+
+    def test_une_critique_l_emporte_sur_une_bonne_note(self):
+        _, verdict = self._verdict([Constat("Exposition", CRITIQUE, "p", "x", cle="k")])
+        self.assertIn("critique", verdict)
+        self.assertIn("sans attendre", verdict)
