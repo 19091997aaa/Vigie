@@ -11,7 +11,12 @@
 # Argument optionnel : le dossier où poser les outils (ex. /opt/vigie-outils, un disque
 # dédié). Sans argument, les outils vont dans les emplacements par défaut (~/.local, ~/go).
 #
-# Les outils PAYANTS (Robin, uncover, PentAGI, mcp-scan) sont écartés automatiquement.
+# Les outils PAYANTS (Robin, PentAGI, mcp-scan) sont écartés automatiquement. uncover est
+# libre (seules certaines sources demandent une clé) : il est installé.
+# Six outils ont une recette à eux (vigie/recettes.py), car la ligne de leur doc rate
+# sous Ubuntu : dnstwist (+ module DNS), EyeWitness et Metagoofil (dépôt + Python à
+# part), PhoneInfoga (programme officiel vérifié), sitespeed.io et Unlighthouse (Node 22
+# posé à part si celui d'Ubuntu est trop vieux).
 # Les outils ACTIFS / offensifs sont installés mais Vigie ne les lance qu'avec une
 # autorisation signée. Il ne touche à AUCUNE machine distante : il prépare celle-ci.
 set -u
@@ -82,7 +87,7 @@ liberer_apt
 attendre_apt
 $SUDO $APT update -y >/dev/null 2>&1 || true
 attendre_apt
-$SUDO $APT install -y python3 python3-pip pipx golang-go npm git curl unzip jq \
+$SUDO $APT install -y python3 python3-pip python3-venv pipx golang-go npm git curl unzip jq \
   || echo "  [!] apt a signalé un souci ; je vérifie quand même les outils de base"
 
 # Secours : si pipx n'est pas venu par apt (vieilles versions), on le pose via pip.

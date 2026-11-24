@@ -50,6 +50,8 @@ def preparer_dest(dossier):
     os.environ["PIP_CACHE_DIR"] = os.path.join(cache, "pip")
     os.environ["TMPDIR"] = tmp
     os.environ["PATH"] = bin_dir + os.pathsep + os.environ.get("PATH", "")
+    # Les outils installés « à part » (vigie/recettes.py : EyeWitness, Node 22…) aussi.
+    os.environ["VIGIE_OUTILS_RACINE"] = dossier
     return bin_dir
 
 
@@ -204,8 +206,46 @@ def _langages(install):
     return bool(_PYTHON.search(install)), bool(_GO.search(install))
 
 
+def _par_recette(outil, a_blanc):
+    """Les outils que la doc fait rater sous Ubuntu ont une recette à eux
+    (vigie/recettes.py). Renvoie un compte rendu, ou None pour passer à la suite."""
+    from . import presence, recettes
+    trouvee = recettes.pour(outil["nom"])
+    if not trouvee:
+        return None
+    libelle, recette = trouvee
+    if a_blanc:
+        return {"nom": outil["nom"], "installe": False, "repond": False, "binaire": "",
+                "methode": libelle, "raison": "à blanc : " + libelle}
+    try:
+        reussi, message, binaires = recette()
+    except Exception as erreur:  # une recette qui plante laisse sa chance à la doc
+        reussi, message, binaires = False, f"erreur : {erreur}", []
+    if not reussi:
+        return {"nom": outil["nom"], "installe": False, "repond": False, "binaire": "",
+                "methode": "", "raison": f"{libelle} : {message}"}
+    for binaire in binaires + [b for b in presence.binaires_possibles(outil["nom"])
+                               if b not in binaires]:
+        if repond(binaire):
+            return {"nom": outil["nom"], "installe": True, "repond": True,
+                    "binaire": binaire, "methode": libelle, "raison": ""}
+    return {"nom": outil["nom"], "installe": True, "repond": False, "binaire": "",
+            "methode": libelle, "raison": "installé mais ne démarre pas"}
+
+
 def installer_un(outil, a_blanc=False):
-    """Essaie les méthodes l'une après l'autre, puis vérifie que l'outil démarre vraiment."""
+    """Essaie les méthodes l'une après l'autre, puis vérifie que l'outil démarre vraiment.
+    Une recette Vigie (vigie/recettes.py) passe en premier quand l'outil en a une."""
+    recette = _par_recette(outil, a_blanc)
+    if recette and (recette["installe"] or a_blanc):
+        return recette
+    resultat = _installer_par_doc(outil, a_blanc)
+    if recette and not resultat["installe"]:
+        resultat["raison"] = (recette["raison"] + " | " + resultat["raison"])[:300]
+    return resultat
+
+
+def _installer_par_doc(outil, a_blanc=False):
     essais = methodes(outil)
     if not essais:
         raison = ("pas de dépôt" if not depot(outil.get("lien", "")) else

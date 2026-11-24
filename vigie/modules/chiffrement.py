@@ -10,7 +10,7 @@ import json
 import os
 import tempfile
 
-from .. import outils
+from .. import outils, reseau
 from ..modeles import CRITIQUE, IMPORTANT, INFO, OK, Constat, ControleImpossible
 
 BLOC = "Exposition"
@@ -23,11 +23,26 @@ VERSIONS = {"ssl_2_0_cipher_suites": "SSL 2", "ssl_3_0_cipher_suites": "SSL 3",
 FAIBLES = ("RC4", "3DES", "_DES_", "NULL", "EXPORT", "ANON", "MD5")
 
 
+class InjoignableSSLyze(ControleImpossible):
+    """SSLyze n'a pas pu se connecter. raison : ce que SSLyze en dit (dernière ligne)."""
+
+    def __init__(self, message, raison=""):
+        super().__init__(message)
+        self.raison = raison
+
+
+def _raison(resultat):
+    trace = resultat.get("connectivity_error_trace") or resultat.get("connectivity_result") or ""
+    lignes = [l.strip() for l in str(trace).splitlines() if l.strip()]
+    return lignes[-1][:160] if lignes else ""
+
+
 def lire_sortie(data):
     """Extrait des résultats de SSLyze : versions acceptées, chiffrements faibles, certificat."""
     resultats = (data or {}).get("server_scan_results") or []
     if not resultats or resultats[0].get("connectivity_status") != "COMPLETED":
-        raise ControleImpossible("le site ne répond pas en connexion chiffrée (SSLyze)")
+        raise InjoignableSSLyze("le site ne répond pas en connexion chiffrée (SSLyze)",
+                                _raison((resultats or [{}])[0]))
     scan = resultats[0].get("scan_result") or {}
     acceptees, faibles = [], []
     for cle, nom in VERSIONS.items():
@@ -52,17 +67,41 @@ def lire_sortie(data):
     return {"versions": acceptees, "faibles": sorted(set(faibles)), "certificat": certificat}
 
 
-def analyser(cible):
+def _un_passage(domaine):
     with tempfile.TemporaryDirectory() as dossier:
         fichier = os.path.join(dossier, "sslyze.json")
         outils.executer("sslyze", ["--quiet", "--json_out", fichier] + CONTROLES
-                        + [cible.domaine], delai=180, dossier=dossier)
+                        + [domaine], delai=180, dossier=dossier)
         try:
             with open(fichier, encoding="utf-8") as lu:
                 data = json.load(lu)
         except (OSError, json.JSONDecodeError):
-            raise ControleImpossible("SSLyze n'a pas produit de résultat lisible")
-    resultat = lire_sortie(data)
+            raise InjoignableSSLyze("SSLyze n'a pas produit de résultat lisible")
+    return lire_sortie(data)
+
+
+def lancer_sslyze(domaine):
+    """SSLyze, avec un 2e essai si la connexion a raté. Si elle rate encore alors que Vigie,
+    lui, arrive à se connecter en chiffré, on le dit : c'est l'outil ou le réseau qui a
+    hoqueté, pas le site (cas réel du 24/11/2026, derrière un pare-feu de labo)."""
+    for essai in range(2):
+        try:
+            return _un_passage(domaine)
+        except InjoignableSSLyze as echec:
+            derniere = echec
+            if essai == 0:
+                continue
+    if reseau.https_repond(domaine) == reseau.OUI:
+        detail = f" ; SSLyze : {derniere.raison}" if derniere.raison else ""
+        raise ControleImpossible(
+            "SSLyze n'a pas réussi à se connecter, alors que le site répond bien en "
+            "connexion chiffrée (vérifié par Vigie) : souci passager du réseau ou de "
+            "l'outil, à relancer" + detail)
+    raise derniere
+
+
+def analyser(cible):
+    resultat = lancer_sslyze(cible.domaine)
     versions = resultat["versions"]
     constats = []
 

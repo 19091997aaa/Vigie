@@ -137,6 +137,20 @@ jamais écrits). `vigie/modules/complet.py` = les nouveaux branchements.
 ceux qui ne peuvent pas tourner (AdGuard Home, Pi-hole, Web-Check, Datashare, Flowsint,
 InVID, geo-sleuth, IVRE, auto-archiver, Toutatis) et **Robin, écarté (dark web)**.
 
+**Fiabilité du diag complet (24/11/2026, 1er complet sur la VM Ubuntu, 58/100)** :
+- **Jamais un point « important » sur l'avis d'un seul outil réseau.** httpx « pas
+  chiffré » est recoupé par `reseau.https_repond()` (2 essais) : oui = rien, non = important,
+  pas de réponse claire = « à confirmer », hors note. SSLyze et WhatWeb réessaient une fois
+  et disent si Vigie, lui, arrive à se connecter.
+- Un outil muet dit **pourquoi** (`outils.pourquoi()` + `erreurs.py`), jamais « réinstaller ».
+- dnstwist muet en 0 s = installé **sans dnspython** : Vigie le relance sur le DNS de la
+  machine ; l'installeur ajoute le module. dnsrecon : repli sur le DNS de la machine.
+- LinkChecker borné (4 min, 400 liens) ; les 4 outils de pseudo tournent **en parallèle**,
+  5 min max chacun, résultat partiel gardé.
+- `vigie/recettes.py` : installation à part des outils que la doc fait rater sous Ubuntu
+  (EyeWitness, Metagoofil, PhoneInfoga, uncover, sitespeed.io et Unlighthouse avec un
+  Node 22 posé à part, dnstwist + dnspython). Empreintes vérifiées, dépôt exact.
+
 Principe : **Vigie ne copie le code d'aucun outil**. Il appelle les outils installés
 sur la machine (chaque outil garde sa licence, se met à jour seul, et Vigie continue
 de marcher si l'un manque). Pour brancher un nouvel outil GitHub : voir la section

@@ -1,7 +1,10 @@
 """Bloc Exposition - liens cassés du site (outil externe : LinkChecker).
 
 LinkChecker parcourt le site comme un moteur de recherche (2 niveaux de pages,
-4 pages à la fois) et vérifie chaque lien. Deux cas :
+4 pages à la fois) et vérifie chaque lien. Bornes (cas réel du 24/11/2026 : arrêté au
+bout de 10 minutes sans RIEN rendre) : 4 minutes et 400 liens au plus, 10 secondes par
+lien, 5 questions par seconde. À la borne, LinkChecker s'arrête proprement et rend ce
+qu'il a vu. Deux cas :
   - un lien interne cassé : une page qui n'existe plus. Ce n'est pas une faille,
     mais un visiteur perdu (ne compte pas dans la note) ;
   - un lien vers un domaine qui n'existe plus : un escroc peut racheter ce domaine
@@ -12,6 +15,8 @@ article menait à une page supprimée.
 """
 import csv
 import io
+import os
+import tempfile
 import urllib.parse
 
 from .. import outils
@@ -47,12 +52,27 @@ def _chemin(url):
     return (morceaux.hostname or "") + (morceaux.path or "/")
 
 
+# Réglages lus par LinkChecker (section [checking] de son fichier de configuration).
+REGLAGES = {"maxrunseconds": 240, "maxnumurls": 400, "timeout": 10, "aborttimeout": 30,
+            "maxrequestspersecond": 5, "recursionlevel": 2, "threads": 4}
+
+
+def configuration():
+    return "[checking]\n" + "".join(f"{cle}={valeur}\n" for cle, valeur in REGLAGES.items())
+
+
 def analyser(cible):
-    texte = outils.executer("linkchecker", [
-        "--no-status", "--no-warnings", "--recursion-level=2", "--threads=4",
-        "--check-extern", "-o", "csv", "https://" + cible.domaine + "/"], delai=600)
+    with tempfile.TemporaryDirectory() as dossier:
+        reglages = os.path.join(dossier, "linkcheckerrc")
+        with open(reglages, "w", encoding="utf-8") as fichier:
+            fichier.write(configuration())
+        # partiel : si malgré tout il déborde, on garde les liens déjà vérifiés.
+        texte = outils.executer("linkchecker", [
+            "-f", reglages, "--no-status", "--no-warnings", "--recursion-level=2",
+            "--threads=4", "--timeout=10", "--check-extern", "-o", "csv",
+            "https://" + cible.domaine + "/"], delai=360, dossier=dossier, partiel=True)
     casses = lire_sortie(texte, cible.domaine)
-    brut = {"liens_casses": casses}
+    brut = {"liens_casses": casses, "bornes": dict(REGLAGES)}
     internes = [c for c in casses if c["interne"]]
     morts = [c for c in casses if not c["interne"]
              and any(m in c["erreur"].lower() for m in DOMAINE_MORT)]

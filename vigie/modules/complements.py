@@ -38,17 +38,32 @@ def lire_dnsrecon(fiches):
     return {"services": services, "ipv6": sorted(ipv6)}
 
 
-def analyser_dns(cible):
+def _dnsrecon(domaine, serveur):
+    """(fiches lues ou None, résultat brut). serveur None = DNS de la machine."""
     with tempfile.TemporaryDirectory() as dossier:
         chemin = os.path.join(dossier, "dnsrecon.json")
-        outils.executer("dnsrecon", ["-d", cible.domaine, "-t", "std", "-n",
-                                     reseau.SERVEURS_DNS[0], "-j", chemin], delai=180,
-                        dossier=dossier)
+        arguments = ["-d", domaine, "-t", "std", "-j", chemin]
+        if serveur:
+            arguments[4:4] = ["-n", serveur]
+        resultat = outils.executer_detail("dnsrecon", arguments, delai=150, dossier=dossier)
         try:
             with open(chemin, encoding="utf-8") as lu:
-                infos = lire_dnsrecon(json.load(lu))
-        except (OSError, json.JSONDecodeError):
-            raise ControleImpossible("dnsrecon n'a rien produit")
+                return json.load(lu), resultat
+        except (OSError, json.JSONDecodeError, ValueError):
+            return None, resultat
+
+
+def analyser_dns(cible):
+    """dnsrecon, d'abord par un résolveur public, puis (s'il ne produit rien) par le DNS de
+    la machine. dnsrecon écrit ses erreurs à l'écran et s'arrête en 1 seconde sans fichier
+    (« Could not resolve domain », délai DNS, version cassée) : on dit lequel, au lieu
+    d'un vague « n'a rien produit » (cas réel du 24/11/2026)."""
+    fiches, resultat = _dnsrecon(cible.domaine, reseau.SERVEURS_DNS[0])
+    if fiches is None:
+        fiches, resultat = _dnsrecon(cible.domaine, None)
+    if fiches is None:
+        raise ControleImpossible("dnsrecon n'a rien produit — " + _raison_dnsrecon(resultat))
+    infos = lire_dnsrecon(fiches)
     brut = {"dns_complet": infos}
     if not infos["services"] and not infos["ipv6"]:
         return [Constat(BLOC, OK, "Fiche DNS sans service particulier déclaré",
@@ -66,6 +81,18 @@ def analyser_dns(cible):
         "double authentification sur la messagerie).",
         "Vérifier que chaque service annoncé sert encore.", cle="dns_complet",
         hors_note=True)], brut
+
+
+def _raison_dnsrecon(resultat):
+    """dnsrecon écrit ses erreurs sur sa sortie normale, préfixées par « [-] »."""
+    texte = (resultat.stdout or "") + "\n" + (resultat.stderr or "")
+    if "could not resolve domain" in texte.lower():
+        return ("il n'a pas pu lire le domaine dans le DNS, ni par un résolveur public, ni "
+                "par celui de la machine : DNS bloqué par le pare-feu ou coupé")
+    if "timeout" in texte.lower() and "[-]" in texte:
+        return ("les serveurs DNS n'ont pas répondu à temps : le pare-feu filtre "
+                "peut-être les questions DNS")
+    return outils.pourquoi(resultat)
 
 
 def lire_unlighthouse(dossier):
