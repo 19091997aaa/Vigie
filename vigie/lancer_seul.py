@@ -11,10 +11,11 @@ seul outil et on le lance sur une cible. Vigie :
 
 Rien n'est lancé via un shell : les arguments passent en liste.
 """
+import os
 import re
 import shlex
 
-from . import lanceur, manuel, outils, registre
+from . import erreurs, fiches_outils, lanceur, manuel, outils, registre
 
 # Index du registre par nom en minuscules, construit une fois.
 _PARNOM = None
@@ -50,7 +51,12 @@ def ligne_lancement(nom, cible):
         if nom_decl.lower() == cle.lower():
             return (decl["outil"],
                     [a.replace("{cible}", cible) for a in decl["arguments"]], True)
-    # 3. Ligne devinée depuis l'usage du catalogue.
+    # 3. Ligne écrite dans la fiche en clair (fiches_outils.py), quand celle du
+    #    catalogue est fausse ou absente.
+    ligne_fiche = fiches_outils.fiche(cle).get("ligne")
+    if ligne_fiche:
+        return (ligne_fiche[0], [a.replace("{cible}", cible) for a in ligne_fiche[1:]], True)
+    # 4. Ligne devinée depuis l'usage du catalogue.
     fiche = info(nom)
     if fiche:
         devinee = _depuis_usage(fiche.get("usage", ""), cible)
@@ -144,26 +150,116 @@ def _traduire(nom, sortie):
     return texte
 
 
-def lancer(nom, cible, delai=300):
-    """Lance UN outil PASSIF sur la cible et renvoie le compte rendu (+ un résumé français).
+def fiche_claire(nom):
+    """La fiche en clair (rôle, cible attendue, mode) d'un outil du registre."""
+    return fiches_outils.fiche(nom, info(nom))
 
-    Refuse (Refus) un outil inconnu, payant, ou actif/offensif : ceux-là passent par
-    l'onglet « Outils manuels » avec autorisation signée.
+
+def preparer(nom, cible):
+    """Tout ce qu'on vérifie AVANT de lancer, avec une explication en français.
+
+    Renvoie {"cible": cible arrangée, "remarques": [...], "ligne": (commande, args,
+    vérifiée)}. Lève Refus avec un texte pédagogique si l'outil ne peut pas partir :
+    outil actif/payant/inconnu, outil qui ne se lance pas sur une cible (service,
+    logiciel à fenêtres, Windows…), cible qui ne correspond pas, ligne inconnue.
     """
     verifier_lancable(nom, autorisation_ok=False)   # passif seulement
+    vrai_nom = info(nom)["nom"]
+    fiche = fiche_claire(nom)
     cible = (cible or "").strip()
-    if not cible:
+    explication = fiches_outils.explication_mode(vrai_nom, fiche, cible)
+    if explication:
+        raise Refus(explication)
+    try:
+        cible, remarque = fiches_outils.adapter_cible(vrai_nom, cible, fiche)
+    except fiches_outils.CibleInadaptee as erreur:
+        raise Refus(str(erreur)) from None
+    if not cible and fiche.get("cible") != "aucune":
         raise Refus("Indique une cible (domaine, pseudo, e-mail… selon l'outil).")
     ligne = ligne_lancement(nom, cible)
     if not ligne:
-        raise Refus(f"{info(nom)['nom']} : lancement à la main pour l'instant "
-                    "(outil interactif ou cible non devinée). Voir l'usage du catalogue.")
-    commande, arguments, verifiee = ligne
+        role = fiche.get("role")
+        raise Refus(f"Vigie ne sait pas encore lancer {vrai_nom} tout seul : sa "
+                    "documentation ne donne pas de ligne de commande claire à appliquer "
+                    "à une cible." + (f" À quoi ça sert : ça {role}." if role else "")
+                    + " Il s'utilise à la main pour l'instant.")
+    return {"cible": cible, "remarques": [remarque] if remarque else [], "ligne": ligne}
+
+
+# Où les outils posent leurs fichiers (captures, archives, documents téléchargés),
+# plutôt que dans le dossier de Vigie.
+DOSSIER_TRAVAIL = "~/vigie-travail"
+
+
+def lancer(nom, cible, delai=300):
+    """Lance UN outil PASSIF sur la cible et renvoie le compte rendu.
+
+    Le compte rendu contient toujours une explication en français (« explication »,
+    une liste de phrases) : ce qui s'est passé, et pourquoi si ça n'a pas marché.
+    Refuse (Refus) un outil inconnu, payant, actif/offensif, ou qui ne se lance pas
+    sur cette cible : la raison est dite en français.
+    """
+    prepa = preparer(nom, cible)
+    commande, arguments, verifiee = prepa["ligne"]
+    vrai_nom = info(nom)["nom"]
     compte = _lancer_commande(commande, arguments, delai)
-    compte["outil"] = info(nom)["nom"]
+    compte["outil"] = vrai_nom
+    compte["cible"] = prepa["cible"]
     compte["verifiee"] = verifiee
+    compte["commande"] = " ".join([commande] + arguments)
     compte["traduction"] = _traduire(nom, compte.get("sortie", ""))
+    compte["explication"] = prepa["remarques"] + expliquer(vrai_nom, compte)
     return compte
+
+
+def expliquer(nom, compte):
+    """Les phrases en français qui disent ce qui s'est passé pendant le lancement."""
+    phrases = []
+    if compte.get("absent"):
+        phrases.append(f"{nom} n'est pas installé sur cet ordinateur (Vigie ne trouve pas "
+                       f"la commande « {compte.get('commande_absente', '')} »).")
+        raison = raison_installation(nom)
+        if raison:
+            phrases.append("Lors de la dernière installation, ça a raté. Voici pourquoi :")
+            phrases += ["• " + texte for texte in
+                        erreurs.expliquer_installation(raison)] or \
+                ["• raison non reconnue (détail technique ci-dessous)."]
+        phrases.append("Prochaine étape : relance l'installeur de Vigie (le fichier "
+                       "« installer-… » à double-cliquer) : il ne réessaie que les outils "
+                       "ratés.")
+        return phrases
+    if compte.get("depasse"):
+        return [f"{nom} a dépassé le temps maximum ({compte.get('delai', '?')} s) et a été "
+                "arrêté. La cible est peut-être très grosse ou lente, ou Internet est lent."]
+    sortie = (compte.get("sortie") or "") + "\n" + (compte.get("erreurs") or "")
+    if compte.get("code"):
+        phrases.append(f"{nom} s'est arrêté en erreur.")
+        connues = erreurs.expliquer(sortie)
+        phrases += connues or ["Vigie ne reconnaît pas encore ce message d'erreur : il est "
+                               "en anglais dans le détail technique ci-dessous. "
+                               "Montre-le à Claude pour qu'il l'ajoute."]
+        if not compte.get("verifiee"):
+            phrases.append("Attention : la ligne de lancement de cet outil a été devinée par "
+                           "Vigie dans sa documentation. Si l'outil dit qu'il ne comprend "
+                           "pas, c'est elle qui est à corriger, pas ta cible.")
+        return phrases
+    if not (compte.get("sortie") or "").strip():
+        phrases.append(f"{nom} a tourné jusqu'au bout mais n'a rien trouvé ni rien écrit. "
+                       "Souvent, ça veut dire qu'il n'y a rien de public sur cette cible.")
+        phrases += erreurs.expliquer(sortie)
+        return phrases
+    phrases.append(f"{nom} a bien tourné ({compte.get('secondes', 0)} s). Le résumé est "
+                   "ci-dessous.")
+    if not compte.get("verifiee"):
+        phrases.append("La ligne de lancement a été devinée par Vigie dans la documentation "
+                       "de l'outil : vérifie que le résultat a du sens.")
+    return phrases
+
+
+def raison_installation(nom):
+    """La raison d'échec notée par la dernière installation pour cet outil, ou ""."""
+    from . import presence
+    return presence.echecs_installation().get((nom or "").lower(), "")
 
 
 def _lancer_commande(commande, arguments, delai):
@@ -172,16 +268,24 @@ def _lancer_commande(commande, arguments, delai):
     import time
     chemin = shutil.which(commande, path=outils.chemin_recherche())
     if not chemin:
-        return {"lance": False, "raison": f"{commande} n'est pas installé", "secondes": 0,
-                "sortie": ""}
+        return {"lance": False, "absent": True, "commande_absente": commande,
+                "raison": f"{commande} n'est pas installé", "secondes": 0, "sortie": ""}
+    dossier = os.path.expanduser(DOSSIER_TRAVAIL)
+    try:
+        os.makedirs(dossier, exist_ok=True)
+    except OSError:
+        dossier = None
     depart = time.monotonic()
     try:
         fini = subprocess.run([chemin] + arguments, capture_output=True, text=True,
-                              timeout=delai, errors="replace")
+                              timeout=delai, errors="replace", cwd=dossier,
+                              stdin=subprocess.DEVNULL)
     except subprocess.TimeoutExpired:
-        return {"lance": False, "raison": f"dépassement de {delai} s",
+        return {"lance": False, "depasse": True, "delai": delai,
+                "raison": f"dépassement de {delai} s",
                 "secondes": round(time.monotonic() - depart, 1), "sortie": ""}
     secondes = round(time.monotonic() - depart, 1)
     sortie = (fini.stdout or "") + ("\n" + fini.stderr if fini.returncode else "")
     return {"lance": True, "echoue": fini.returncode != 0 or not (fini.stdout or "").strip(),
-            "raison": "", "secondes": secondes, "code": fini.returncode, "sortie": sortie}
+            "raison": "", "secondes": secondes, "code": fini.returncode, "sortie": sortie,
+            "erreurs": fini.stderr or ""}

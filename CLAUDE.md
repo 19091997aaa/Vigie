@@ -125,6 +125,8 @@ Attention : **le nom d'un outil n'est pas toujours sa commande** (ClamAV → `cl
 The Sleuth Kit → `fls`, Fail2ban → `fail2ban-client`) ; `vigie outils` ne liste que
 la quarantaine d'outils de l'enchaînement automatique, pas les 216.
 
+**Explications en français (24/11/2026)** : `vigie/fiches_outils.py` donne pour chaque outil lançable seul son rôle, la cible attendue (domaine, URL, pseudo, e-mail, téléphone, fichier, dossier, aucune) et son mode (cible / service / appli / Windows / capture / règles / compte / à la main). « Lancer un outil » vérifie la cible AVANT de lancer et explique en français si ça ne colle pas ; `vigie/erreurs.py` traduit les erreurs courantes des outils et des installations. La sortie brute reste dans « Détail technique ». Un message d'erreur non reconnu = ajouter un motif dans `erreurs.py`.
+
 Principe : **Vigie ne copie le code d'aucun outil**. Il appelle les outils installés
 sur la machine (chaque outil garde sa licence, se met à jour seul, et Vigie continue
 de marcher si l'un manque). Pour brancher un nouvel outil GitHub : voir la section
