@@ -6,6 +6,7 @@
     python3 -m vigie outils             (les outils externes : installés ou non)
 """
 import argparse
+import concurrent.futures
 import datetime
 import os
 import re
@@ -13,7 +14,7 @@ import time
 
 from . import __version__, autorisation, outils, rapport
 from .modeles import Cible, ControleImpossible
-from .modules import MODULES, PAR_DEFAUT
+from .modules import COMPLET, MODULES, PAR_DEFAUT
 
 DOMAINE = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}")
 
@@ -25,38 +26,121 @@ def nettoyer_domaine(texte):
     return domaine
 
 
-def lancer(cible, noms_modules, chemin_autorisation=None, date=None, suivi=None):
+# Combien de contrôles tournent en même temps, et combien ouvrent un navigateur à la fois.
+PARALLELES = 6
+NAVIGATEURS = 2
+DELAI_DEFAUT = 600
+
+
+def _un_controle(cible, nom, chemin_autorisation):
+    """Lance UN contrôle. Renvoie (constats, données, trace d'autorisation)."""
+    module = MODULES[nom]
+    trace = autorisation.verifier(chemin_autorisation) if module["actif"] else None
+    trouves, donnees = module["fonction"](cible)
+    for constat in trouves:
+        if not constat.sources:
+            constat.sources = [module["nom"]]
+    return trouves, donnees, trace
+
+
+def _duree(secondes):
+    secondes = int(round(secondes))
+    return f"{secondes} s" if secondes < 60 else f"{secondes // 60} min {secondes % 60:02d} s"
+
+
+def lancer(cible, noms_modules, chemin_autorisation=None, date=None, suivi=None,
+           paralleles=PARALLELES):
     """Lance les modules demandés sur la cible et renvoie le rapport (dictionnaire).
+
+    Les contrôles tournent en parallèle (paralleles à la fois, NAVIGATEURS au plus qui
+    ouvrent Chrome). Un contrôle qui dépasse son délai est abandonné et noté « non
+    réalisé » ; un contrôle qui plante aussi : les autres continuent. Un contrôle marqué
+    « apres » attend ceux dont il relit les résultats (cible.indices).
 
     suivi (facultatif) : fonction appelée à chaque étape, pour l'affichage en direct.
     suivi(nom_du_module, etat, detail) avec etat = "en_cours", "fini",
     "non_realise" (contrôle impossible, raison dans detail) ou "echec" (plantage).
     """
+    from . import indices
+    indices.oublier()
     date = date or datetime.date.today().isoformat()
     suivi = suivi or (lambda *_: None)
-    constats, brut, non_realises, trace = [], {}, [], None
-    for nom in noms_modules:
-        module = MODULES[nom]
-        suivi(nom, "en_cours", "")
-        try:
-            if module["actif"]:
-                trace = autorisation.verifier(chemin_autorisation)
-            trouves, donnees = module["fonction"](cible)
-            for constat in trouves:
-                if not constat.sources:
-                    constat.sources = [module["nom"]]
-        except ControleImpossible as empechement:
-            non_realises.append({"module": module["nom"], "raison": str(empechement)})
-            suivi(nom, "non_realise", str(empechement))
-            continue
-        except Exception as erreur:
-            suivi(nom, "echec", str(erreur))
-            raise
-        constats += trouves
-        brut[nom] = donnees
-        suivi(nom, "fini", f"{len(trouves)} point(s) relevé(s)")
-    return rapport.construire(cible.societe or cible.domaine, cible.domaine, date,
-                              constats, brut, non_realises, trace)
+    resultats, deroule, trace = {}, [], None
+    en_attente, en_cours, termines = list(noms_modules), {}, set()
+    groupe = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, paralleles))
+
+    def pret(nom):
+        return all(avant in termines or avant not in noms_modules
+                   for avant in MODULES[nom].get("apres", ()))
+
+    def terminer(nom, debut, etat, detail, resultat=None):
+        duree = time.monotonic() - debut
+        termines.add(nom)
+        resultats[nom] = resultat
+        deroule.append({"module": nom, "nom": MODULES[nom]["nom"], "etat": etat,
+                        "detail": detail, "duree": round(duree, 1)})
+        suivi(nom, etat, detail if etat != "fini" else f"{detail} — {_duree(duree)}")
+
+    try:
+        while en_attente or en_cours:
+            navigateurs = sum(1 for n, _ in en_cours.values() if MODULES[n].get("chrome"))
+            for nom in list(en_attente):
+                if len(en_cours) >= paralleles:
+                    break
+                if not pret(nom) or (MODULES[nom].get("chrome") and navigateurs >= NAVIGATEURS):
+                    continue
+                en_attente.remove(nom)
+                navigateurs += bool(MODULES[nom].get("chrome"))
+                suivi(nom, "en_cours", "")
+                tache = groupe.submit(_un_controle, cible, nom, chemin_autorisation)
+                en_cours[tache] = (nom, time.monotonic())
+            if not en_cours:  # rien ne peut démarrer : ne devrait pas arriver
+                for nom in en_attente:
+                    terminer(nom, time.monotonic(), "non_realise", "contrôle préalable absent")
+                break
+            finis, _ = concurrent.futures.wait(
+                en_cours, timeout=2, return_when=concurrent.futures.FIRST_COMPLETED)
+            for tache in finis:
+                nom, debut = en_cours.pop(tache)
+                try:
+                    trouves, donnees, trace_module = tache.result()
+                except ControleImpossible as empechement:
+                    terminer(nom, debut, "non_realise", str(empechement))
+                    continue
+                except Exception as erreur:  # un outil qui plante n'arrête pas les autres
+                    terminer(nom, debut, "echec",
+                             f"erreur inattendue : {erreur or erreur.__class__.__name__}")
+                    continue
+                trace = trace_module or trace
+                cible.indices[nom] = donnees
+                terminer(nom, debut, "fini", f"{len(trouves)} point(s) relevé(s)",
+                         (trouves, donnees))
+            for tache, (nom, debut) in list(en_cours.items()):
+                limite = MODULES[nom].get("delai", DELAI_DEFAUT) + 60
+                if time.monotonic() - debut > limite:
+                    del en_cours[tache]
+                    terminer(nom, debut, "non_realise",
+                             f"abandonné : plus de {_duree(limite)} sans réponse")
+    finally:
+        groupe.shutdown(wait=False, cancel_futures=True)
+
+    constats, brut, non_realises = [], {}, []
+    for element in sorted(deroule, key=lambda e: noms_modules.index(e["module"])):
+        nom = element["module"]
+        if element["etat"] == "fini":
+            trouves, donnees = resultats[nom]
+            constats += trouves  # dans l'ordre demandé : la fusion garde le premier texte
+            brut[nom] = donnees
+        else:
+            non_realises.append({"module": element["nom"], "raison": element["detail"]})
+    resultat = rapport.construire(cible.societe or cible.domaine, cible.domaine, date,
+                                  constats, brut, non_realises, trace)
+    resultat["deroule"] = deroule
+    if any(nom not in PAR_DEFAUT for nom in noms_modules):
+        # Diagnostic complet : une ligne par outil des 42, même ceux qui n'ont pas tourné.
+        from . import diag_gratuit
+        resultat["outils_diag"] = diag_gratuit.bilan(deroule)
+    return resultat
 
 
 def dossier_rapport(sortie, resultat):
@@ -72,7 +156,10 @@ def main(arguments=None):
     diag.add_argument("domaine", help="exemple.fr")
     diag.add_argument("--societe", default="", help="nom de la société, pour le rapport")
     diag.add_argument("--modules", default=",".join(PAR_DEFAUT),
-                      help="liste séparée par des virgules, ou « tous »")
+                      help="liste séparée par des virgules, « tous », ou « complet » "
+                           "(les 42 outils du diagnostic gratuit, plus long)")
+    diag.add_argument("--complet", action="store_true",
+                      help="diagnostic complet : les 42 outils du diagnostic gratuit")
     diag.add_argument("--pseudo", action="append", default=[],
                       help="pseudo du dirigeant, donné par lui (répétable)")
     diag.add_argument("--mail", action="append", default=[],
@@ -469,8 +556,14 @@ def main(arguments=None):
         domaine = nettoyer_domaine(args.domaine)
     except ValueError as erreur:
         raise SystemExit(str(erreur))
-    noms = list(MODULES) if args.modules.strip() == "tous" else [
-        nom.strip() for nom in args.modules.split(",") if nom.strip()]
+    if args.commande == "diagnostic" and args.complet:
+        args.modules = "complet"
+    if args.modules.strip() == "tous":
+        noms = list(MODULES)
+    elif args.modules.strip() == "complet":
+        noms = list(COMPLET)
+    else:
+        noms = [nom.strip() for nom in args.modules.split(",") if nom.strip()]
     inconnus = [nom for nom in noms if nom not in MODULES]
     if inconnus:
         raise SystemExit("Module inconnu : " + ", ".join(inconnus))
@@ -496,8 +589,9 @@ def main(arguments=None):
             raise SystemExit(f"Réponses illisibles : {erreur}")
         if "conformite" not in noms:
             noms.append("conformite")
-    cible = Cible(domaine, args.societe, args.pseudo, args.accord_dirigeant, reponses,
-                  args.mail, args.telephone)
+    cible = Cible(domaine, args.societe, pseudos=args.pseudo,
+                  accord_dirigeant=args.accord_dirigeant, reponses=reponses,
+                  emails=args.mail, telephones=args.telephone)
     resultat = lancer(cible, noms, args.autorisation)
     chemins = rapport.ecrire(resultat, dossier_rapport(args.sortie, resultat))
     print(rapport.en_texte(resultat))

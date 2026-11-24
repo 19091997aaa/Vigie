@@ -43,7 +43,7 @@ CATALOGUE = {
         "role": "Sous-domaines visibles de la société (2e avis, plus lourd)",
         "commande": "amass", "installation": "brew install amass",
         "depot": "https://github.com/owasp-amass/amass",
-        "licence": "Apache-2.0", "actif": False, "adaptateur": None,
+        "licence": "Apache-2.0", "actif": False, "adaptateur": "sousdomaines_amass",
     },
     "gau": {
         "role": "Anciennes pages du site gardées par les archives d'internet",
@@ -71,7 +71,7 @@ CATALOGUE = {
         "role": "Réponses DNS des adresses de la société (alias oubliés)",
         "commande": "dnsx", "installation": "brew install dnsx",
         "depot": "https://github.com/projectdiscovery/dnsx",
-        "licence": "MIT", "actif": False, "adaptateur": None,
+        "licence": "MIT", "actif": False, "adaptateur": "alias_dns",
     },
     # Comme Sherlock, plus complet (68 comptes « vigie » sur 200 sites le 21/11/2026, la
     # plupart d'homonymes). Pseudos du dirigeant + accord écrit uniquement.
@@ -193,6 +193,69 @@ CATALOGUE = {
         "depot": "https://github.com/laramies/theHarvester",
         "licence": "GPL-2.0", "actif": False, "adaptateur": "adresses",
     },
+    # Lot « diagnostic complet » (24/11/2026) : les outils de la famille « diag gratuit »
+    # qui n'étaient pas encore dans l'enchaînement. Tous lisent ce qui est public.
+    "whatweb": {
+        "role": "Technologies du site, 2e avis (mode discret : une seule visite)",
+        "commande": "whatweb", "installation": "sudo apt install whatweb",
+        "depot": "https://github.com/urbanadventurer/WhatWeb",
+        "licence": "GPL-2.0", "actif": False, "adaptateur": "technos_whatweb",
+    },
+    "sitespeed.io": {
+        "role": "Vitesse de la page d'accueil, vue par un navigateur",
+        "commande": "sitespeed.io", "installation": "npm install -g sitespeed.io",
+        "depot": "https://github.com/sitespeedio/sitespeed.io",
+        "licence": "MIT", "actif": False, "adaptateur": "vitesse",
+    },
+    "eyewitness": {
+        "role": "Capture d'écran de la page d'accueil (2e avis de gowitness)",
+        "commande": "eyewitness", "installation": "sudo apt install eyewitness",
+        "depot": "https://github.com/RedSiege/EyeWitness",
+        "licence": "GPL-3.0", "actif": False, "adaptateur": "captures",
+    },
+    "uncover": {
+        "role": "Ce que les moteurs Shodan/Censys ont déjà indexé sur la société",
+        "commande": "uncover",
+        "installation": "go install github.com/projectdiscovery/uncover/cmd/uncover@latest",
+        "depot": "https://github.com/projectdiscovery/uncover",
+        "licence": "MIT", "actif": False, "adaptateur": "moteurs_exposition",
+    },
+    "metagoofil": {
+        "role": "Documents publics de la société trouvés par les moteurs de recherche",
+        "commande": "metagoofil", "installation": "sudo apt install metagoofil",
+        "depot": "https://github.com/opsdisk/metagoofil",
+        "licence": "GPL-2.0", "actif": False, "adaptateur": "documents_publics",
+    },
+    "exiv2": {
+        "role": "Informations cachées des photos (2e avis d'ExifTool)",
+        "commande": "exiv2", "installation": "brew install exiv2",
+        "depot": "https://github.com/exiv2/exiv2",
+        "licence": "GPL-2.0", "actif": False, "adaptateur": "photos",
+    },
+    "instaloader": {
+        "role": "Fiche publique du compte Instagram de la société",
+        "commande": "instaloader", "installation": "pipx install instaloader",
+        "depot": "https://github.com/instaloader/instaloader",
+        "licence": "MIT", "actif": False, "adaptateur": "instagram",
+    },
+    "social-analyzer": {
+        "role": "Comptes publics ouverts sous un pseudo (4e avis)",
+        "commande": "social-analyzer", "installation": "pipx install social-analyzer",
+        "depot": "https://github.com/qeeqbox/social-analyzer",
+        "licence": "AGPL-3.0", "actif": False, "adaptateur": "pseudos_societe",
+    },
+    "archivebox": {
+        "role": "Copie datée de la page d'accueil (preuve de l'état du site)",
+        "commande": "archivebox", "installation": "pipx install archivebox",
+        "depot": "https://github.com/ArchiveBox/ArchiveBox",
+        "licence": "MIT", "actif": False, "adaptateur": "archive_page",
+    },
+    "ghunt": {
+        "role": "Ce que Google montre sur l'adresse Gmail du dirigeant (avec son accord)",
+        "commande": "ghunt", "installation": "pipx install ghunt",
+        "depot": "https://github.com/mxrch/GHunt",
+        "licence": "AGPL-3.0", "actif": False, "adaptateur": "google_dirigeant",
+    },
     # --- Bloc Exposition : scan externe (autorisation signée) ---
     "naabu": {
         "role": "Services ouverts sur internet (ports)",
@@ -309,11 +372,20 @@ def astuce_installation(nom, systeme=None):
     return "installeur Linux de Vigie (bash installer-linux.command)"
 
 
-def executer(nom, arguments, delai=300, dossier=None):
+def executer(nom, arguments, delai=300, dossier=None, entree=None):
     """Lance un outil du catalogue et renvoie ce qu'il affiche.
 
     Les arguments sont passés en liste, jamais via un shell : une valeur saisie
     par l'utilisateur ne peut pas devenir une commande.
+    """
+    return executer_detail(nom, arguments, delai, dossier, entree).stdout
+
+
+def executer_detail(nom, arguments, delai=300, dossier=None, entree=None):
+    """Comme executer(), mais renvoie tout : code de retour, sortie, messages d'erreur.
+
+    entree : texte envoyé à l'outil (une liste de noms, pour dnsx). Sans entree, le
+    clavier est coupé : un outil qui pose une question ne bloque pas le diagnostic.
     """
     outil = CATALOGUE[nom]
     chemin = trouver(outil["commande"])
@@ -322,12 +394,12 @@ def executer(nom, arguments, delai=300, dossier=None):
             f"l'outil {nom} n'est pas installé ({astuce_installation(nom)})")
     environnement = dict(os.environ, PATH=chemin_recherche())
     try:
-        resultat = subprocess.run([chemin] + list(arguments), capture_output=True, text=True,
-                                  timeout=delai, cwd=dossier, env=environnement,
-                                  errors="replace")
+        return subprocess.run([chemin] + list(arguments), capture_output=True, text=True,
+                              timeout=delai, cwd=dossier, env=environnement,
+                              errors="replace", input=entree,
+                              stdin=None if entree is not None else subprocess.DEVNULL)
     except subprocess.TimeoutExpired:
         raise ControleImpossible(f"l'outil {nom} n'a pas répondu en {delai} secondes")
-    return resultat.stdout
 
 
 def etat():

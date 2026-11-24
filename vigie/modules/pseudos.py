@@ -1,6 +1,6 @@
 """Bloc Exposition - comptes publics du dirigeant, à partir de ses pseudos.
 
-Trois outils, comparés point par point le 21/11/2026 sur le pseudo « vigie » :
+Quatre outils (Social Analyzer ajouté le 24/11/2026). Les trois premiers, comparés point par point le 21/11/2026 sur le pseudo « vigie » :
 Sherlock 80 comptes, Maigret 68, user-scanner 110 ; seulement 40 à 46 en commun deux
 à deux. Chacun rate un bon tiers de ce que voient les autres : Vigie les lance tous
 (ceux qui sont installés) et compte, pour chaque site, combien d'outils l'ont vu.
@@ -14,6 +14,7 @@ import json
 import os
 import re
 import tempfile
+import urllib.parse
 
 from .. import outils
 from ..modeles import INFO, OK, Constat, ControleImpossible
@@ -88,8 +89,36 @@ def _user_scanner(pseudo):
             return []
 
 
+def lire_social_analyzer(texte):
+    """Social Analyzer (sortie JSON) : les profils jugés « bons » (hors bases de fuites)."""
+    debut = (texte or "").find("{")
+    if debut < 0:
+        return []
+    try:
+        data = json.loads(texte[debut:texte.rfind("}") + 1])
+    except json.JSONDecodeError:
+        return []
+    comptes = []
+    for profil in data.get("detected") or []:
+        lien = profil.get("link") or ""
+        hote = urllib.parse.urlparse(lien).hostname or ""
+        hote = hote.removeprefix("www.").removeprefix("m.")
+        if hote and not _fuite(hote):
+            comptes.append({"site": hote, "adresse": lien})
+    return comptes
+
+
+def _social_analyzer(pseudo):
+    with tempfile.TemporaryDirectory() as dossier:
+        return lire_social_analyzer(outils.executer(
+            "social-analyzer", ["--username", pseudo, "--mode", "fast", "--output", "json",
+                                "--filter", "good", "--method", "find", "--top", "100"],
+            delai=900, dossier=dossier))
+
+
 OUTILS = (("Sherlock", "sherlock", _sherlock), ("Maigret", "maigret", _maigret),
-          ("user-scanner", "user-scanner", _user_scanner))
+          ("user-scanner", "user-scanner", _user_scanner),
+          ("Social Analyzer", "social-analyzer", _social_analyzer))
 
 
 def recouper(par_outil):

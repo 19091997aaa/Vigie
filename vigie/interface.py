@@ -26,7 +26,7 @@ from .modeles import Cible, ControleImpossible
 # Où l'onglet « Outils manuels » range les autorisations et le journal des lancements.
 AUTORISATIONS = "autorisations"
 JOURNAL = "journal"
-from .modules import MODULES, PAR_DEFAUT
+from .modules import COMPLET, MODULES, PAR_DEFAUT
 
 NOM_RAPPORT = re.compile(r"[a-z0-9_-]{3,120}")
 
@@ -108,6 +108,13 @@ button:hover { background:#1c3a68; }
   background:var(--fond); border-left:4px solid var(--navy); }
 .bandeau.fini { border-left-color:#1e7a46; }
 .bandeau.erreur { border-left-color:#b3261e; background:#fbeceb; color:#8a1d16; }
+.formule { border:1px solid var(--trait); border-radius:10px; padding:10px 16px; display:grid; gap:10px; }
+.formule legend { font-weight:700; font-size:14px; padding:0 6px; }
+.choix { display:flex; gap:10px; align-items:flex-start; font-weight:400; }
+.choix input { margin-top:4px; }
+.dirigeant summary { cursor:pointer; font-weight:700; font-size:14px; color:var(--navy); }
+.dirigeant { display:grid; gap:12px; }
+.dirigeant[open] label { margin-top:10px; }
 .bouton { display:inline-block; font-weight:800; padding:13px 18px; border-radius:10px;
   background:var(--navy); color:#fff; text-decoration:none; }
 """
@@ -130,9 +137,26 @@ PAGE = """<!DOCTYPE html>
 </label>
 <label>Nom de la société <span class="aide">Affiché en tête du rapport.</span>
 <input name="societe" autocomplete="off"></label>
+<fieldset class="formule"><legend>Quel diagnostic&nbsp;?</legend>
+<label class="choix"><input type="radio" name="formule" value="complet" checked>
+<span><b>Complet</b> — les 42 outils du diagnostic gratuit, plusieurs en même temps.
+<span class="aide">Compter 30 minutes à 1 heure.</span></span></label>
+<label class="choix"><input type="radio" name="formule" value="rapide">
+<span><b>Rapide</b> — les contrôles essentiels.
+<span class="aide">Environ 5 minutes.</span></span></label>
+</fieldset>
+<details class="dirigeant"><summary>Avec l'accord écrit du dirigeant (facultatif)</summary>
+<p class="aide">Seulement si le dirigeant a donné ces informations lui-même ET signé son accord.
+Sans cela, ces recherches ne sont pas faites.</p>
+<label>Son pseudo <input name="pseudo" autocomplete="off" autocapitalize="none"></label>
+<label>Son adresse e-mail <input name="mail" type="email" autocomplete="off"></label>
+<label>Son numéro de portable <input name="telephone" autocomplete="off"></label>
+<label class="choix"><input type="checkbox" name="accord" value="oui">
+<span>Le dirigeant a signé son accord écrit.</span></label>
+</details>
 <button type="submit">Lancer le diagnostic</button>
-<p class="aide">Contrôles lancés&nbsp;: {controles}. Ils lisent des informations publiques et
-prennent environ 5 minutes. Vous suivez chaque contrôle en direct.</p>
+<p class="aide">Contrôles rapides&nbsp;: {controles}. Tous lisent des informations publiques,
+sans action sur les machines de la société. Vous suivez chaque outil en direct.</p>
 </form>
 <p><a href="/outils-un">Lancer un outil</a> · <a href="/comparer">Comparer des outils</a> · <a href="/manuel">Outils manuels (contrôles actifs, sur autorisation signée)</a></p>
 <h2>Rapports déjà produits</h2>
@@ -191,9 +215,10 @@ async function rafraichir() {{
     b.textContent = "Le diagnostic s'est arrêté : " + etat.erreur;
     return;
   }}
-  const courant = etat.etapes.find(e => e.etat === "en_cours");
+  const courants = etat.etapes.filter(e => e.etat === "en_cours").map(e => e.libelle);
   b.className = "bandeau";
-  b.textContent = (courant ? "En ce moment : " + courant.libelle : "Préparation…") +
+  b.textContent = (courants.length ? "En ce moment (" + courants.length + " en même temps) : "
+    + courants.join(" · ") : "Préparation…") +
     "  (" + finis + " sur " + etat.etapes.length + " terminés)";
   setTimeout(rafraichir, 1000);
 }}
@@ -305,11 +330,21 @@ def traiter_formulaire(corps, sortie):
     Le domaine est vérifié tout de suite : une saisie invalide lève ValueError.
     """
     champs = urllib.parse.parse_qs(corps)
-    domaine = nettoyer_domaine(champs.get("domaine", [""])[0])
-    societe = champs.get("societe", [""])[0].strip()[:120]
-    cible = Cible(domaine, societe)
-    ident = nouveau_suivi(cible, PAR_DEFAUT)
-    threading.Thread(target=executer_suivi, args=(ident, cible, PAR_DEFAUT, sortie),
+
+    def champ(nom, longueur=120):
+        return champs.get(nom, [""])[0].strip()[:longueur]
+
+    domaine = nettoyer_domaine(champ("domaine", 300))
+    # Les données du dirigeant ne servent que s'il a signé son accord (case cochée).
+    accord = champ("accord") == "oui"
+    cible = Cible(domaine, champ("societe"),
+                  pseudos=[champ("pseudo", 40)] if accord and champ("pseudo") else [],
+                  accord_dirigeant=accord,
+                  emails=[champ("mail")] if accord and champ("mail") else [],
+                  telephones=[champ("telephone", 20)] if accord and champ("telephone") else [])
+    noms = PAR_DEFAUT if champ("formule") == "rapide" else COMPLET
+    ident = nouveau_suivi(cible, noms)
+    threading.Thread(target=executer_suivi, args=(ident, cible, noms, sortie),
                      daemon=True).start()
     return ident
 

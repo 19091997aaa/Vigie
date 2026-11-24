@@ -68,10 +68,17 @@ class Base(unittest.TestCase):
         bibliotheques._ouvrir = pas_de_telechargement
         sousdomaines._CACHE.clear()
         archives._CACHE.clear()
+        from vigie import indices
+        self._sauve_indices = (indices._ouvrir, outils.executer_detail)
+        indices._ouvrir = pas_de_telechargement
+        indices.oublier()
 
     def tearDown(self):
         (reseau.dns, site._ouvrir, site._jours_certificat, outils.executer,
          metadonnees._ouvrir) = self._sauve
+        from vigie import indices
+        indices._ouvrir, outils.executer_detail = self._sauve_indices
+        indices.oublier()
         from vigie.modules import telephone
         telephone._ouvrir = self._sauve_tel
         from vigie.modules import bibliotheques
@@ -475,7 +482,7 @@ class Interface(Base):
             accueil = urllib.request.urlopen(base + "/").read().decode()
             self.assertIn("Nouveau diagnostic", accueil)
             reponse = urllib.request.urlopen(base + "/diagnostic",
-                                             data=b"domaine=ex.fr&societe=Essai")
+                                             data=b"domaine=ex.fr&societe=Essai&formule=rapide")
             suivi = reponse.geturl()
             self.assertIn("/suivi/", suivi)
             self.assertIn("Diagnostic en cours", reponse.read().decode())
@@ -538,14 +545,17 @@ class Interface(Base):
         modules = {"a": {"fonction": impossible, "actif": False, "nom": "Contrôle A"},
                    "b": {"fonction": plante, "actif": False, "nom": "Contrôle B"}}
         with mock.patch.dict(cli.MODULES, modules), \
-                mock.patch.dict(interface.MODULES, modules):
+                mock.patch.dict(interface.MODULES, modules), \
+                tempfile.TemporaryDirectory() as sortie:
             ident = interface.nouveau_suivi(Cible("ex.fr"), ["a", "b"])
-            interface.executer_suivi(ident, Cible("ex.fr"), ["a", "b"], "inutile")
+            interface.executer_suivi(ident, Cible("ex.fr"), ["a", "b"], sortie)
         etat = interface.etat_suivi(ident)
-        self.assertEqual(etat["etat"], "erreur")
+        # Depuis le diagnostic complet (24/11/2026) : un outil qui plante est noté en
+        # échec, mais le diagnostic va au bout et produit son rapport.
+        self.assertEqual(etat["etat"], "fini")
         self.assertEqual([e["etat"] for e in etat["etapes"]], ["non_realise", "echec"])
         self.assertEqual(etat["etapes"][0]["detail"], "pas de réseau")
-        self.assertIn("outil introuvable", etat["erreur"])
+        self.assertIn("outil introuvable", etat["etapes"][1]["detail"])
 
     def test_code_obligatoire_en_reseau_local(self):
         with tempfile.TemporaryDirectory() as sortie:
@@ -1991,3 +2001,247 @@ class TestExplicationsEnFrancais(unittest.TestCase):
         self.assertIn("Cible : un pseudo", p)
         with self.assertRaises(interface_outils.lancer_seul.Refus):
             interface_outils.lancer("nom=AdGuard+Home&cible=eldjango30")
+
+
+# ---------------------------------------------------------------------------
+# Diagnostic complet : les 42 outils de la famille « diagnostic gratuit » (24/11/2026).
+
+class Fini:
+    """Ce que renvoie subprocess.run : code, sortie, erreurs."""
+    def __init__(self, stdout="", stderr="", returncode=0):
+        self.stdout, self.stderr, self.returncode = stdout, stderr, returncode
+
+
+class DiagComplet(Base):
+    def test_les_42_ont_chacun_une_ligne(self):
+        from vigie import diag_gratuit
+        from vigie.modules import COMPLET
+        self.assertEqual(sorted(diag_gratuit.OUTILS), diag_gratuit.noms_famille())
+        self.assertEqual(len(diag_gratuit.OUTILS), 42)
+        for nom, fiche in diag_gratuit.OUTILS.items():
+            if "raison" in fiche:
+                self.assertTrue(len(fiche["raison"]) > 40, nom)
+                continue
+            self.assertIn(fiche["module"], COMPLET, nom)
+            self.assertIn(fiche["commande"], outils.CATALOGUE, nom)
+            self.assertFalse(MODULES[fiche["module"]]["actif"], nom)
+        # Garde-fou : le dark web (fuites) n'est jamais lancé à froid.
+        self.assertTrue(diag_gratuit.OUTILS["Robin"]["ecarte"])
+        self.assertIn("dark web", diag_gratuit.OUTILS["Robin"]["raison"])
+
+    def test_complet_sans_rien_d_actif(self):
+        from vigie.modules import COMPLET
+        self.assertTrue(set(PAR_DEFAUT) <= set(COMPLET))
+        self.assertFalse([n for n in COMPLET if MODULES[n]["actif"]])
+        self.assertNotIn("conformite", COMPLET)
+        for nom in COMPLET:
+            for avant in MODULES[nom].get("apres", ()):
+                self.assertLess(COMPLET.index(avant), COMPLET.index(nom), nom)
+
+    def test_bilan_dit_pourquoi(self):
+        from vigie import diag_gratuit
+        deroule = [
+            {"module": "sousdomaines", "nom": "Sous", "etat": "fini",
+             "detail": "1 point(s) relevé(s)", "duree": 12.0},
+            {"module": "alias_dns", "nom": "dnsx", "etat": "non_realise",
+             "detail": "réseau coupé", "duree": 1.0},
+        ]
+        lignes = {l["outil"]: l for l in diag_gratuit.bilan(
+            deroule, installe=lambda commande: commande != "gau")}
+        self.assertEqual(len(lignes), 42)
+        self.assertEqual(lignes["Subfinder"]["etat"], "lance")
+        self.assertEqual(lignes["Subfinder"]["duree"], 12.0)
+        self.assertEqual(lignes["dnsx"]["etat"], "non_realise")
+        self.assertIn("réseau coupé", lignes["dnsx"]["texte"])
+        self.assertEqual(lignes["gau"]["etat"], "hors_liste")
+        self.assertEqual(lignes["Pi-hole"]["etat"], "jamais")
+        lignes = {l["outil"]: l for l in diag_gratuit.bilan(
+            [{"module": "archives", "nom": "A", "etat": "fini", "detail": "", "duree": 1}],
+            installe=lambda commande: False)}
+        self.assertEqual(lignes["gau"]["etat"], "absent")
+        self.assertIn("à installer", lignes["gau"]["texte"])
+
+    def test_lancement_en_parallele_avec_ordre_et_delai(self):
+        vus = {}
+
+        def lent(nom, pause, niveau=INFO):
+            def fonction(cible):
+                time.sleep(pause)
+                return [Constat("Exposition", niveau, f"Point {nom}", "x", cle="meme")], \
+                    {"liste": [nom]}
+            return fonction
+
+        def apres_a(cible):
+            vus["a"] = cible.indices.get("a")
+            return [], {}
+
+        def plante(cible):
+            raise RuntimeError("bug")
+
+        modules = {
+            "a": {"fonction": lent("a", 0.4), "actif": False, "nom": "A", "bloc": "Exposition"},
+            "b": {"fonction": lent("b", 0.4, IMPORTANT), "actif": False, "nom": "B",
+                  "bloc": "Exposition"},
+            "c": {"fonction": apres_a, "actif": False, "nom": "C", "apres": ["a"]},
+            "d": {"fonction": plante, "actif": False, "nom": "D"},
+            "e": {"fonction": lent("e", 5), "actif": False, "nom": "E", "delai": -58},
+        }
+        etapes = []
+        with mock.patch.dict(cli.MODULES, modules):
+            debut = time.monotonic()
+            r = cli.lancer(Cible("ex.fr"), ["a", "b", "c", "d", "e"],
+                           suivi=lambda nom, etat, detail: etapes.append((nom, etat)))
+            duree = time.monotonic() - debut
+        self.assertLess(duree, 4.5)                       # a et b ensemble, e abandonné
+        self.assertEqual(vus["a"], {"liste": ["a"]})      # c a attendu a
+        self.assertLess(etapes.index(("a", "fini")), etapes.index(("c", "en_cours")))
+        raisons = {n["module"]: n["raison"] for n in r["non_realises"]}
+        self.assertIn("bug", raisons["D"])
+        self.assertIn("abandonné", raisons["E"])
+        # Fusion dans l'ordre demandé : a d'abord, b plus grave l'emporte et s'ajoute.
+        constat = r["blocs"]["Exposition"]["constats"][0]
+        self.assertEqual(constat["niveau"], IMPORTANT)
+        self.assertEqual(constat["sources"], ["A", "B"])
+        self.assertEqual({e["module"] for e in r["deroule"]}, set("abcde"))
+
+    def test_indices_tires_du_site(self):
+        from vigie import indices
+        page = ('<a href="https://www.instagram.com/pavillon.noir/">Insta</a>'
+                '<a href="https://www.facebook.com/sharer/sharer.php?u=x">partager</a>'
+                '<a href="https://x.com/PavillonNoir">X</a>'
+                '<a href="https://www.linkedin.com/company/pavillon-noir/">in</a>'
+                "Tél. : 01 23 45 67 89 — portable +33 6 12 34 56 78")
+        comptes = indices.reseaux_sociaux(page)
+        self.assertEqual(comptes["instagram"], ["pavillon.noir"])
+        self.assertNotIn("facebook", comptes)
+        self.assertEqual(indices.numeros(page), ["+33123456789", "+33612345678"])
+        self.assertEqual(indices.nom_dans_domaine("pavillon-noir.tech"), "pavillon-noir")
+        self.assertEqual(indices.nom_dans_domaine("www.exemple.co.uk"), "exemple")
+        indices._ouvrir = lambda url: page if url.endswith("ex.fr/") else None
+        indices.oublier()
+        self.assertEqual(indices.pseudos_societe("ex.fr"),
+                         ["pavillon.noir", "pavillon-noir", "PavillonNoir"])
+        indices.oublier()
+        indices._ouvrir = pas_de_telechargement
+        self.assertEqual(indices.pseudos_societe("ex.fr"), ["ex"])
+        self.assertEqual(indices.numeros_publics("ex.fr"), [])
+
+    def test_lecteurs_des_sorties(self):
+        from vigie.modules import complet
+        self.assertEqual(complet.lire_amass(
+            "www.ex.fr (FQDN) --> a_record --> 1.2.3.4 (IPAddress)\nmail.ex.fr\nautre.fr\n"
+            "pasex.fr", "ex.fr"), ["mail.ex.fr", "www.ex.fr"])
+        fiches = complet.lire_dnsx('{"host":"a.ex.fr","a":["1.2.3.4"]}\n'
+                                   '{"host":"vieux.ex.fr","cname":["x.herokuapp.com"]}\nbruit')
+        self.assertEqual(fiches["vieux.ex.fr"], {"a": [], "cname": ["x.herokuapp.com"]})
+        infos = complet.lire_whatweb([{"plugins": {
+            "WordPress": {"version": ["6.4.2"]}, "Country": {}, "HTTPServer": {"string": ["nginx"]},
+            "JQuery": {}}}])
+        self.assertEqual(infos, {"technos": ["WordPress 6.4.2", "nginx", "JQuery"],
+                                 "avec_version": 1})
+        self.assertEqual(complet.lire_uncover("1.2.3.4:443\n[INF] bruit\nmail.ex.fr:25\n"
+                                              "1.2.3.4:443"), ["1.2.3.4:443", "mail.ex.fr:25"])
+        self.assertEqual(complet.lire_exiv2(
+            "Exif.GPSInfo.GPSLatitude  Rational  3  48 deg\n"
+            "Exif.Image.Artist  Ascii  10  Jean\n"), (True, True))
+        self.assertEqual(complet.lire_exiv2("Exif.Image.Make  Ascii 6 Canon"), (False, False))
+        self.assertEqual(complet.lire_instagram({"node": {
+            "edge_followed_by": {"count": 120}, "is_private": False,
+            "business_email": "a@b.fr"}})["abonnes"], 120)
+        self.assertEqual(pseudos.lire_social_analyzer(
+            'bruit {"detected": [{"link": "https://www.github.com/x"},'
+            '{"link": "https://hudsonrock.com/x"}]}'),
+            [{"site": "github.com", "adresse": "https://www.github.com/x"}])
+
+    def test_dnsx_repere_les_alias_orphelins(self):
+        from vigie.modules import complet
+        recus = {}
+
+        def faux(nom, arguments, delai=300, dossier=None, entree=None):
+            recus["entree"] = entree
+            return Fini('{"host":"ex.fr","a":["1.2.3.4"]}\n'
+                        '{"host":"www.ex.fr","a":["1.2.3.4"]}\n'
+                        '{"host":"boutique.ex.fr","cname":["shop.myshopify.com"]}\n')
+
+        outils.executer_detail = faux
+        cible = Cible("ex.fr", indices={
+            "sousdomaines": {"sous_domaines": ["boutique.ex.fr", "test.ex.fr"]},
+            "sousdomaines_amass": {"sous_domaines": ["test.ex.fr"]}})
+        constats, brut = complet.analyser_dnsx(cible)
+        self.assertEqual(recus["entree"].split(), ["ex.fr", "www.ex.fr", "boutique.ex.fr",
+                                                   "test.ex.fr"])
+        self.assertEqual(brut["alias_orphelins"], ["boutique.ex.fr"])
+        self.assertEqual(brut["muets"], ["test.ex.fr"])
+        self.assertEqual([c.niveau for c in constats], [IMPORTANT, INFO])
+
+    def test_uncover_sans_cle_explique(self):
+        from vigie.modules import complet
+        outils.executer_detail = lambda *a, **k: Fini("", "[FTL] no keys provided")
+        with self.assertRaises(ControleImpossible) as refus:
+            complet.analyser_uncover(Cible("ex.fr"))
+        self.assertIn("clé d'accès", str(refus.exception))
+
+    def test_numeros_jamais_dans_le_rapport(self):
+        from vigie import indices
+        from vigie.modules import complet
+        indices._ouvrir = lambda url: "Appelez le 06 12 34 56 78"
+        outils.executer = lambda *a, **k: "Country: FR\nLocal: 06 12 34 56 78\n"
+        constats, brut = complet.analyser_phoneinfoga(Cible("ex.fr"))
+        texte = json.dumps([c.en_dict() for c in constats] + [brut], ensure_ascii=False)
+        self.assertNotIn("12 34", texte)
+        self.assertNotIn("612345678", texte)
+        self.assertEqual(brut["numeros"][0]["portable"], True)
+
+    def test_rapport_montre_les_42(self):
+        with mock.patch.object(outils, "trouver", return_value=None):
+            r = cli.lancer(Cible("ex.fr", "Essai"), ["mail", "photos", "pseudos_societe"],
+                           date="2026-11-24")
+        self.assertEqual(len(r["outils_diag"]), 42)
+        page = rapport.en_html(r)
+        self.assertIn("Les 42 outils du diagnostic gratuit", page)
+        self.assertIn("Pi-hole", page)
+        self.assertIn("Pas lançable ici", page)
+        texte = rapport.en_texte(r)
+        self.assertIn("Robin — Écarté par la règle légale", texte)
+        self.assertNotIn("Les 42 outils", rapport.en_html(r, public="executif"))
+        # Le diagnostic rapide ne change pas.
+        r = cli.lancer(Cible("ex.fr"), ["mail"], date="2026-11-24")
+        self.assertNotIn("outils_diag", r)
+
+    def test_interface_lance_le_complet_par_defaut(self):
+        from vigie.modules import COMPLET
+        lances = {}
+
+        def faux_suivi(ident, cible, noms, sortie):
+            lances.update(cible=cible, noms=noms)
+
+        with mock.patch.object(interface, "executer_suivi", faux_suivi):
+            interface.traiter_formulaire("domaine=ex.fr&pseudo=jean&mail=j%40ex.fr", "x")
+            time.sleep(0.1)
+            self.assertEqual(lances["noms"], COMPLET)
+            # Sans la case « accord », les données du dirigeant ne servent pas.
+            self.assertEqual((lances["cible"].pseudos, lances["cible"].emails), ([], []))
+            interface.traiter_formulaire(
+                "domaine=ex.fr&formule=rapide&pseudo=jean&mail=j%40ex.fr&accord=oui", "x")
+            time.sleep(0.1)
+            self.assertEqual(lances["noms"], PAR_DEFAUT)
+            self.assertEqual(lances["cible"].pseudos, ["jean"])
+            self.assertTrue(lances["cible"].accord_dirigeant)
+        self.assertIn('value="complet" checked', interface.page_accueil("inexistant"))
+
+    def test_cli_complet(self):
+        from vigie.modules import COMPLET
+        recu = {}
+
+        def faux_lancer(cible, noms, chemin=None):
+            recu.update(cible=cible, noms=noms)
+            return cli.rapport.construire("ex.fr", "ex.fr", "2026-11-24", [], {}, [], None)
+
+        with mock.patch.object(cli, "lancer", faux_lancer), \
+                tempfile.TemporaryDirectory() as sortie, \
+                mock.patch("builtins.print"):
+            cli.main(["diagnostic", "ex.fr", "--complet", "--sortie", sortie,
+                      "--mail", "j@ex.fr"])
+        self.assertEqual(recu["noms"], COMPLET)
+        # Avant, l'adresse du dirigeant atterrissait dans la mauvaise case (bug corrigé).
+        self.assertEqual(recu["cible"].emails, ["j@ex.fr"])
