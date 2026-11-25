@@ -16,6 +16,7 @@ import re
 import contextlib
 import shutil
 import subprocess
+import tempfile
 import threading
 
 CATALOGUE = os.path.join(os.path.dirname(__file__), "catalogue_outils.json")
@@ -150,9 +151,11 @@ def repond(binaire, delai=60):
         return False
     for arguments in (["--help"], ["-h"], []):
         try:
+            # Lancé depuis le dossier temporaire : certains outils (Nettacker) créent
+            # des fichiers là où on les lance, ils ne doivent pas salir le dossier Vigie.
             fini = subprocess.run([chemin] + arguments, capture_output=True,
                                   text=True, timeout=delai, errors="replace",
-                                  stdin=subprocess.DEVNULL)
+                                  stdin=subprocess.DEVNULL, cwd=tempfile.gettempdir())
         except subprocess.TimeoutExpired:
             return True
         except OSError:
@@ -180,7 +183,8 @@ def erreur_demarrage(binaires):
             continue
         try:
             fini = subprocess.run([chemin, "--help"], capture_output=True, text=True,
-                                  timeout=60, errors="replace", stdin=subprocess.DEVNULL)
+                                  timeout=60, errors="replace", stdin=subprocess.DEVNULL,
+                                  cwd=tempfile.gettempdir())
         except (subprocess.TimeoutExpired, OSError):
             continue
         lignes = [l.strip() for l in (fini.stderr or fini.stdout or "").splitlines()
