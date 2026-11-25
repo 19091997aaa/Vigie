@@ -17,6 +17,10 @@
 # sous Ubuntu : dnstwist (+ module DNS), EyeWitness et Metagoofil (dépôt + Python à
 # part), PhoneInfoga (programme officiel vérifié), sitespeed.io et Unlighthouse (Node 22
 # posé à part si celui d'Ubuntu est trop vieux).
+# Depuis le 25/11/2026 : apt passe un par un (fini le « verrou de dpkg »), npm s'installe
+# dans le dossier des outils avec Node 22, un outil Python qui rate est retenté avec un
+# Python 3.12 à part, et les outils à poser à la main (serveurs, Windows, Kali) sont
+# comptés à part : ce ne sont pas des pannes.
 # Les outils ACTIFS / offensifs sont installés mais Vigie ne les lance qu'avec une
 # autorisation signée. Il ne touche à AUCUNE machine distante : il prépare celle-ci.
 set -u
