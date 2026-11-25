@@ -151,6 +151,16 @@ InVID, geo-sleuth, IVRE, auto-archiver, Toutatis) et **Robin, écarté (dark web
   (EyeWitness, Metagoofil, PhoneInfoga, uncover, sitespeed.io et Unlighthouse avec un
   Node 22 posé à part, dnstwist + dnspython). Empreintes vérifiées, dépôt exact.
 
+**Installeur Linux (25/11/2026, 1re install complète sur la VM Ubuntu, Python 3.14 :
+93 prêts / 117 ratés)** : apt passe **un par un** et sans question à l'écran (verrou
+dpkg) ; npm s'installe dans le dossier de Vigie avec Node 22 (plus de droits admin) ;
+un outil pipx qui rate ou ne démarre pas est retenté avec un **Python 3.12 à part**
+(`pipx --fetch-missing-python`), et `pkg_resources` manquant = on ajoute setuptools ;
+nouvelles recettes dans `vigie/recettes.py` (go aux bons modules, programmes officiels
+GitHub vérifiés, scripts Python copiés depuis leur dépôt) ; `recettes.MANUELS` = outils
+à poser à la main (serveurs, Windows, Kali, Kubernetes), comptés à part dans le bilan.
+« ne démarre pas » note maintenant la raison. Un bilan vide ne fait plus planter la relance.
+
 **Conséquences pour le dirigeant (24/11/2026)** : demande d'Anass, chaque constat non
 « Correct » a un onglet **Conséquences** (ce qu'un attaquant peut faire / ce que ça coûte /
 côté loi / côté assurance / exemple réel sourcé) à côté de l'onglet **À corriger
