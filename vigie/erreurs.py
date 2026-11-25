@@ -126,6 +126,21 @@ MOTIFS_INSTALL = [
     (r"externally-managed-environment",
      "Ubuntu interdit d'installer des outils Python « en vrac » dans le système : il "
      "faut passer par pipx."),
+    (r"à installer à la main",
+     "Cet outil ne s'installe pas tout seul (serveur, outil Windows, paquet Kali, "
+     "Kubernetes…). Ce n'est pas une panne : la raison exacte est écrite juste à côté."),
+    (r"bibliothèque Python|No apps associated",
+     "Ce paquet Python est une bibliothèque (une brique pour d'autres programmes) : il "
+     "n'apporte aucune commande à lancer."),
+    (r"Cannot determine package name|Check package spec",
+     "L'outil est un simple script Python, pas un paquet installable par pipx : il faut "
+     "le copier depuis son dépôt et le lancer depuis son dossier."),
+    (r"pkg_resources",
+     "Il manque au programme un module ancien (setuptools) que les versions récentes de "
+     "Python ne fournissent plus d'office."),
+    (r"Python 3\.12",
+     "Vigie a dû utiliser un Python 3.12 à part (celui de la machine est trop récent pour "
+     "cet outil). C'est normal et sans risque pour le système."),
     (r"pas de dépôt|pas de méthode",
      "Vigie ne connaît aucune méthode d'installation automatique et sûre pour cet outil "
      "(pas de commande dans sa documentation). Il s'installe à la main."),

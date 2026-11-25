@@ -147,6 +147,31 @@ def dossier_rapport(sortie, resultat):
     return os.path.join(sortie, f"{resultat['cible'].replace('.', '_')}_{resultat['date']}")
 
 
+def lire_bilan(chemin):
+    """Le compte rendu d'une installation précédente. Un fichier vide ou abîmé (une
+    installation coupée en plein milieu) ne doit pas faire planter la relance : on
+    repart alors de zéro, en le disant."""
+    import json as _json
+    try:
+        with open(chemin, encoding="utf-8") as fichier:
+            lu = _json.load(fichier)
+    except (OSError, ValueError):
+        print(f"(Compte rendu précédent illisible ou vide : {chemin}. "
+              "Je réessaie tous les outils.)")
+        return {}
+    return lu if isinstance(lu, dict) else {}
+
+
+def ecrire_bilan(chemin, contenu):
+    """Écrit le compte rendu d'un coup (fichier temporaire puis remplacement) : une
+    coupure en cours d'écriture ne laisse plus un fichier vide."""
+    import json as _json
+    temporaire = chemin + ".en-cours"
+    with open(temporaire, "w", encoding="utf-8") as fichier:
+        _json.dump(contenu, fichier, ensure_ascii=False, indent=2)
+    os.replace(temporaire, chemin)
+
+
 def main(arguments=None):
     analyseur = argparse.ArgumentParser(
         prog="vigie", description=f"Vigie {__version__} - diagnostic de sécurité")
@@ -415,9 +440,7 @@ def main(arguments=None):
         # que ceux qui avaient échoué. Beaucoup plus rapide qu'une install complète.
         anciens_ok = []
         if getattr(args, "reprendre", None) and os.path.exists(args.reprendre):
-            import json as _json
-            with open(args.reprendre, encoding="utf-8") as fichier:
-                precedent = _json.load(fichier)
+            precedent = lire_bilan(args.reprendre)
             details = precedent.get("details", [])
             # Seuls les outils PRÊTS (installés ET qui démarrent) sont gardés : ceux qui
             # « ne démarraient pas » sont revérifiés (souvent, on cherchait le mauvais nom
@@ -444,17 +467,19 @@ def main(arguments=None):
         # Le rapport final garde les outils déjà prêts + le résultat des réessais.
         comptes = anciens_ok + nouveaux
         bilan = installeur.resume(comptes)
-        import json as _json
-        with open(args.rapport, "w", encoding="utf-8") as fichier:
-            _json.dump({"resume": bilan, "details": comptes}, fichier,
-                       ensure_ascii=False, indent=2)
+        ecrire_bilan(args.rapport, {"resume": bilan, "details": comptes})
         minutes = (time.monotonic() - debut) / 60
         print(f"\nBilan sur {bilan['total']} outils, en {minutes:.0f} min :")
         print(f"  {bilan['prets']:4}  prêts (installés ET ils démarrent)")
         print(f"  {bilan['coquilles']:4}  installés mais ne démarrent pas")
-        print(f"  {bilan['echecs']:4}  pas installés du tout")
+        print(f"  {bilan['echecs']:4}  pas installés :")
+        print(f"        {bilan['a_la_main']:4}  à poser à la main (serveurs, Windows, Kali, "
+              "Kubernetes… : ce n'est pas une panne)")
+        print(f"        {bilan['vrais_echecs']:4}  vrais échecs (raison dans le compte rendu)")
+        if bilan["par_methode"]:
+            print("  Comment les outils installés ont été posés :")
         for methode, nombre in bilan["par_methode"].items():
-            print(f"        dont {nombre} via {methode}")
+            print(f"        {nombre:4}  via {methode}")
         print(f"Compte rendu écrit : {args.rapport}")
         return
 

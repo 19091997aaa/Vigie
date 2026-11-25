@@ -1777,10 +1777,13 @@ class TestInstallTousNonPayants(unittest.TestCase):
         apt = [cmd for lib, cmd in essais if lib.startswith("apt (documenté)")]
         self.assertTrue(apt, "aucune commande apt reconnue")
         for cmd in apt:
-            self.assertEqual(cmd[:2], ["sudo", "apt-get"])
+            self.assertEqual(cmd[0], "sudo")
+            self.assertIn("apt-get", cmd)
             self.assertIn("install", cmd)
+            # Aucune question à l'écran (Wireshark en posait une et bloquait tout).
+            self.assertIn("DEBIAN_FRONTEND=noninteractive", cmd)
             # apt doit ATTENDRE le verrou au lieu d'échouer tout de suite.
-            self.assertIn("DPkg::Lock::Timeout=300", cmd)
+            self.assertTrue(any(c.startswith("DPkg::Lock::Timeout=") for c in cmd))
             self.assertEqual(cmd[-1], "libimage-exiftool-perl")
 
     def test_payants_exclus_du_registre(self):
@@ -2686,3 +2689,118 @@ class Verdict(unittest.TestCase):
         _, verdict = self._verdict([Constat("Exposition", CRITIQUE, "p", "x", cle="k")])
         self.assertIn("critique", verdict)
         self.assertIn("sans attendre", verdict)
+
+
+class TestInstalleurLinux25Novembre(unittest.TestCase):
+    """Corrections après l'installation complète sur la VM Ubuntu (25/11/2026)."""
+
+    def test_jamais_le_paquet_git_tire_d_une_adresse(self):
+        from vigie import installeur
+        essais = installeur.methodes(
+            {"nom": "Impacket", "lien": "https://github.com/fortra/impacket"},
+            install="pip install impacket ; pipx install git+https://github.com/fortra/impacket")
+        commandes = [c for _, c in essais]
+        self.assertIn(["pipx", "install", "impacket"], commandes)
+        self.assertNotIn(["pipx", "install", "git"], commandes)
+
+    def test_apt_un_par_un(self):
+        from vigie import installeur
+        en_cours, maximum, verrou = [0], [0], threading.Lock()
+
+        def faux_run(*a, **k):
+            with verrou:
+                en_cours[0] += 1
+                maximum[0] = max(maximum[0], en_cours[0])
+            time.sleep(0.05)
+            with verrou:
+                en_cours[0] -= 1
+            return subprocess.CompletedProcess(a[0], 0, "", "")
+        commande = installeur.DOCUMENTEES[-1][2] + ["nmap"]
+        with mock.patch.object(installeur.shutil, "which", return_value="/usr/bin/sudo"), \
+                mock.patch.object(installeur.subprocess, "run", side_effect=faux_run):
+            fils = [threading.Thread(target=installeur._lancer, args=(commande,))
+                    for _ in range(5)]
+            for f in fils:
+                f.start()
+            for f in fils:
+                f.join()
+        self.assertEqual(maximum[0], 1)
+
+    def test_outil_a_la_main_pas_essaye_et_compte_a_part(self):
+        from vigie import installeur
+        with mock.patch.object(installeur, "_lancer") as lancer:
+            compte = installeur.installer_un(
+                {"nom": "geo-sleuth", "lien": "https://github.com/Oldcircle/geo-sleuth"})
+        lancer.assert_not_called()
+        self.assertTrue(compte["manuel"])
+        self.assertIn("à la main", compte["raison"])
+        bilan = installeur.resume([compte, {"nom": "X", "installe": False, "raison": "go"}])
+        self.assertEqual((bilan["a_la_main"], bilan["vrais_echecs"]), (1, 1))
+
+    def test_recettes_et_manuels_existent_dans_le_catalogue(self):
+        from vigie import installeur, recettes
+        noms = {o["nom"].lower() for o in installeur.charger()}
+        for nom in list(recettes.RECETTES) + list(recettes.MANUELS):
+            self.assertIn(nom, noms)
+        self.assertFalse(set(recettes.RECETTES) & set(recettes.MANUELS))
+
+    def test_pipx_retente_avec_python_de_secours(self):
+        from vigie import installeur
+        appels = []
+
+        def faux_lancer(commande, delai=600):
+            appels.append(commande)
+            if "--python" in commande:
+                return True, "", "installed package nettacker 1.0\n  These apps are now " \
+                                 "globally available\n    - nettacker\n"
+            return False, "Error installing nettacker.", "Error installing nettacker."
+        with mock.patch.object(installeur, "_lancer", side_effect=faux_lancer), \
+                mock.patch.object(installeur, "repond", side_effect=lambda b: b == "nettacker"):
+            compte = installeur._installer_par_doc(
+                {"nom": "OWASP Nettacker", "lien": "https://github.com/OWASP/Nettacker"})
+        self.assertTrue(compte["repond"])
+        self.assertIn("Python 3.12", compte["methode"])
+        self.assertIn("--fetch-missing-python", appels[1])
+
+    def test_un_outil_lent_a_demarrer_a_bien_demarre(self):
+        from vigie import installeur
+        with mock.patch.object(installeur.shutil, "which", return_value="/bin/garak"), \
+                mock.patch.object(installeur.subprocess, "run",
+                                  side_effect=subprocess.TimeoutExpired("garak", 60)):
+            self.assertTrue(installeur.repond("garak"))
+
+    def test_une_trace_python_n_est_pas_une_aide(self):
+        from vigie import installeur
+        trace = ("Traceback (most recent call last):\n  File \"x\", line 1\n"
+                 "ModuleNotFoundError: No module named 'pkg_resources'\n")
+        with mock.patch.object(installeur.shutil, "which", return_value="/bin/x"), \
+                mock.patch.object(installeur.subprocess, "run",
+                                  return_value=subprocess.CompletedProcess([], 1, "", trace)):
+            self.assertFalse(installeur.repond("x"))
+            self.assertIn("pkg_resources", installeur.erreur_demarrage(["x"]))
+
+    def test_erreur_npm_lisible(self):
+        from vigie import recettes
+        sortie = ("npm ERR! code EACCES\nnpm ERR! syscall mkdir\nnpm ERR! path /usr/lib/x\n"
+                  "npm ERR! A complete log of this run can be found in:\n"
+                  "npm ERR!     /home/a/.npm/_logs/2026-debug-0.log\n")
+        self.assertIn("EACCES", recettes.erreur_npm(sortie))
+        self.assertNotIn("debug-0.log", recettes.erreur_npm(sortie))
+
+    def test_noms_des_programmes_officiels(self):
+        from vigie import recettes
+        valeurs = dict(recettes.NOMS_SYSTEME["linux"], **recettes.NOMS_ARCH["x64"],
+                       version="0.58.1")
+        self.assertEqual("trivy_{version}_{mac}-{bits}.tar.gz".format(**valeurs),
+                         "trivy_0.58.1_Linux-64bit.tar.gz")
+        self.assertEqual("grype_{version}_{os}_{goarch}.tar.gz".format(**valeurs),
+                         "grype_0.58.1_linux_amd64.tar.gz")
+
+    def test_compte_rendu_vide_ne_fait_pas_planter(self):
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "vigie-installation.json")
+            open(chemin, "w").close()
+            self.assertEqual(cli.lire_bilan(chemin), {})
+            cli.ecrire_bilan(chemin, {"resume": {}, "details": []})
+            self.assertEqual(cli.lire_bilan(chemin), {"resume": {}, "details": []})
+            self.assertEqual(os.listdir(dossier), ["vigie-installation.json"])
