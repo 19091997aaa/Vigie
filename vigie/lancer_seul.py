@@ -76,44 +76,83 @@ _EXEMPLE_CIBLE = re.compile(
     r"|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"  # une adresse e-mail
     r"|(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}"              # un nom de domaine
     r")(?:'|\")?$")
-_PLACEHOLDERS = ("{cible}", "{email}", "{profil}", "{fichier}", "{numero}", "{domaine}",
-                 "{pseudo}", "{url}", "{ip}", "{utilisateur}")
+# Emplacements qu'on NE PEUT PAS fournir depuis la simple case « cible » : un
+# dictionnaire, un port, une liste de modules, un identifiant de session… Un usage qui
+# en réclame un ne peut pas être deviné (la ligne serait incomplète).
+_PH_IMPOSSIBLES = {"{wordlist}", "{port}", "{modules}", "{instagramsessionid}"}
+_INTERPRETEURS = {"python", "python3", "ruby", "perl", "php", "node"}
+_PLACEHOLDER = re.compile(r"\{[a-z_]+\}")
 
 
 def _depuis_usage(usage, cible):
-    """Devine « commande + arguments » depuis la première ligne d'usage, si elle est nette.
+    """Devine « commande + arguments » depuis la première ligne d'usage, SEULEMENT si
+    elle est nette ET complète.
 
-    Deux cas sûrs :
-      1. un emplacement explicite ({cible}, {email}, {profil}…) ;
-      2. un exemple de cible reconnaissable (domaine, e-mail, URL, @pseudo, numéro).
-    Dans les deux cas on remplace l'emplacement / l'exemple par la vraie cible. Les
-    usages interactifs ou sans cible devinable sont ignorés : mieux vaut ne rien
-    proposer qu'une mauvaise commande.
+    On ne propose une ligne que si elle a exactement UN emplacement à remplir — la cible
+    — et rien d'autre à fournir. Sont écartés (mieux vaut ne rien proposer qu'une
+    commande cassée) :
+      - un usage avec deux emplacements différents (ex. une URL ET un dictionnaire) ;
+      - un usage qui réclame un dictionnaire, un port, une liste de modules… ;
+      - un usage qui lance un script par « python monscript.py » (introuvable sur le PATH) ;
+      - une ligne où, après avoir mis la cible, un AUTRE morceau ressemble encore à une
+        cible ou à un fichier resté en dur (CeWL, gobuster, ffuf… 26/11/2026).
+    Sinon on remplace l'emplacement ({cible}, {url}…) ou l'exemple de cible
+    reconnaissable (domaine, e-mail, URL, @pseudo, numéro) par la vraie cible.
     """
     if not usage:
         return None
     premier = usage.split(";")[0].split("(")[0].strip()
-    a_placeholder = any(e in premier for e in _PLACEHOLDERS)
+    emplacements = set(_PLACEHOLDER.findall(premier))
+    if len(emplacements) > 1 or (emplacements & _PH_IMPOSSIBLES):
+        return None
+    a_placeholder = bool(emplacements)
     if a_placeholder:
-        premier = re.sub(r"\{[a-z]+\}", "\x00", premier)
+        premier = _PLACEHOLDER.sub("\x00", premier)
     try:
         morceaux = shlex.split(premier)
     except ValueError:
         return None
     if len(morceaux) < 2:
         return None
-    remplace = False
-    sortie = []
-    for jeton in morceaux:
+    if (morceaux[0] in _INTERPRETEURS and not morceaux[1].startswith("-")
+            and re.search(r"\.(py|rb|pl|js|php)$", morceaux[1])):
+        return None
+    remplace, pris, sortie = False, set(), []
+    for i, jeton in enumerate(morceaux):
         if "\x00" in jeton:
-            sortie.append(jeton.replace("\x00", cible)); remplace = True
+            sortie.append(jeton.replace("\x00", cible)); remplace = True; pris.add(i)
         elif not remplace and not a_placeholder and _EXEMPLE_CIBLE.match(jeton):
-            sortie.append(cible); remplace = True
+            sortie.append(cible); remplace = True; pris.add(i)
         else:
             sortie.append(jeton)
     if not remplace:
         return None
+    for i, jeton in enumerate(sortie):
+        if i not in pris and not jeton.startswith("-") and _EXEMPLE_CIBLE.match(jeton):
+            return None
     return sortie[0], sortie[1:]
+
+
+def lancable_ici(nom):
+    """True si l'outil peut VRAIMENT être lancé sur une cible depuis « Lancer un outil ».
+    Sinon, il s'ouvre avec sa propre interface ou s'utilise à la main : on ne le propose
+    pas au lancement et on ne le marque pas « lançable ».
+
+    Trois conditions : mode « cible », une ligne de commande connue, et une ligne SÛRE —
+    soit une recette vérifiée, soit un outil dont Vigie connaît le type de cible (il peut
+    alors valider ce qui est tapé). Un simple « deviné » sur un outil au type de cible
+    inconnu part trop souvent de travers (la cible atterrit sur un fichier, un
+    dictionnaire ou le nom du programme) : on ne le propose pas (26/11/2026)."""
+    fiche_outil = info(nom)
+    if not fiche_outil or fiche_outil["payant"]:
+        return False
+    f = fiches_outils.fiche(nom, fiche_outil)
+    if f.get("mode") != "cible":
+        return False
+    ligne = ligne_lancement(nom, "exemple.fr")
+    if not ligne:
+        return False
+    return bool(ligne[2]) or f.get("cible") not in ("inconnue", "")
 
 
 class Refus(outils.ControleImpossible):

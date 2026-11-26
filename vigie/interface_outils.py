@@ -28,8 +28,11 @@ CSS = """
 .m-auto { background: #fcf0dc; color: #9a5f00; }
 .m-payant { background: #eceef1; color: #5c6676; }
 .m-pret { background: #e6f2ec; color: #2e7d4f; }
+.m-ouvrir { background: #e4edfb; color: #1c4e8a; }
+.m-main { background: #eceef1; color: #5c6676; }
 .m-installe { background: #2e7d4f; color: #fff; }
 .compte-installes { font-size: 15px; margin: 6px 0 0; }
+.legende { font-size: 13px; color: #3c4656; margin: 8px 0 0; line-height: 1.9; }
 .refus { padding: 13px 16px; border-radius: 10px; border-left: 4px solid #b3261e;
   background: #fbeceb; color: #5a1410; margin: 4px 0 14px; line-height: 1.5; }
 .refus b { color: #8a1d16; }
@@ -58,7 +61,8 @@ def _options_passifs(etats=None):
     morceaux = []
     for fam in ("diag", "secu"):
         passifs = [o for o in groupes.get(fam, [])
-                   if not o["payant"] and not o["autorisation_requise"]]
+                   if not o["payant"] and not o["autorisation_requise"]
+                   and lancer_seul.lancable_ici(o["nom"])]
         if not passifs:
             continue
         options = "".join(
@@ -69,7 +73,8 @@ def _options_passifs(etats=None):
     for fam, etiquette in (("audit", "Actifs : seulement sur mes propres cibles"),
                            ("gate", "Offensifs : seulement sur mes propres cibles")):
         actifs = [o for o in groupes.get(fam, [])
-                  if not o["payant"] and o["autorisation_requise"]]
+                  if not o["payant"] and o["autorisation_requise"]
+                  and lancer_seul.lancable_ici(o["nom"])]
         if actifs:
             options = "".join(
                 _option(o, etats.get(o["nom"]))
@@ -130,9 +135,24 @@ def _option(o, installe):
             f" — {e((f.get('role') or o['categorie'])[:60])}</option>")
 
 
+def _statut(o, interfaces):
+    """L'état réel d'un outil pour l'affichage (classe CSS, texte du badge) :
+    lançable ici seulement s'il a une vraie recette ; sinon « à ouvrir » (il a sa propre
+    interface) ou « à la main ». Fini le « lançable » promis puis refusé."""
+    if o["payant"]:
+        return "m-payant", "payant"
+    if lancer_seul.lancable_ici(o["nom"]):
+        return ("m-auto", "autorisation") if o["autorisation_requise"] else ("m-pret", "lançable")
+    if o["nom"] in interfaces:
+        return "m-ouvrir", "à ouvrir"
+    return "m-main", "à la main"
+
+
 def _catalogue_html(etats=None):
+    from . import graphiques
     etats = etats or {}
     e = html.escape
+    interfaces = graphiques.INTERFACES
     groupes = registre.par_famille()
     titres = registre.FAMILLES
     blocs = []
@@ -140,12 +160,8 @@ def _catalogue_html(etats=None):
         liste = sorted(groupes.get(fam, []), key=lambda x: x["nom"].lower())
         items = []
         for o in liste:
-            if o["payant"]:
-                marque = "<span class='marque m-payant'>payant</span>"
-            elif o["autorisation_requise"]:
-                marque = "<span class='marque m-auto'>autorisation</span>"
-            else:
-                marque = "<span class='marque m-pret'>lançable</span>"
+            classe, texte = _statut(o, interfaces)
+            marque = f"<span class='marque {classe}'>{texte}</span>"
             if etats.get(o["nom"]):
                 marque += "<span class='marque m-installe'>installé</span>"
             items.append(f"<li>{e(o['nom'])}{marque}</li>")
@@ -234,6 +250,11 @@ Pour toute autre cible, il faut une autorisation signée.</p>
 <p class="compte-installes"><b>{installes}</b> {'outils' if installes > 1 else 'outil'} sur
 {len(gratuits)} {'sont installés' if installes > 1 else 'est installé'} sur cette machine
 (marqués <span class='marque m-installe'>installé</span>).</p>
+<p class="legende"><span class='marque m-pret'>lançable</span> Vigie le lance ici ·
+<span class='marque m-auto'>autorisation</span> seulement sur tes propres cibles ·
+<span class='marque m-ouvrir'>à ouvrir</span> s'ouvre avec sa propre fenêtre
+(<a href="/ouvrir">Ouvrir un outil</a>) ·
+<span class='marque m-main'>à la main</span> s'utilise à la main.</p>
 {_catalogue_html(etats)}</div>
 {_formulaire_brancher(etats)}
 <div class="corps"><p><a href="/">Accueil</a> · <a href="/manuel">Outils manuels</a></p></div>

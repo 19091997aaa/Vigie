@@ -80,7 +80,7 @@ FICHES = {
     "theharvester": _f("cherche les adresses e-mail et sous-domaines publics d'un domaine",
                        "domaine"),
     "metagoofil": _f("cherche les documents publics (PDF, Word, Excel) d'un domaine",
-                     "domaine"),
+                     "domaine", ligne=["metagoofil", "-d", "{cible}", "-t", "pdf,doc,xls"]),
     "owasp amass": _f("liste les sous-domaines d'un domaine", "domaine"),
     "subfinder": _f("liste les sous-domaines d'un domaine à partir de sources publiques",
                     "domaine"),
@@ -97,6 +97,26 @@ FICHES = {
     "arjun": _f("découvre les paramètres cachés qu'une page accepte (utile pour trouver "
                 "des entrées oubliées sur un endpoint)", "url",
                 ligne=["arjun", "-u", "{cible}", "--stable"]),
+    # --- Scanners web (actifs/offensifs : seulement sur tes propres cibles) --
+    "nikto": _f("cherche sur un serveur web les fichiers dangereux et les logiciels "
+                "périmés", "url", ligne=["nikto", "-h", "{cible}"]),
+    "wapiti": _f("teste un site à la recherche de failles web (formulaires, pages)",
+                 "url", ligne=["wapiti", "-u", "{cible}"]),
+    "katana": _f("parcourt un site pour lister toutes ses pages et points d'entrée",
+                 "url", ligne=["katana", "-u", "{cible}"]),
+    "dalfox": _f("cherche les failles d'injection de script (XSS) sur une page", "url",
+                 ligne=["dalfox", "url", "{cible}"]),
+    "dirsearch": _f("cherche les dossiers et fichiers cachés d'un site (pages d'admin, "
+                    "sauvegardes oubliées…)", "url", ligne=["dirsearch", "-u", "{cible}"]),
+    "sqlmap": _f("teste si une page est vulnérable à l'injection SQL (vol de base de "
+                 "données)", "url", ligne=["sqlmap", "-u", "{cible}", "--batch"]),
+    "cewl": _f("construit une liste de mots à partir du contenu d'un site (utile pour "
+               "tester la robustesse des mots de passe)", "url",
+               ligne=["cewl", "-d", "2", "-m", "5", "{cible}"]),
+    "tlsx": _f("lit et analyse le certificat de sécurité (HTTPS) d'un domaine", "domaine",
+               ligne=["tlsx", "-u", "{cible}", "-san", "-cn", "-silent"]),
+    "wpprobe": _f("repère les extensions et thèmes WordPress d'un site et leurs failles "
+                  "connues", "url", ligne=["wpprobe", "scan", "-u", "{cible}"]),
     "lighthouse": _f("note la qualité d'un site : vitesse, bonnes pratiques, protections",
                      "url", prealable="Google Chrome ou Chromium doit être installé"),
     "unlighthouse": _f("passe Lighthouse sur toutes les pages d'un site", "url",
