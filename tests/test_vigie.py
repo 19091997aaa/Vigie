@@ -2035,7 +2035,7 @@ class TestExplicationsEnFrancais(unittest.TestCase):
         outil = {"nom": "Uptime Kuma", "lien": "https://github.com/louislam/uptime-kuma"}
         self.assertEqual(installeur.methodes(
             outil, install="docker louislam/uptime-kuma ; npm ; git clone (Node.js 18+)"), [])
-        self.assertIn("pas de méthode", installeur.installer_un(outil)["raison"])
+        self.assertIn("à la main", installeur.installer_un(outil)["raison"])
         go = installeur.methodes({"nom": "G", "lien": "https://github.com/a/g"},
                                  install="go build ./...")
         self.assertEqual([l for l, _ in go], ["go (dépôt)"])
@@ -3257,3 +3257,87 @@ class RapportDiagComplet(Base):
                      if l["outil"] == "dnsrecon")
         self.assertEqual(ligne["etat"], "non_realise")
         self.assertIn("Vigie a lu lui-même", ligne["texte"])
+
+
+class TestTriOutilsALaMain(unittest.TestCase):
+    """Tri du 26/11/2026 des 84 outils « à poser à la main » de la VM Ubuntu."""
+
+    def test_nouvelles_recettes(self):
+        from vigie import recettes
+        for nom in ("Nuclei Templates", "Maester", "Monkey365", "OWASP ZAP"):
+            self.assertIsNotNone(recettes.pour(nom, "linux"), nom)
+            self.assertIsNone(recettes.manuel(nom, "linux"), nom)
+
+    def test_chaque_manuel_a_une_raison_et_pas_ici_est_un_manuel(self):
+        from vigie import recettes
+        self.assertTrue(recettes.PAS_ICI <= set(recettes.MANUELS))
+        for nom, (raison, _) in recettes.MANUELS.items():
+            self.assertTrue(raison, nom)
+        for utile in ("openvas (greenbone community)", "burp suite community", "scubagear"):
+            self.assertFalse(recettes.pas_ici(utile))
+        self.assertTrue(recettes.pas_ici("Metasploit Framework"))
+
+    def test_bilan_separe_utiles_et_rien_a_faire(self):
+        from vigie import installeur
+        comptes = [{"nom": "Wazuh", "installe": False, "manuel": True, "raison": "x"},
+                   {"nom": "Ghidra", "installe": False, "manuel": True, "raison": "x"},
+                   {"nom": "Zeek", "installe": False, "manuel": True, "raison": "x"}]
+        bilan = installeur.resume(comptes)
+        self.assertEqual((bilan["a_la_main"], bilan["a_poser"], bilan["pas_ici"]), (3, 1, 2))
+
+    def test_sommes_powershell_en_utf16(self):
+        from vigie import recettes
+        texte = ("a" * 64 + " *powershell-7.7.0-linux-x64.tar.gz\r\n").encode("utf-16")
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = os.path.join(dossier, "hashes.sha256")
+            with open(chemin, "wb") as f:
+                f.write(texte)
+            sommes = recettes.lire_sommes(recettes.lire_texte(chemin))
+        self.assertEqual(sommes, {"powershell-7.7.0-linux-x64.tar.gz": "a" * 64})
+
+    def test_archive_sans_dossier_de_tete(self):
+        import io
+        import tarfile
+        from vigie import recettes
+        with tempfile.TemporaryDirectory() as dossier:
+            archive = os.path.join(dossier, "ps.tar.gz")
+            with tarfile.open(archive, "w:gz") as tar:
+                for nom in ("pwsh", "Modules/a.psd1", "../piege"):
+                    info = tarfile.TarInfo(nom)
+                    info.size = 2
+                    tar.addfile(info, io.BytesIO(b"ok"))
+            cible = os.path.join(dossier, "powershell")
+            recettes._extraire_tout(archive, cible, retirer_tete=False)
+            self.assertTrue(os.path.exists(os.path.join(cible, "pwsh")))
+            self.assertTrue(os.path.exists(os.path.join(cible, "Modules", "a.psd1")))
+            self.assertFalse(os.path.exists(os.path.join(dossier, "piege")))
+
+    def test_zap_versions_refuse_une_autre_source(self):
+        from vigie import recettes
+        modele = ("<ZAP><core><linux><url>{}</url><hash>SHA-256:{}</hash></linux>"
+                  "</core></ZAP>")
+        bonne = "https://github.com/zaproxy/zaproxy/releases/download/v2.17.0/ZAP_2.17.0_Linux.tar.gz"
+        self.assertEqual(recettes.lire_zap_versions(modele.format(bonne, "B" * 64)),
+                         (bonne, "b" * 64))
+        self.assertEqual(recettes.lire_zap_versions(
+            modele.format("https://exemple.com/zap.tar.gz", "b" * 64)), (None, None))
+        self.assertEqual(recettes.lire_zap_versions("pas du xml"), (None, None))
+
+    def test_module_powershell_ecrit_un_lanceur(self):
+        from vigie import recettes
+        vrais = (recettes.powershell_a_part, recettes._lancer)
+        self.addCleanup(lambda: (setattr(recettes, "powershell_a_part", vrais[0]),
+                                 setattr(recettes, "_lancer", vrais[1])))
+        appels = []
+        recettes.powershell_a_part = lambda: ("/opt/pwsh", "")
+        recettes._lancer = lambda commande, **k: appels.append(commande) or (True, "", "")
+        with tempfile.TemporaryDirectory() as dossier, \
+                mock.patch.dict(os.environ, {"VIGIE_OUTILS_RACINE": dossier,
+                                             "PIPX_BIN_DIR": os.path.join(dossier, "bin")}):
+            reussi, _, commandes = recettes.pour("Maester", "linux")[1]()
+            with open(os.path.join(dossier, "bin", "maester"), encoding="utf-8") as lu:
+                lanceur = lu.read()
+        self.assertTrue(reussi)
+        self.assertEqual(commandes, ["maester"])
+        self.assertIn("Install-Module -Name Maester -Repository PSGallery", appels[0][-1])
+        self.assertIn("Get-Help Invoke-Maester", lanceur)

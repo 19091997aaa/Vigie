@@ -176,6 +176,16 @@ Rappel honnête : Vigie pilote le **moteur en ligne de commande** des outils (so
 traduites) ; services (Wazuh, OpenVAS), applis (Burp, Ghidra) et exploration à la main
 restent dans l'interface de l'outil.
 
+**Tri des 84 outils « à la main » (26/11/2026)** : 4 passent en automatique
+(`recettes.py`) : Nuclei Templates (`nuclei -update-templates`, sinon copie du dépôt),
+Maester et Monkey365 (audit Microsoft 365 : PowerShell 7 officiel posé à part, empreinte
+vérifiée, puis PowerShell Gallery), OWASP ZAP (archive officielle, empreinte lue dans
+`ZapVersions.xml`, Java d'Ubuntu si absent). Chaque outil à la main a sa vraie raison ;
+`recettes.PAS_ICI` = rien à faire sur la machine de Vigie (chez le client, Windows,
+offensif, doublon) et le bilan les compte à part (`pas_ici` / `a_poser`). Utiles à la main :
+OpenVAS et Wazuh (plus tard sur un serveur loué), Burp, ScubaGear et HardeningKitty (PC
+Windows), BloodHound (client avec Active Directory).
+
 **Relecture du 1er rapport complet (26/11/2026, 68/100)** : un texte de conséquence peut
 avoir des **variantes** selon la situation réelle (`consequences.VARIANTES`, ex. DMARC en
 quarantaine ≠ absent). Une même mesure = **une seule ligne** (vitesse de l'accueil : clé

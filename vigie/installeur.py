@@ -528,6 +528,10 @@ def resume(comptes_rendus):
     prets = [c for c in reussis if c.get("repond")]
     # .get : un compte rendu repris d'un ancien rapport peut ne pas porter « methode ».
     a_la_main = [c for c in comptes_rendus if not c["installe"] and c.get("manuel")]
+    # Parmi eux, ceux qui n'ont rien à faire sur cette machine (chez le client, Windows,
+    # offensif, doublon) : ni une panne, ni un travail à faire (tri du 26/11/2026).
+    from . import recettes
+    pas_ici = [c for c in a_la_main if recettes.pas_ici(c.get("nom"))]
     return {"total": len(comptes_rendus), "installes": len(reussis),
             "prets": len(prets),
             "coquilles": len(reussis) - len(prets),
@@ -535,6 +539,8 @@ def resume(comptes_rendus):
             # Parmi les échecs : ceux qui se posent à la main (serveurs, Windows, Kali…)
             # et les vraies pannes, à regarder.
             "a_la_main": len(a_la_main),
+            "pas_ici": len(pas_ici),
+            "a_poser": len(a_la_main) - len(pas_ici),
             "vrais_echecs": len(comptes_rendus) - len(reussis) - len(a_la_main),
             "par_methode": {m: sum(1 for c in reussis if c.get("methode", "") == m)
                             for m in sorted({c.get("methode", "") for c in reussis})}}

@@ -509,8 +509,11 @@ def main(arguments=None):
         print(f"  {bilan['prets']:4}  prêts (installés ET ils démarrent)")
         print(f"  {bilan['coquilles']:4}  installés mais ne démarrent pas")
         print(f"  {bilan['echecs']:4}  pas installés :")
-        print(f"        {bilan['a_la_main']:4}  à poser à la main (serveurs, Windows, Kali, "
-              "Kubernetes… : ce n'est pas une panne)")
+        print(f"        {bilan['a_la_main']:4}  à poser à la main (ce n'est pas une panne) :")
+        print(f"              {bilan.get('a_poser', bilan['a_la_main']):4}  utiles à Vigie "
+              "(gros serveurs, appli, PC Windows)")
+        print(f"              {bilan.get('pas_ici', 0):4}  rien à faire ici (chez le client, "
+              "Windows, attaque, doublon ou inutile pour une TPE)")
         print(f"        {bilan['vrais_echecs']:4}  vrais échecs (raison dans le compte rendu)")
         if bilan["par_methode"]:
             print("  Comment les outils installés ont été posés :")

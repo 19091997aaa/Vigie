@@ -225,13 +225,15 @@ def _extraire_un(archive, membre_voulu, destination):
     return False
 
 
-def _extraire_tout(archive, destination):
-    """Déballe une archive dans destination en retirant son dossier de tête."""
+def _extraire_tout(archive, destination, retirer_tete=True):
+    """Déballe une archive dans destination en retirant son dossier de tête
+    (retirer_tete=False : archive sans dossier de tête, comme celle de PowerShell)."""
     os.makedirs(destination, exist_ok=True)
     racine = os.path.realpath(destination)
     with tarfile.open(archive) as tar:
         for membre in tar.getmembers():
-            morceaux = membre.name.split("/", 1)
+            nom = membre.name[2:] if membre.name.startswith("./") else membre.name
+            morceaux = nom.split("/", 1) if retirer_tete else ["", nom]
             if len(morceaux) < 2 or not morceaux[1]:
                 continue
             cible = os.path.realpath(os.path.join(destination, morceaux[1]))
@@ -582,6 +584,193 @@ def npm_moderne(paquet, binaires):
     return recette
 
 
+# ---------------------------------------------------------------------------
+# Ajouts du 26/11/2026 (tri des 84 outils « à poser à la main ») : trois outils utiles
+# à Vigie avaient en fait une source officielle vérifiable.
+
+def lire_texte(chemin):
+    """Lit un petit fichier texte, qu'il soit en UTF-8 ou en UTF-16 (le fichier
+    d'empreintes de PowerShell est en UTF-16 : lu en UTF-8, il paraissait vide)."""
+    with open(chemin, "rb") as lu:
+        brut = lu.read()
+    if brut.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return brut.decode("utf-16", errors="replace")
+    return brut.decode("utf-8-sig", errors="replace")
+
+
+def nuclei_modeles():
+    """Nuclei Templates : les « modèles » de tests de Nuclei (des données, pas un
+    programme). Méthode documentée : « nuclei -update-templates » ; si Nuclei n'est pas
+    (encore) là, copie du dépôt exact. Rien à « démarrer »."""
+    def recette():
+        from . import outils
+        env = dict(os.environ, PATH=outils.chemin_recherche())
+        if shutil.which("nuclei", path=env["PATH"]):
+            reussi, message, _ = _lancer(["nuclei", "-update-templates"], delai=1800, env=env)
+            if reussi:
+                return True, "", None
+        return depot_donnees("https://github.com/projectdiscovery/nuclei-templates",
+                             "nuclei-templates")()
+    return recette
+
+
+VERROU_PWSH = threading.Lock()
+DEPOT_PWSH = "PowerShell/PowerShell"
+
+
+def powershell_a_part():
+    """PowerShell 7 posé dans le dossier de Vigie : programme officiel publié par
+    Microsoft sur GitHub, empreinte vérifiée avec son fichier hashes.sha256.
+    Rien n'est touché dans le système (pas de dépôt apt ajouté).
+    Renvoie (chemin de pwsh, message d'erreur)."""
+    with VERROU_PWSH:
+        return _powershell_a_part()
+
+
+def _powershell_a_part():
+    from . import outils
+    deja = shutil.which("pwsh", path=outils.chemin_recherche())
+    if deja:
+        return deja, ""
+    racine, commandes = dossiers()
+    dossier = os.path.join(racine, "powershell")
+    pwsh = os.path.join(dossier, "pwsh")
+    if os.path.exists(pwsh):
+        return pwsh, ""
+    arch = _architecture()
+    systeme = {"linux": "linux", "darwin": "osx"}.get(
+        "darwin" if sys.platform == "darwin" else
+        "linux" if sys.platform.startswith("linux") else "")
+    if not arch or not systeme:
+        return None, f"système non prévu ({sys.platform} {platform.machine()})"
+    base = f"https://github.com/{DEPOT_PWSH}/releases/latest/download/"
+    with tempfile.TemporaryDirectory() as travail:
+        try:
+            _telecharger(base + "hashes.sha256", os.path.join(travail, "sommes.txt"))
+            sommes = lire_sommes(lire_texte(os.path.join(travail, "sommes.txt")).lower())
+            nom = next((n for n in sorted(sommes) if re.fullmatch(
+                rf"powershell-[\d.]+-{systeme}-{arch}\.tar\.gz", n)), None)
+            if not nom:
+                return None, "archive de PowerShell introuvable sur sa page officielle"
+            chemin = os.path.join(travail, nom)
+            _telecharger(base + nom, chemin)
+        except OSError as erreur:
+            return None, f"téléchargement de PowerShell impossible : {erreur}"
+        if _empreinte(chemin) != sommes[nom]:
+            return None, "empreinte de PowerShell incorrecte : installation refusée"
+        if os.path.isdir(dossier):
+            shutil.rmtree(dossier)
+        _extraire_tout(chemin, dossier, retirer_tete=False)
+    if not os.path.exists(pwsh):
+        return None, "pwsh absent de l'archive de PowerShell"
+    os.chmod(pwsh, os.stat(pwsh).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    ecrire_lanceur(os.path.join(commandes, "pwsh"), [f'exec "{pwsh}" "$@"'])
+    return pwsh, ""
+
+
+def module_powershell(module, commande_ps, commande):
+    """Un module PowerShell (Maester, Monkey365) : PowerShell 7 à part, puis la ligne de
+    la documentation de l'outil, « Install-Module -Name <module> -Scope CurrentUser »,
+    depuis la PowerShell Gallery (le magasin officiel de Microsoft). Aucun droit
+    administrateur. Un lanceur au nom de l'outil charge le module ; sans argument, il
+    affiche l'aide (c'est ce que l'installeur vérifie)."""
+    def recette():
+        pwsh, message = powershell_a_part()
+        if not pwsh:
+            return False, message, []
+        reussi, message, _ = _lancer([pwsh, "-NoLogo", "-NoProfile", "-NonInteractive",
+                                      "-Command",
+                                      f"Install-Module -Name {module} -Repository PSGallery "
+                                      "-Scope CurrentUser -Force -AllowClobber "
+                                      "-ErrorAction Stop"], delai=1800)
+        if not reussi:
+            return False, "PowerShell Gallery : " + message, []
+        _, commandes = dossiers()
+        charger = f"Import-Module {module} -ErrorAction Stop"
+        ecrire_lanceur(os.path.join(commandes, commande), [
+            'case "$1" in ""|-h|--help)',
+            f'  exec "{pwsh}" -NoLogo -NoProfile -Command "{charger}; Get-Help {commande_ps}" ;;',
+            "esac",
+            f'exec "{pwsh}" -NoLogo -NoProfile -Command "{charger}; {commande_ps} $*"'])
+        return True, "", [commande]
+    return recette
+
+
+ZAP_VERSIONS = "https://raw.githubusercontent.com/zaproxy/zap-admin/master/ZapVersions.xml"
+ZAP_SOURCE = "https://github.com/zaproxy/zaproxy/releases/download/"
+
+
+def version_java():
+    """Le numéro principal de Java (17, 21…), ou 0 s'il est absent."""
+    programme = shutil.which("java")
+    if not programme:
+        return 0
+    try:
+        fini = subprocess.run([programme, "-version"], capture_output=True, text=True,
+                              timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return 0
+    trouve = re.search(r'version "(\d+)', (fini.stderr or "") + (fini.stdout or ""))
+    return int(trouve.group(1)) if trouve else 0
+
+
+def lire_zap_versions(texte):
+    """(adresse, empreinte) de l'archive Linux de ZAP, lues dans ZapVersions.xml : le
+    fichier que ZAP lui-même lit pour se mettre à jour. L'adresse doit pointer vers la
+    page « Releases » du dépôt exact de ZAP, sinon on refuse."""
+    import xml.etree.ElementTree as ET
+    try:
+        linux = ET.fromstring(texte).find("core/linux")
+    except ET.ParseError:
+        return None, None
+    if linux is None:
+        return None, None
+    adresse = (linux.findtext("url") or "").strip()
+    empreinte = (linux.findtext("hash") or "").strip().lower()
+    if empreinte.startswith("sha-256:"):
+        empreinte = empreinte[len("sha-256:"):]
+    if not adresse.startswith(ZAP_SOURCE) or not re.fullmatch(r"[0-9a-f]{64}", empreinte):
+        return None, None
+    return adresse, empreinte
+
+
+def zap_officiel():
+    """OWASP ZAP sous Linux : l'archive officielle (GitHub du projet), empreinte vérifiée
+    avec le fichier de versions de ZAP. Il lui faut Java 17 ou plus : s'il manque, on pose
+    celui d'Ubuntu (apt, « default-jre-headless »)."""
+    def recette():
+        if version_java() < 17:
+            from . import installeur
+            apt = next(c for l, _, c in installeur.DOCUMENTEES if l.startswith("apt"))
+            reussi, message, _ = installeur._lancer(apt + ["default-jre-headless"])
+            if not reussi or version_java() < 17:
+                return False, "Java 17 ou plus manquant : " + (message or "apt a échoué"), []
+        racine, commandes = dossiers()
+        dossier = os.path.join(racine, "ZAP")
+        with tempfile.TemporaryDirectory() as travail:
+            try:
+                _telecharger(ZAP_VERSIONS, os.path.join(travail, "versions.xml"))
+                adresse, attendue = lire_zap_versions(
+                    lire_texte(os.path.join(travail, "versions.xml")))
+                if not adresse:
+                    return False, "fichier de versions de ZAP illisible", []
+                chemin = os.path.join(travail, "zap.tar.gz")
+                _telecharger(adresse, chemin, delai=1800)
+            except OSError as erreur:
+                return False, f"téléchargement impossible : {erreur}", []
+            if _empreinte(chemin) != attendue:
+                return False, "empreinte du fichier téléchargé incorrecte : installation refusée", []
+            if os.path.isdir(dossier):
+                shutil.rmtree(dossier)
+            _extraire_tout(chemin, dossier)
+        if not os.path.exists(os.path.join(dossier, "zap.sh")):
+            return False, "zap.sh absent de l'archive", []
+        ecrire_lanceur(os.path.join(commandes, "zaproxy"),
+                       [f'exec "{os.path.join(dossier, "zap.sh")}" "$@"'])
+        return True, "", ["zaproxy"]
+    return recette
+
+
 # nom (minuscules, comme dans le catalogue) -> (libellé, recette, systèmes concernés)
 TOUS = ("linux", "darwin")
 OFFICIEL = "programme officiel GitHub, empreinte vérifiée (recette Vigie)"
@@ -648,6 +837,19 @@ RECETTES = {
     # Des listes de mots (pour ffuf, Gobuster…), pas un programme. « apt » : Kali seulement.
     "seclists": ("copie du dépôt GitHub (recette Vigie)",
                  depot_donnees("https://github.com/danielmiessler/SecLists", "SecLists"), TOUS),
+    # --- Ajoutés le 26/11/2026 (tri des outils « à poser à la main »). ---
+    # Les modèles de tests de Nuclei : sans eux, Nuclei (audit sur autorisation) ne teste rien.
+    "nuclei templates": ("modèles Nuclei (documenté, recette Vigie)", nuclei_modeles(), TOUS),
+    # Audit Microsoft 365 du client (avec son accord et SON compte) : la plupart des TPE,
+    # dont les cabinets comptables, sont sur Microsoft 365. Marchent sous Linux avec
+    # PowerShell 7.
+    "maester": ("PowerShell 7 officiel + PowerShell Gallery (recette Vigie)",
+                module_powershell("Maester", "Invoke-Maester", "maester"), TOUS),
+    "monkey365": ("PowerShell 7 officiel + PowerShell Gallery (recette Vigie)",
+                  module_powershell("monkey365", "Invoke-Monkey365", "monkey365"), TOUS),
+    # Test des sites web pendant un audit signé. Le paquet « zaproxy » n'existe que sur Kali.
+    "owasp zap": ("programme officiel ZAP, empreinte vérifiée (recette Vigie)",
+                  zap_officiel(), ("linux",)),
 }
 
 
@@ -679,7 +881,6 @@ MANUELS = {
                                    ("linux",)),
     "metasploit framework": (KALI + " ; ailleurs, son installeur officiel est un script à "
                              "exécuter, ce que Vigie refuse", ("linux",)),
-    "owasp zap": (KALI + " ; ailleurs, installeur officiel (Java) sur zaproxy.org", ("linux",)),
     "airgeddon": (KALI + " ; ailleurs, il se lance depuis son dépôt en administrateur",
                   ("linux",)),
     "kismet": (KALI + " ; ailleurs, dépôt officiel sur kismetwireless.net", ("linux",)),
@@ -695,6 +896,113 @@ MANUELS = {
     "owasp dependency-check": ("programme Java à télécharger (zip) sur sa page officielle",
                                ("linux",)),
 }
+
+# --- Tri du 26/11/2026 : les 84 outils « à poser à la main » de la 1re installation
+# complète sur la VM Ubuntu (8 Go). Avant, la plupart disaient seulement « pas de
+# méthode automatique sûre ». Chacun a maintenant sa vraie raison, et ceux qui n'ont
+# rien à faire sur la machine de Vigie sont comptés à part (PAS_ICI) : ce n'est ni une
+# panne ni un travail à faire.
+CHEZ_CLIENT = ("protection à installer chez le client pendant la sécurisation, pas sur la "
+               "machine de Vigie")
+SUR_WINDOWS = "outil PowerShell pour Windows : il se lance sur un PC Windows, pas ici"
+INUTILE = "pas utile pour Vigie pour l'instant"
+OFFENSIF = "outil d'attaque (famille GATE) : pas dans Vigie tant que le labo n'existe pas"
+GROS_SERVEUR = ("gros serveur (plusieurs Go de mémoire) : trop lourd pour la VM, à poser "
+                "plus tard sur un serveur loué")
+
+# Utiles, mais à poser à la main (ils restent comptés « à poser à la main »).
+MANUELS.update({
+    "openvas (greenbone community)": (
+        GROS_SERVEUR + " ; utile pour l'audit sur autorisation (conteneurs Greenbone "
+        "Community)", TOUS),
+    "wazuh": (GROS_SERVEUR + " ; utile pour une offre de surveillance des postes", TOUS),
+    "burp suite community": ("application à télécharger sur portswigger.net, puis à "
+                             "brancher dans « Je l'ai installé à la main »", TOUS),
+    "scubagear": (SUR_WINDOWS + " ; utile pour l'audit Microsoft 365 (Maester et "
+                  "Monkey365 font le même travail ici)", TOUS),
+    "hardeningkitty": (SUR_WINDOWS + " ; utile pendant la sécurisation des postes du "
+                       "client", TOUS),
+    "bloodhound": ("serveur avec Docker ; seulement pour un client qui a un Active "
+                   "Directory (rare chez une TPE)", TOUS),
+})
+
+_PAS_ICI = {
+    # Diag gratuit : des applis, extensions ou plateformes ; Vigie fait déjà le travail.
+    "datashare": "appli de recherche dans des documents : " + INUTILE,
+    "invid-weverify": "extension de navigateur (vérification d'images) : " + INUTILE,
+    "web-check": "site à héberger qui refait les contrôles que Vigie fait déjà",
+    "flowsint": "appli d'enquête à la main avec ses propres serveurs : " + INUTILE,
+    "reconftw": "gros script qui réinstalle des dizaines d'outils que Vigie a déjà posés",
+    "zmap": "scan d'internet entier : " + INUTILE,
+    "angry ip scanner": "application graphique ; Nmap (installé) fait le même travail",
+    # Audit interne : des scripts à déposer sur la machine auditée.
+    "privesccheck": "script à déposer sur le poste Windows audité, rien à installer ici",
+    "linux-smart-enumeration": "script à déposer sur le serveur Linux audité, rien à "
+                               "installer ici",
+    "complianceascode": "durcissement de serveurs Linux (rare chez une TPE) : " + INUTILE,
+    # Cloud Azure et Windows : rare chez une TPE, ou offensif.
+    "microburst": "audit Azure (rare chez une TPE) : " + INUTILE,
+    "microsoft365dsc": "gestion de configuration Microsoft 365 pour grandes entreprises : "
+                       + INUTILE,
+    "aadinternals": OFFENSIF,
+    "azurehound": "audit Azure (rare chez une TPE) : " + INUTILE,
+    "psrule for azure": "audit Azure (rare chez une TPE) : " + INUTILE,
+    "locksmith": "Active Directory (rare chez une TPE) : " + INUTILE,
+    "group3r": "Active Directory (rare chez une TPE) : " + INUTILE,
+    "exploit-db (searchsploit)": OFFENSIF,
+    # Wi-Fi : carte spéciale, outils d'attaque.
+    "hcxtools": OFFENSIF + " (Wi-Fi, carte spéciale)",
+    "hcxdumptool": OFFENSIF + " (Wi-Fi, carte spéciale)",
+    # Analyse poussée (rétro-ingénierie, enquête après incident).
+    "ghidra": "rétro-ingénierie de programmes : " + INUTILE,
+    "cyberchef": "s'utilise en ligne (gchq.github.io/CyberChef), rien à installer",
+    "autopsy": "enquête sur un disque après incident : " + INUTILE,
+    "outils zimmerman": "enquête Windows après incident : " + INUTILE,
+    "chainsaw": "lecture des journaux Windows après incident : " + INUTILE,
+    "hayabusa": "lecture des journaux Windows après incident : " + INUTILE,
+    # Surveillance et protections : se posent chez le client.
+    "ntopng (community)": CHEZ_CLIENT,
+    "zeek": CHEZ_CLIENT,
+    "arkime": CHEZ_CLIENT,
+    "uptime kuma": CHEZ_CLIENT,
+    "vaultwarden": CHEZ_CLIENT,
+    "pi-hole": CHEZ_CLIENT,
+    "osquery": CHEZ_CLIENT,
+    "falco": CHEZ_CLIENT,
+    "pfsense ce": CHEZ_CLIENT + " (c'est un pare-feu complet)",
+    "opnsense": CHEZ_CLIENT + " (c'est un pare-feu complet)",
+    "devsec hardening": CHEZ_CLIENT,
+    "harden-windows-security": CHEZ_CLIENT + " (Windows)",
+    "snort 3": CHEZ_CLIENT,
+    "owasp crs": CHEZ_CLIENT + " (règles pour le serveur web)",
+    "caddy waf": CHEZ_CLIENT + " (pare-feu du serveur web)",
+    "sysmon-modular": CHEZ_CLIENT + " (Windows)",
+    "misp": "plateforme de partage de menaces pour grandes équipes : " + INUTILE,
+    # Simulation d'attaque et IA offensive.
+    "atomic red team": OFFENSIF,
+    "infection monkey": OFFENSIF,
+    "shannon": OFFENSIF,
+    "deepaudit": OFFENSIF,
+    "decepticon": OFFENSIF,
+    "redamon": OFFENSIF,
+    "open-kritt": OFFENSIF,
+    "burp ai agent": OFFENSIF,
+}
+MANUELS.update({nom: (raison, TOUS) for nom, raison in _PAS_ICI.items()})
+
+# Déjà dans MANUELS plus haut, mais rien à faire sur la machine de Vigie non plus.
+PAS_ICI = set(_PAS_ICI) | {
+    "geo-sleuth", "xingrin", "arl-next", "mitre caldera", "grr rapid response",
+    "velociraptor", "crowdsec", "coraza waf", "hardentools", "artex", "xalgorix",
+    "adalanche", "dorkagent", "sparrow-wifi", "peass-ng (winpeas/linpeas)",
+    "metasploit framework", "airgeddon", "kismet", "veracrypt", "rustscan", "feroxbuster",
+    "kubescape", "kube-bench", "owasp dependency-check"}
+
+
+def pas_ici(nom):
+    """Vrai pour un outil qu'il n'y a pas lieu d'installer sur la machine de Vigie
+    (chez le client, Windows, offensif, doublon ou inutile pour une TPE)."""
+    return (nom or "").strip().lower() in PAS_ICI
 
 
 def manuel(nom, systeme=None):
