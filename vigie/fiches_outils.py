@@ -94,6 +94,9 @@ FICHES = {
               "d'Internet", "domaine"),
     "httpx": _f("vérifie si un site répond et relève son titre et sa technologie", "url"),
     "whatweb": _f("reconnaît les technologies d'un site (WordPress, serveur…)", "url"),
+    "arjun": _f("découvre les paramètres cachés qu'une page accepte (utile pour trouver "
+                "des entrées oubliées sur un endpoint)", "url",
+                ligne=["arjun", "-u", "{cible}", "--stable"]),
     "lighthouse": _f("note la qualité d'un site : vitesse, bonnes pratiques, protections",
                      "url", prealable="Google Chrome ou Chromium doit être installé"),
     "unlighthouse": _f("passe Lighthouse sur toutes les pages d'un site", "url",
