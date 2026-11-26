@@ -22,6 +22,12 @@ MOTIFS = [
     (r"undefined method [`']exists\?'",
      "Cette version de l'outil est trop ancienne pour le Ruby installé sur la machine "
      "(Ruby 3.2 et plus). Il faut une version plus récente de l'outil."),
+    (r"Skipped .* due to errors|URL doesn't seem to be a webpage",
+     "Arjun a renoncé : il n'a pas réussi à obtenir une réponse régulière de la page "
+     "pendant son test de départ. En général, la cible a répondu trop lentement, a "
+     "renvoyé une page qui change à chaque fois, ou bloque les robots. On peut "
+     "réessayer : si ça recommence, viser une page précise du site (par exemple se "
+     "terminant par « .php » ou « /api ») plutôt que l'accueil."),
     # --- Réseau -----------------------------------------------------------
     (r"temporary failure in name resolution|could not resolve host|name or service not "
      r"known|nodename nor servname|getaddrinfo failed|no such host|NXDOMAIN|"

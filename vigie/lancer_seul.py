@@ -299,7 +299,11 @@ def _lancer_commande(commande, arguments, delai):
                 "raison": f"dépassement de {delai} s",
                 "secondes": round(time.monotonic() - depart, 1), "sortie": ""}
     secondes = round(time.monotonic() - depart, 1)
-    sortie = (fini.stdout or "") + ("\n" + fini.stderr if fini.returncode else "")
-    return {"lance": True, "echoue": fini.returncode != 0 or not (fini.stdout or "").strip(),
+    # On retire les codes couleur ANSI : sinon l'écran affiche « [92m », « [0m »… au
+    # lieu du texte (beaucoup d'outils colorent même sans vrai terminal, ex. Arjun).
+    propre = outils.sans_couleurs(fini.stdout or "")
+    erreurs_propres = outils.sans_couleurs(fini.stderr or "")
+    sortie = propre + ("\n" + erreurs_propres if fini.returncode else "")
+    return {"lance": True, "echoue": fini.returncode != 0 or not propre.strip(),
             "raison": "", "secondes": secondes, "code": fini.returncode, "sortie": sortie,
-            "erreurs": fini.stderr or ""}
+            "erreurs": erreurs_propres}

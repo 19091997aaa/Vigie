@@ -425,6 +425,17 @@ def _texte(contenu):
     return contenu or ""
 
 
+# Beaucoup d'outils colorent leur sortie avec des codes ANSI (« ^[[92m », « ^[[0m »…)
+# même quand ils ne parlent pas à un vrai terminal. À l'écran, ces codes sont du
+# charabia (« [92m », « [1;91m[-][0m »). On les retire avant tout affichage.
+_ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+
+
+def sans_couleurs(texte):
+    """Retire les codes couleur ANSI d'une sortie d'outil (pour l'afficher proprement)."""
+    return _ANSI.sub("", texte or "")
+
+
 def pourquoi(resultat):
     """Pourquoi un outil n'a rien donné, en français : l'explication d'un message connu
     (vigie/erreurs.py), sinon la dernière ligne de l'outil telle quelle."""
