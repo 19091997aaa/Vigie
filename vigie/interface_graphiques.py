@@ -1,0 +1,180 @@
+"""L'onglet « Ouvrir un outil » : les outils qui ont LEUR interface (fenêtre, page web,
+console), ouverts tels quels depuis Vigie. Toute la mécanique est dans graphiques.py.
+"""
+import html
+import secrets
+import threading
+import urllib.parse
+
+from . import fiches_outils, graphiques, rapport
+
+OUVERTURES = {}
+VERROU = threading.Lock()
+
+CSS = """
+.cartes { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:12px;
+  margin:10px 0 24px; }
+.carte { border:1px solid var(--trait); border-radius:12px; padding:14px 16px; display:grid;
+  gap:8px; align-content:start; }
+.carte h3 { margin:0; font-size:16px; }
+.carte .genre { font-size:12px; color:var(--gris); font-weight:700; text-transform:uppercase;
+  letter-spacing:.04em; }
+.carte p { margin:0; font-size:14px; }
+.carte .note { font-size:13px; color:var(--gris); }
+.carte form { display:grid; gap:8px; margin:0; }
+.carte button { font:inherit; font-weight:800; padding:10px 14px; border:0; border-radius:9px;
+  background:var(--navy); color:#fff; cursor:pointer; }
+.carte button:disabled { background:#cfd6e1; cursor:not-allowed; }
+.carte label { font-size:13px; font-weight:600; display:flex; gap:8px; align-items:flex-start; }
+.pastille-etat { font-size:11px; font-weight:800; padding:2px 8px; border-radius:6px;
+  justify-self:start; }
+.e-marche { background:#2e7d4f; color:#fff; }
+.e-present { background:#e6f2ec; color:#2e7d4f; }
+.e-absent { background:#eceef1; color:#5c6676; }
+.fam-avert { padding:10px 14px; border-radius:10px; background:#fcf0dc; color:#7a4b00;
+  font-size:14px; }
+.fam-avert.gate { background:#fbeceb; color:#8a1d16; }
+pre.detail { white-space:pre-wrap; font-size:13px; }
+"""
+
+TITRES = {
+    "diag": "Diagnostic gratuit (OSINT passif)",
+    "secu": "Sécurisation et enquête (défensif)",
+    "audit": "Audit (outils actifs)",
+    "gate": "Offensif (GATE)",
+}
+AVERTISSEMENTS = {
+    "audit": "Outils actifs : les ouvrir ne vise personne, mais ne les pointe que sur ton "
+             "labo ou sur une cible couverte par une autorisation signée (art. 323-1 du "
+             "Code pénal). Chaque ouverture est notée au journal.",
+    "gate": "Outils offensifs : uniquement sur ton labo (serveur d'entraînement) ou sur une "
+            "cible couverte par une autorisation signée. Jamais dans un diagnostic. "
+            "Chaque ouverture est notée au journal.",
+}
+
+
+def _role(nom):
+    fiche = fiches_outils.FICHES.get(nom.lower())
+    if fiche and fiche.get("role"):
+        return "Ça " + fiche["role"] + "."
+    return (graphiques._fiche(nom) or {}).get("categorie", "")
+
+
+def _carte(nom):
+    e = html.escape
+    fiche = graphiques.INTERFACES[nom]
+    etat = graphiques.etat(nom)
+    if fiche["genre"] in ("page", "lien"):
+        pastille = "<span class='pastille-etat e-present'>dans le navigateur</span>"
+    elif etat["en_marche"]:
+        pastille = "<span class='pastille-etat e-marche'>en marche</span>"
+    elif etat["present"]:
+        pastille = "<span class='pastille-etat e-present'>installé</span>"
+    else:
+        pastille = "<span class='pastille-etat e-absent'>pas trouvé ici</span>"
+    case = ""
+    if graphiques.demande_engagement(nom):
+        case = ("<label><input type='checkbox' name='engagement' value='oui' required>"
+                "Je ne vise que mon labo ou une cible couverte par une autorisation "
+                "signée.</label>")
+    note = f"<p class='note'>{e(fiche['note'])}</p>" if fiche.get("note") else ""
+    bouton = "Ouvrir" if etat["present"] else "Essayer d'ouvrir"
+    return (f"<div class='carte'><span class='genre'>{e(graphiques.GENRES[fiche['genre']])}"
+            f"</span><h3>{e(nom)}</h3>{pastille}<p>{e(_role(nom))}</p>{note}"
+            f"<form method='post' action='/ouvrir/lancer' target='_blank'>"
+            f"<input type='hidden' name='nom' value='{e(nom)}'>{case}"
+            f"<button type='submit'>{bouton}</button></form></div>")
+
+
+def page(message=""):
+    e = html.escape
+    bandeau = f"<div class='erreur'>{e(message)}</div>" if message else ""
+    blocs = []
+    for fam in ("diag", "secu", "audit", "gate"):
+        noms = [n for n in graphiques.liste() if graphiques.famille(n) == fam]
+        if not noms:
+            continue
+        avert = ""
+        if fam in AVERTISSEMENTS:
+            avert = f"<p class='fam-avert {fam}'>{e(AVERTISSEMENTS[fam])}</p>"
+        blocs.append(f"<h2>{e(TITRES[fam])} ({len(noms)})</h2>{avert}"
+                     f"<div class='cartes'>{''.join(_carte(n) for n in noms)}</div>")
+    return f"""<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vigie - Ouvrir un outil</title><style>{rapport.CSS}{CSS}</style></head><body><main>
+<div class="couv"><div class="enseigne">{rapport.LOGO}<div class="mot">Vigie<small>Sécurité</small></div></div>
+<h1>Ouvrir un outil</h1><div class="meta"><span>Chaque outil avec sa propre interface</span></div></div>
+<div class="corps">{bandeau}
+<p>Ces outils ne se pilotent pas depuis Vigie : ils ont <b>leur propre écran</b>. Un clic
+sur « Ouvrir » et Vigie fait le reste : il démarre le logiciel (sa fenêtre apparaît), ou
+démarre le service et ouvre sa page web, ou ouvre sa console.</p>
+<p class="aide">Les fenêtres s'ouvrent sur l'écran de la machine où tourne Vigie. Si un
+service demande les droits administrateur, une fenêtre demande ton mot de passe.</p>
+{''.join(blocs)}
+<p><a href="/">Accueil</a> · <a href="/outils-un">Lancer un outil</a></p></div>
+</main></body></html>"""
+
+
+def lancer(corps, journal=graphiques.JOURNAL):
+    """Démarre l'ouverture en arrière-plan. Renvoie l'identifiant de suivi.
+    Lève graphiques.Refus (en français) si l'outil ne peut pas s'ouvrir."""
+    champs = urllib.parse.parse_qs(corps)
+    nom = (champs.get("nom", [""])[0] or "").strip()[:80]
+    engagement = champs.get("engagement", [""])[0] == "oui"
+    graphiques.verifier(nom, engagement)
+    ident = secrets.token_urlsafe(9)
+    with VERROU:
+        OUVERTURES[ident] = {"outil": nom, "etat": "en_cours", "texte": "Préparation…",
+                             "url": "", "detail": ""}
+
+    def suivre(texte):
+        with VERROU:
+            OUVERTURES[ident]["texte"] = texte
+
+    def travail():
+        try:
+            fin = graphiques.ouvrir(nom, suivre, engagement=engagement, journal=journal)
+            etat = {"etat": "fini", "texte": fin["message"], "url": fin["url"],
+                    "detail": fin["detail"], "garder": fin.get("garder", False)}
+        except graphiques.Refus as refus:
+            etat = {"etat": "erreur", "texte": str(refus)}
+        except Exception as erreur:  # la page ne doit jamais rester bloquée
+            etat = {"etat": "erreur", "texte": f"Erreur inattendue : {erreur}"}
+        with VERROU:
+            OUVERTURES[ident].update(etat)
+    threading.Thread(target=travail, daemon=True).start()
+    return ident
+
+
+def page_suivi(ident):
+    with VERROU:
+        etat = dict(OUVERTURES.get(ident) or {})
+    if not etat:
+        return None
+    e = html.escape
+    tete, script, lien = "", "", ""
+    if etat["etat"] == "en_cours":
+        tete = "<meta http-equiv='refresh' content='2'>"
+    elif etat["url"]:
+        lien = (f"<p><a class='bouton' href='{e(etat['url'])}'>Ouvrir la page de "
+                f"{e(etat['outil'])}</a></p>")
+        # La page de l'outil remplace cet onglet : l'onglet Vigie reste ouvert à côté.
+        if not etat.get("garder"):
+            script = f"<script>location.replace({_js(etat['url'])});</script>"
+    classe = {"en_cours": "", "fini": " fini", "erreur": " erreur"}[etat["etat"]]
+    detail = (f"<details><summary>Détail technique</summary><pre class='detail'>"
+              f"{e(etat['detail'])}</pre></details>") if etat.get("detail") else ""
+    return f"""<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">{tete}
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vigie - {e(etat['outil'])}</title><style>{rapport.CSS}{CSS}</style></head><body><main>
+<div class="couv"><div class="enseigne">{rapport.LOGO}<div class="mot">Vigie<small>Sécurité</small></div></div>
+<h1>{e(etat['outil'])}</h1><div class="meta"><span>Ouverture de l'outil</span></div></div>
+<div class="corps"><div class="bandeau{classe}">{e(etat['texte'])}</div>{lien}{detail}
+<p><a href="/ouvrir">Ouvrir un autre outil</a></p></div></main>{script}</body></html>"""
+
+
+def _js(texte):
+    import json
+    return json.dumps(texte).replace("<", "\\u003c")
