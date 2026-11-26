@@ -124,6 +124,42 @@ def _catalogue_html(etats=None):
     return "".join(blocs)
 
 
+def _formulaire_brancher(etats):
+    """« Je l'ai installé à la main » : on montre où est le programme, Vigie le relie."""
+    e = html.escape
+    manquants = sorted((o["nom"] for o in registre.charger()
+                        if not o["payant"] and not etats.get(o["nom"])), key=str.lower)
+    if not manquants:
+        return ""
+    options = "".join(f"<option>{e(nom)}</option>" for nom in manquants)
+    return f"""<div class="corps" id="a-la-main"><h2>Je l'ai installé à la main</h2>
+<p>Tu as posé un outil toi-même (programme téléchargé, dossier copié depuis GitHub…) ?
+Montre à Vigie où il est : Vigie le relie, vérifie qu'il démarre et le marque
+<span class='marque m-installe'>installé</span>. Rien n'est téléchargé.</p>
+<form method="post" action="/outil/brancher">
+<label>Outil<select name="nom">{options}</select></label>
+<label>Où est le programme (ou son dossier)
+<input name="chemin" placeholder="/home/moi/Téléchargements/chainsaw/chainsaw"></label>
+<p class="aide-outil">Astuce : dans le gestionnaire de fichiers, clic droit sur le fichier
+&gt; Copier, puis clique dans la case et fais Ctrl+V : le chemin s'écrit tout seul.</p>
+<button type="submit">Brancher sur Vigie</button>
+</form></div>"""
+
+
+def brancher(corps):
+    """Traite le formulaire « Je l'ai installé à la main ». Renvoie la page avec le
+    résultat en français (réussite ou raison du refus)."""
+    import urllib.parse
+    from . import a_la_main
+    champs = urllib.parse.parse_qs(corps)
+    nom = champs.get("nom", [""])[0].strip()[:120]
+    chemin = champs.get("chemin", [""])[0].strip()[:1000]
+    try:
+        return page(ok=a_la_main.brancher(nom, chemin))
+    except (a_la_main.Refus, OSError) as erreur:
+        return page(message=str(erreur))
+
+
 def page(message="", ok=""):
     bandeau = ""
     if message:
@@ -166,6 +202,7 @@ Les outils <b>actifs</b> ou offensifs se lancent dans
 {len(gratuits)} {'sont installés' if installes > 1 else 'est installé'} sur cette machine
 (marqués <span class='marque m-installe'>installé</span>).</p>
 {_catalogue_html(etats)}</div>
+{_formulaire_brancher(etats)}
 <div class="corps"><p><a href="/">Accueil</a> · <a href="/manuel">Outils manuels</a></p></div>
 </main></body></html>"""
 
