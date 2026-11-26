@@ -198,6 +198,14 @@ class Page(unittest.TestCase):
         self.assertIn("/outils-un#a-la-main", absents)
         self.assertIn("la commande velociraptor", absents)
 
+    def test_barre_de_recherche(self):
+        with mock.patch.object(graphiques, "etat",
+                               return_value={"present": False, "en_marche": None}):
+            p = interface_graphiques.page()
+        self.assertIn("id=\"recherche\"", p)
+        self.assertIn("data-nom='Velociraptor'", p)
+        self.assertIn("startsWith(q)", p)
+
     def test_page_rien_d_installe(self):
         with mock.patch.object(graphiques, "etat",
                                return_value={"present": False, "en_marche": None}):
