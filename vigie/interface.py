@@ -19,7 +19,8 @@ import time
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import __version__, interface_duel, interface_manuel, interface_outils, rapport
+from . import (__version__, interface_duel, interface_graphiques, interface_manuel,
+               interface_outils, rapport)
 from .cli import dossier_rapport, lancer, nettoyer_domaine
 from .modeles import Cible, ControleImpossible
 
@@ -37,6 +38,7 @@ NOM_RAPPORT = re.compile(r"[a-z0-9_-]{3,120}")
 NAVIGATION = """<nav class="vigie-nav" aria-label="Navigation Vigie">
 <a class="vigie-accueil" href="/">&larr; Accueil</a>
 <a href="/outils-un">Lancer un outil</a>
+<a href="/ouvrir">Ouvrir un outil</a>
 <a href="/comparer">Comparer des outils</a>
 <a href="/manuel">Outils manuels</a>
 </nav>
@@ -158,7 +160,7 @@ Sans cela, ces recherches ne sont pas faites.</p>
 <p class="aide">Contrôles rapides&nbsp;: {controles}. Tous lisent des informations publiques,
 sans action sur les machines de la société. Vous suivez chaque outil en direct.</p>
 </form>
-<p><a href="/outils-un">Lancer un outil</a> · <a href="/comparer">Comparer des outils</a> · <a href="/manuel">Outils manuels (contrôles actifs, sur autorisation signée)</a></p>
+<p><a href="/outils-un">Lancer un outil</a> · <a href="/ouvrir">Ouvrir un outil (sa propre interface)</a> · <a href="/comparer">Comparer des outils</a> · <a href="/manuel">Outils manuels (contrôles actifs, sur autorisation signée)</a></p>
 <h2>Rapports déjà produits</h2>
 {rapports}
 </div>
@@ -396,6 +398,14 @@ def fabrique(sortie, code):
                 self._envoyer(200, interface_duel.page_resultat(banc.group(1)),
                               [("Cache-Control", "no-store")])
                 return
+            if adresse.path == "/ouvrir":
+                self._envoyer(200, interface_graphiques.page())
+                return
+            ouverture = re.fullmatch(r"/ouvrir/suivi/([A-Za-z0-9_-]{8,40})", adresse.path)
+            if ouverture and interface_graphiques.page_suivi(ouverture.group(1)):
+                self._envoyer(200, interface_graphiques.page_suivi(ouverture.group(1)),
+                              [("Cache-Control", "no-store")])
+                return
             if adresse.path == "/outils-un":
                 self._envoyer(200, interface_outils.page())
                 return
@@ -453,6 +463,15 @@ def fabrique(sortie, code):
                     self._envoyer(400, interface_duel.page(str(erreur)))
                     return
                 self._envoyer(303, "", [("Location", f"/comparer/{ident}")])
+                return
+            if self.path == "/ouvrir/lancer":
+                taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
+                corps = self.rfile.read(taille).decode("utf-8", "replace")
+                try:
+                    ident = interface_graphiques.lancer(corps, JOURNAL)
+                    self._envoyer(303, "", [("Location", f"/ouvrir/suivi/{ident}")])
+                except interface_graphiques.graphiques.Refus as erreur:
+                    self._envoyer(400, interface_graphiques.page(str(erreur)))
                 return
             if self.path == "/outil/lancer":
                 taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)

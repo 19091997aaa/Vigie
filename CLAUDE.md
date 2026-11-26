@@ -175,6 +175,16 @@ nouveau constat = ajouter sa fiche, un test le vérifie). Sources : `docs/source
 Règle : toujours « peut », aucun montant d'amende par constat (plafonds une seule fois dans
 le cadre légal). La phrase d'en-tête suit la lettre : un D dit clairement qu'il faut agir.
 
+**Ouvrir un outil (26/11/2026)** : demande d'Anass, l'onglet « Ouvrir un outil » (`/ouvrir`,
+`vigie/graphiques.py` + `vigie/interface_graphiques.py`) ouvre ~40 outils avec **leur propre
+interface** : logiciel à fenêtres (Ghidra, Burp, ZAP, Autopsy…), service web démarré si
+besoin (commande, service systemd via `pkexec`, conteneur ou `docker compose`) puis page
+ouverte (Wazuh, OpenVAS, SpiderFoot, Uptime Kuma…), console dans un terminal (Metasploit,
+Shannon, Strix…). Rien n'est scanné à l'ouverture. Outils d'audit et GATE : case
+« labo ou autorisation signée » obligatoire, chaque ouverture notée dans
+`journal/ouvertures.jsonl`. Toujours jamais dans un diagnostic ni en automatique. Les lignes
+de démarrage viennent des docs : à confirmer sur la VM.
+
 Principe : **Vigie ne copie le code d'aucun outil**. Il appelle les outils installés
 sur la machine (chaque outil garde sa licence, se met à jour seul, et Vigie continue
 de marcher si l'un manque). Pour brancher un nouvel outil GitHub : voir la section
