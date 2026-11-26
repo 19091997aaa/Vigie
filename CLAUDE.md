@@ -172,6 +172,10 @@ machine seulement) : Anass montre le programme ou son dossier, Vigie écrit un l
 de la commande attendue (jamais par-dessus un vrai programme), vérifie qu'il démarre (pas
 pour une appli ou un service) et le note dans `~/vigie-installation.json`. L'installeur
 reconnaît un outil « à la main » déjà présent au lieu de le noter en échec.
+Rappel honnête : Vigie pilote le **moteur en ligne de commande** des outils (sorties JSON/XML
+traduites) ; services (Wazuh, OpenVAS), applis (Burp, Ghidra) et exploration à la main
+restent dans l'interface de l'outil.
+
 **Tri des 84 outils « à la main » (26/11/2026)** : 4 passent en automatique
 (`recettes.py`) : Nuclei Templates (`nuclei -update-templates`, sinon copie du dépôt),
 Maester et Monkey365 (audit Microsoft 365 : PowerShell 7 officiel posé à part, empreinte
@@ -181,9 +185,6 @@ vérifiée, puis PowerShell Gallery), OWASP ZAP (archive officielle, empreinte l
 offensif, doublon) et le bilan les compte à part (`pas_ici` / `a_poser`). Utiles à la main :
 OpenVAS et Wazuh (plus tard sur un serveur loué), Burp, ScubaGear et HardeningKitty (PC
 Windows), BloodHound (client avec Active Directory).
-Rappel honnête : Vigie pilote le **moteur en ligne de commande** des outils (sorties JSON/XML
-traduites) ; services (Wazuh, OpenVAS), applis (Burp, Ghidra) et exploration à la main
-restent dans l'interface de l'outil.
 
 **Relecture du 1er rapport complet (26/11/2026, 68/100)** : un texte de conséquence peut
 avoir des **variantes** selon la situation réelle (`consequences.VARIANTES`, ex. DMARC en
