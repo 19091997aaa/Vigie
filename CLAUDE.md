@@ -160,6 +160,12 @@ nouvelles recettes dans `vigie/recettes.py` (go aux bons modules, programmes off
 GitHub vérifiés, scripts Python copiés depuis leur dépôt) ; `recettes.MANUELS` = outils
 à poser à la main (serveurs, Windows, Kali, Kubernetes), comptés à part dans le bilan.
 « ne démarre pas » note maintenant la raison. Un bilan vide ne fait plus planter la relance.
+**26/11/2026 : Ubuntu a tué l'installeur (mémoire pleine, signal 9) vers l'outil 108.**
+Depuis : nombre d'installations de front = « auto » d'après la mémoire libre (4 au plus,
+`--parallele N` ou `VIGIE_PARALLELE=N` pour forcer) ; les compilations (pip, pipx, go)
+passent **une par une** et attendent 1 Go libre (`recettes.chantier`, `--compilations`) ;
+Go/make limités à 2 cœurs ; le bilan est écrit **après chaque outil** (une coupure ne perd
+plus rien, la relance reprend). build-essential + python3-dev ajoutés à la base apt.
 
 **Conséquences pour le dirigeant (24/11/2026)** : demande d'Anass, chaque constat non
 « Correct » a un onglet **Conséquences** (ce qu'un attaquant peut faire / ce que ça coûte /

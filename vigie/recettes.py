@@ -38,6 +38,7 @@ Ajouts du 25/11/2026 (installation complète sur la VM Ubuntu, Python 3.14) :
 Toujours la même règle : jamais un paquet deviné sur son nom. Chaque recette nomme le
 dépôt exact de l'outil, ou le site officiel, et vérifie les empreintes publiées.
 """
+import contextlib
 import hashlib
 import os
 import platform
@@ -49,6 +50,7 @@ import sys
 import tarfile
 import tempfile
 import threading
+import time
 import urllib.request
 
 # Les outils libres que le catalogue range à tort parmi les « payants » (clé API).
@@ -63,15 +65,111 @@ def dossiers():
     return racine, commandes
 
 
+# ---------------------------------------------------------------------------
+# Mémoire. Le 26/11/2026, sur la VM Ubuntu, le système a TUÉ l'installeur (signal 9,
+# « mémoire presque pleine ») vers l'outil 108 : six installations de front, dont
+# plusieurs compilations Python et Go, chacune pouvant prendre 1 Go ou plus.
+# Désormais : les compilations (pip, pipx, go) passent une par une, attendent qu'il y
+# ait assez de mémoire libre, et le nombre d'installations de front suit la mémoire.
+
+MEMOIRE_MINI_MO = 1000      # mémoire libre voulue avant de lancer une compilation
+MO_PAR_INSTALLATION = 1500  # ce qu'on compte pour une installation menée de front
+PARALLELE_MAX = 4
+
+_LOURDS = threading.BoundedSemaphore(1)
+_COMPILEURS = {"go", "pipx", "pip", "pip3"}
+
+
+def memoire_libre_mo():
+    """La mémoire encore disponible, en Mo (None si on ne sait pas la lire)."""
+    try:
+        with open("/proc/meminfo", encoding="utf-8") as lu:
+            for ligne in lu:
+                if ligne.startswith("MemAvailable:"):
+                    return int(ligne.split()[1]) // 1024
+    except (OSError, ValueError, IndexError):
+        pass
+    if sys.platform == "darwin":  # Mac : la mémoire totale, dont on compte la moitié
+        try:
+            total = subprocess.run(["sysctl", "-n", "hw.memsize"], capture_output=True,
+                                   text=True, timeout=10).stdout
+            return int(total.strip()) // (2 * 1024 * 1024)
+        except (OSError, ValueError, subprocess.TimeoutExpired):
+            pass
+    return None
+
+
+def parallele_auto(memoire_mo=None):
+    """Combien d'installations mener de front, d'après la mémoire libre.
+    2,5 Go libres -> 1 ; 4 Go -> 2 ; 6 Go et plus -> 4 (jamais plus)."""
+    memoire_mo = memoire_libre_mo() if memoire_mo is None else memoire_mo
+    if memoire_mo is None:
+        return 2
+    return max(1, min(PARALLELE_MAX, memoire_mo // MO_PAR_INSTALLATION))
+
+
+def regler_compilations(nombre=0):
+    """Combien de compilations (pip, pipx, go) peuvent tourner en même temps.
+    0 = auto : 1 seule sous 8 Go de mémoire libre, 2 au-delà."""
+    global _LOURDS
+    nombre = int(nombre or 0)
+    if nombre <= 0:
+        libre = memoire_libre_mo()
+        nombre = 2 if libre is not None and libre >= 8000 else 1
+    _LOURDS = threading.BoundedSemaphore(nombre)
+    return nombre
+
+
+def limiter_compilations():
+    """Chaque compilation reste sobre : Go et make sur 2 cœurs au plus, au lieu de
+    tous (chaque cœur occupé = un compilateur de plus en mémoire). Ne remplace pas un
+    réglage déjà fait par la personne."""
+    os.environ.setdefault("GOFLAGS", "-p=2")
+    os.environ.setdefault("MAKEFLAGS", "-j2")
+    os.environ.setdefault("CMAKE_BUILD_PARALLEL_LEVEL", "2")
+    os.environ.setdefault("MAX_JOBS", "2")
+
+
+def est_compilation(commande):
+    """pip, pipx et go compilent souvent (surtout avec un Python très récent) :
+    ce sont eux qui remplissent la mémoire. apt, npm et les téléchargements, non."""
+    return bool(commande) and os.path.basename(commande[0]) in _COMPILEURS
+
+
+def attendre_memoire(minimum_mo=MEMOIRE_MINI_MO, attente_max=300, pause=5):
+    """Attend (5 min au plus) qu'il y ait assez de mémoire libre. Renvoie le temps attendu."""
+    attendu = 0
+    while attendu < attente_max:
+        libre = memoire_libre_mo()
+        if libre is None or libre >= minimum_mo:
+            break
+        time.sleep(pause)
+        attendu += pause
+    return attendu
+
+
+@contextlib.contextmanager
+def chantier(commande):
+    """Une compilation à la fois (ou le nombre réglé), et seulement avec assez de
+    mémoire libre. Les autres commandes passent sans attendre."""
+    if not est_compilation(commande):
+        yield
+        return
+    with _LOURDS:
+        attendre_memoire()
+        yield
+
+
 def _lancer(commande, delai=900, env=None, dossier=None):
     """(réussi, dernière ligne d'erreur, sortie complète)."""
     programme = shutil.which(commande[0], path=(env or os.environ).get("PATH"))
     if not programme:
         return False, f"{commande[0]} absent", ""
     try:
-        fini = subprocess.run([programme] + commande[1:], capture_output=True, text=True,
-                              timeout=delai, errors="replace", env=env, cwd=dossier,
-                              stdin=subprocess.DEVNULL)
+        with chantier(commande):
+            fini = subprocess.run([programme] + commande[1:], capture_output=True, text=True,
+                                  timeout=delai, errors="replace", env=env, cwd=dossier,
+                                  stdin=subprocess.DEVNULL)
     except subprocess.TimeoutExpired:
         return False, f"dépassement de {delai} s", ""
     sortie = (fini.stdout or "") + "\n" + (fini.stderr or "")

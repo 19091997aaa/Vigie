@@ -13,7 +13,6 @@ npm). Aucun script distant n'est exécuté.
 import json
 import os
 import re
-import contextlib
 import shutil
 import subprocess
 import tempfile
@@ -104,7 +103,9 @@ def _lancer(commande, delai=600):
     programme = shutil.which(commande[0])
     if not programme:
         return False, f"{commande[0]} absent", ""
-    verrou = VERROU_APT if "apt-get" in commande else contextlib.nullcontext()
+    from . import recettes
+    # apt : un à la fois. pip/pipx/go : une compilation à la fois, avec assez de mémoire.
+    verrou = VERROU_APT if "apt-get" in commande else recettes.chantier(commande)
     try:
         with verrou:
             fini = subprocess.run([programme] + commande[1:], capture_output=True,
@@ -447,22 +448,41 @@ def _installer_par_doc(outil, a_blanc=False):
     return _compte(outil, raison=" | ".join(raisons)[:300], manuel=manuel)
 
 
-def installer(outils, a_blanc=False, journal=print, parallele=1):
+def installer(outils, a_blanc=False, journal=print, parallele=1, apres_chaque=None):
     """Installe une liste d'outils et renvoie le compte rendu de chacun.
 
     Installer, c'est surtout attendre un téléchargement : à la file, la machine
     ne fait rien la plupart du temps. En lançant plusieurs installations de front,
     on divise l'attente d'autant. Le premier outil passe seul, pour laisser pipx
     préparer son environnement partagé sans que huit processus se marchent dessus.
+
+    parallele : un nombre, ou 0 / None = « auto » (d'après la mémoire libre).
+    Les compilations (pip, pipx, go), elles, passent une par une quoi qu'il arrive
+    (voir recettes.chantier) : ce sont elles qui ont rempli la mémoire de la VM.
+    apres_chaque(comptes_rendus) est appelé après chaque outil : le compte rendu est
+    écrit au fur et à mesure, un arrêt brutal ne fait plus tout perdre.
     """
+    from . import recettes
+    if not parallele:
+        parallele = recettes.parallele_auto()
+    recettes.limiter_compilations()
+    comptes_rendus = []
+
+    def noter(resultat):
+        comptes_rendus.append(resultat)
+        if apres_chaque:
+            try:
+                apres_chaque(list(comptes_rendus))
+            except OSError:
+                pass  # disque plein, etc. : l'installation continue
+
     if parallele <= 1 or len(outils) < 2 or a_blanc:
-        comptes_rendus = []
         for numero, outil in enumerate(outils, 1):
             journal(f"[{numero}/{len(outils)}] {outil['nom']}…")
             resultat = installer_un(outil, a_blanc)
             etat = "ok" if resultat["installe"] else "échec"
             journal(f"    {etat} {resultat['methode']} {resultat['raison']}".rstrip())
-            comptes_rendus.append(resultat)
+            noter(resultat)
         return comptes_rendus
 
     import concurrent.futures
@@ -470,19 +490,20 @@ def installer(outils, a_blanc=False, journal=print, parallele=1):
     journal(f"[1/{total}] {outils[0]['nom']}… (seul, le temps que pipx se prépare)")
     premier = installer_un(outils[0], a_blanc)
     journal(f"    {'ok' if premier['installe'] else 'échec'} {premier['methode']}".rstrip())
-    comptes_rendus = [premier]
+    noter(premier)
     faits = 1
     with concurrent.futures.ThreadPoolExecutor(max_workers=parallele) as equipe:
         en_cours = {equipe.submit(installer_un, outil, a_blanc): outil
                     for outil in outils[1:]}
-        journal(f"  ({len(en_cours)} outils restants, {parallele} à la fois)")
+        journal(f"  ({len(en_cours)} outils restants, {parallele} à la fois, "
+                "compilations une par une)")
         for fini in concurrent.futures.as_completed(en_cours):
             resultat = fini.result()
             faits += 1
             etat = "ok   " if resultat["installe"] else "échec"
             journal(f"[{faits}/{total}] {etat} {resultat['nom']} "
                     f"{resultat['methode']} {resultat['raison']}".rstrip())
-            comptes_rendus.append(resultat)
+            noter(resultat)
     return comptes_rendus
 
 
