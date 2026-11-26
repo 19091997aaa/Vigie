@@ -162,8 +162,13 @@ class Interface(Base):
         self.assertIn("Aucune : c'est une de mes propres cibles", p)
         texte = interface_manuel.gerer_cibles("action=domaine&valeur=mon-site.fr&atteste=oui",
                                               self.dossier, self.journal)
-        self.assertIn("vigie-verification=", texte)
-        self.assertIn("attestation de propriété", interface_manuel.page(self.dossier))
+        self.assertIn("ajouté à tes cibles", texte)
+        page = interface_manuel.page(self.dossier)
+        self.assertIn("mon-site.fr", page)
+        self.assertIn("à toi", page)
+        # Plus aucune mention du DNS dans l'onglet.
+        for mot in ("vigie-verification", "TXT", "code DNS", "prouv"):
+            self.assertNotIn(mot, page)
 
     def test_attestation_obligatoire(self):
         with self.assertRaises(mes_cibles.Refus):
