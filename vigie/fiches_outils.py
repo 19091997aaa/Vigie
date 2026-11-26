@@ -19,6 +19,8 @@ import ipaddress
 import os
 import re
 
+from . import spiderfoot
+
 # ---------------------------------------------------------------------------
 # Les genres de cible, avec un exemple pour guider.
 CIBLES = {
@@ -46,9 +48,12 @@ MODES = ("cible", "service", "appli", "windows", "capture", "ressource", "compte
          "a_la_main", "agent")
 
 
-def _f(role, cible="aucune", mode="cible", prealable="", ligne=None):
+def _f(role, cible="aucune", mode="cible", prealable="", ligne=None, delai=None):
+    """delai : temps maximum en secondes, pour un outil plus long que les 5 minutes
+    habituelles (SpiderFoot interroge 25 sources) ; au-delà, Vigie l'arrête et garde
+    ce qu'il a déjà trouvé."""
     return {"role": role, "cible": cible, "mode": mode, "prealable": prealable,
-            "ligne": ligne}
+            "ligne": ligne, "delai": delai}
 
 
 # Clé = nom du registre en minuscules.
@@ -97,6 +102,12 @@ FICHES = {
     "arjun": _f("découvre les paramètres cachés qu'une page accepte (utile pour trouver "
                 "des entrées oubliées sur un endpoint)", "url",
                 ligne=["arjun", "-u", "{cible}", "--stable"]),
+    # SpiderFoot : 25 sources publiques choisies par Vigie (spiderfoot.py), sortie JSON
+    # traduite. Son interface web s'ouvre aussi depuis « Ouvrir un outil ».
+    "spiderfoot": _f("rassemble en un seul passage ce que 25 sources publiques savent d'un "
+                     "domaine : sous-domaines, adresses, hébergeur, faux domaines qui "
+                     "l'imitent, listes noires, certificat", "domaine",
+                     ligne=spiderfoot.ligne(), delai=spiderfoot.DELAI),
     # --- Scanners web (actifs/offensifs : seulement sur tes propres cibles) --
     "nikto": _f("cherche sur un serveur web les fichiers dangereux et les logiciels "
                 "périmés", "url", ligne=["nikto", "-h", "{cible}"]),
@@ -106,6 +117,9 @@ FICHES = {
                  "url", ligne=["katana", "-u", "{cible}"]),
     "dalfox": _f("cherche les failles d'injection de script (XSS) sur une page", "url",
                  ligne=["dalfox", "url", "{cible}"]),
+    "xsstrike": _f("cherche les failles d'injection de script (XSS) sur une page, en "
+                   "analysant comment elle renvoie ce qu'on lui envoie", "url",
+                   ligne=["xsstrike", "-u", "{cible}"]),
     "dirsearch": _f("cherche les dossiers et fichiers cachés d'un site (pages d'admin, "
                     "sauvegardes oubliées…)", "url", ligne=["dirsearch", "-u", "{cible}"]),
     "sqlmap": _f("teste si une page est vulnérable à l'injection SQL (vol de base de "

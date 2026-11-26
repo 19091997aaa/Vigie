@@ -371,7 +371,8 @@ def module_manquant(paquet, module):
     return not reussi and "not found" in sortie.lower()
 
 
-def depot_python(depot, requirements, script, commande, nom, nettoyer_pipx=None):
+def depot_python(depot, requirements, script, commande, nom, nettoyer_pipx=None,
+                 python=None):
     """Copie du dépôt GitHub exact + environnement Python à part + lanceur.
 
     Pour les outils qui sont un simple script Python (XSStrike, SSRFmap, jwt_tool…) :
@@ -379,11 +380,18 @@ def depot_python(depot, requirements, script, commande, nom, nettoyer_pipx=None)
     requirements : le fichier de dépendances, ou None pour installer le dossier
     lui-même s'il a un pyproject.toml / setup.py (sinon, aucune dépendance).
     nettoyer_pipx : un ancien paquet pipx posé de travers à retirer d'abord (DPAT).
+    python : une version (« 3.12 ») quand les dépendances ne s'installent pas sur le
+    Python de la machine : Vigie pose alors ce Python à part (python_a_part).
     """
     def recette():
         racine, commandes = dossiers()
         if nettoyer_pipx:
             _lancer(["pipx", "uninstall", nettoyer_pipx], delai=120)
+        interprete = sys.executable
+        if python:
+            interprete, erreur = python_a_part(python)
+            if not interprete:
+                return False, erreur, []
         dossier = os.path.join(racine, nom)
         if os.path.isdir(os.path.join(dossier, ".git")):
             reussi, message, _ = _lancer(["git", "-C", dossier, "pull", "--ff-only"])
@@ -393,7 +401,7 @@ def depot_python(depot, requirements, script, commande, nom, nettoyer_pipx=None)
         if not reussi:
             return False, "git : " + message, []
         venv = os.path.join(dossier, "vigie-venv")
-        reussi, message, _ = _lancer([sys.executable, "-m", "venv", venv])
+        reussi, message, _ = _lancer([interprete, "-m", "venv", venv])
         if not reussi:
             return False, "python3 -m venv : " + message + " (paquet python3-venv ?)", []
         pip = os.path.join(venv, "bin", "pip")
@@ -609,6 +617,67 @@ def _node_a_part():
             shutil.rmtree(dossier)
         _extraire_tout(chemin, dossier)
     return os.path.join(dossier, "bin"), ""
+
+
+# Python « à part » pour les outils dont les dépendances ne s'installent pas encore sur
+# le Python très récent de la VM (3.14) : SpiderFoot exige lxml < 5, sans version pour
+# 3.14 (26/11/2026). Source officielle : python-build-standalone (le même projet que
+# pipx --fetch-missing-python), empreinte vérifiée avec son fichier SHA256SUMS.
+PBS = "https://raw.githubusercontent.com/astral-sh/python-build-standalone/latest-release/" \
+      "latest-release.json"
+VERROU_PYTHON = threading.Lock()
+
+
+def _triplet():
+    machine = {"x86_64": "x86_64", "amd64": "x86_64", "aarch64": "aarch64",
+               "arm64": "aarch64"}.get(platform.machine().lower())
+    systeme = {"linux": "unknown-linux-gnu", "darwin": "apple-darwin"}.get(sys.platform)
+    return f"{machine}-{systeme}" if machine and systeme else None
+
+
+def python_a_part(version="3.12"):
+    """Pose un Python officiel (python-build-standalone) dans le dossier de Vigie.
+    Renvoie (chemin du programme python3, message d'erreur)."""
+    with VERROU_PYTHON:
+        return _python_a_part(version)
+
+
+def _python_a_part(version):
+    racine, _ = dossiers()
+    dossier = os.path.join(racine, f"python{version}")
+    python = os.path.join(dossier, "bin", "python3")
+    if os.access(python, os.X_OK):
+        return python, ""
+    triplet = _triplet()
+    if not triplet:
+        return None, f"système non prévu ({sys.platform} {platform.machine()})"
+    import json
+    with tempfile.TemporaryDirectory() as travail:
+        try:
+            _telecharger(PBS, os.path.join(travail, "derniere.json"), delai=60)
+            with open(os.path.join(travail, "derniere.json"), encoding="utf-8") as lu:
+                infos = json.load(lu)
+            prefixe, etiquette = infos["asset_url_prefix"], infos["tag"]
+            _telecharger(prefixe + "/SHA256SUMS", os.path.join(travail, "sommes.txt"))
+            with open(os.path.join(travail, "sommes.txt"), encoding="utf-8") as lu:
+                sommes = lire_sommes(lu.read())
+            motif = (rf"cpython-{re.escape(version)}\.\d+\+{re.escape(etiquette)}-"
+                     rf"{re.escape(triplet)}-install_only\.tar\.gz")
+            nom = next((n for n in sorted(sommes) if re.fullmatch(motif, n)), None)
+            if not nom:
+                return None, f"Python {version} introuvable dans la publication officielle"
+            chemin = os.path.join(travail, nom)
+            _telecharger(prefixe + "/" + nom, chemin)
+        except (OSError, ValueError, KeyError) as erreur:
+            return None, f"téléchargement de Python {version} impossible : {erreur}"
+        if _empreinte(chemin) != sommes[nom]:
+            return None, f"empreinte de Python {version} incorrecte : installation refusée"
+        if os.path.isdir(dossier):
+            shutil.rmtree(dossier)
+        _extraire_tout(chemin, dossier)
+    if not os.access(python, os.X_OK):
+        return None, f"Python {version} déballé mais introuvable ({python})"
+    return python, ""
 
 
 def commandes_npm(prefixe, paquet):
@@ -933,6 +1002,14 @@ RECETTES = {
                                       "jwt_tool.py", "jwt_tool", "jwt_tool"), TOUS),
     "responder": (SCRIPT, depot_python("https://github.com/lgandx/Responder", "requirements.txt",
                                        "Responder.py", "responder", "Responder"), TOUS),
+    # SpiderFoot (26/11/2026) : la doc proposait « pipx install spiderfoot-ng », un fork
+    # tiers (9 versions publiées en un jour, autre dépôt) -> retiré. Le dépôt officiel n'est
+    # pas un paquet, et ses dépendances (lxml < 5) ne s'installent pas sur Python 3.14 :
+    # dépôt officiel + Python 3.12 à part. Lanceur « spiderfoot » = python sf.py.
+    "spiderfoot": ("dépôt officiel + Python 3.12 à part (recette Vigie)",
+                   depot_python("https://github.com/smicallef/spiderfoot", "requirements.txt",
+                                "sf.py", "spiderfoot", "SpiderFoot",
+                                nettoyer_pipx="spiderfoot-ng", python="3.12"), TOUS),
     "zircolite": (SCRIPT, depot_python("https://github.com/wagga40/Zircolite", None,
                                        "zircolite.py", "zircolite", "Zircolite"), TOUS),
     # pipx posait DPAT avec pour seules commandes « test » et « tests » (= pytest) !

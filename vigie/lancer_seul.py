@@ -244,7 +244,23 @@ def preparer(nom, cible, propre_ok=False):
 DOSSIER_TRAVAIL = "~/vigie-travail"
 
 
-def lancer(nom, cible, delai=300, propre_ok=False):
+# Temps maximum d'un outil, sauf si sa fiche en donne un autre (fiches_outils, delai=).
+DELAI = 300
+
+
+def _lecteur(nom):
+    """Le module de Vigie qui prépare et lit la sortie d'un outil précis, ou None.
+
+    Un lecteur offre : avant_lancement(chemin) -> remarques, panne(sortie, erreurs,
+    cible) -> raison ou "", resumer(sortie, erreurs, cible, secondes, partiel) -> texte.
+    """
+    if (nom or "").strip().lower() == "spiderfoot":
+        from . import spiderfoot
+        return spiderfoot
+    return None
+
+
+def lancer(nom, cible, delai=None, propre_ok=False):
     """Lance UN outil PASSIF sur la cible et renvoie le compte rendu.
 
     Le compte rendu contient toujours une explication en français (« explication »,
@@ -252,17 +268,39 @@ def lancer(nom, cible, delai=300, propre_ok=False):
     Refuse (Refus) un outil inconnu, payant, actif/offensif, ou qui ne se lance pas
     sur cette cible : la raison est dite en français.
     """
+    import shutil
     prepa = preparer(nom, cible, propre_ok=propre_ok)
     commande, arguments, verifiee = prepa["ligne"]
     vrai_nom = info(nom)["nom"]
+    delai = delai or fiche_claire(nom).get("delai") or DELAI
+    remarques = list(prepa["remarques"])
+    lecteur = _lecteur(vrai_nom)
+    chemin = shutil.which(commande, path=outils.chemin_recherche())
+    if lecteur and chemin:
+        remarques += lecteur.avant_lancement(chemin)
     compte = _lancer_commande(commande, arguments, delai)
     compte["outil"] = vrai_nom
     compte["cible"] = prepa["cible"]
     compte["verifiee"] = verifiee
     compte["commande"] = " ".join([commande] + arguments)
-    compte["traduction"] = _traduire(nom, compte.get("sortie", ""))
-    compte["explication"] = prepa["remarques"] + expliquer(vrai_nom, compte)
+    if lecteur and compte.get("lance"):
+        # SpiderFoot répond « fini » même quand son scan a planté : son lecteur le voit.
+        compte["panne"] = lecteur.panne(compte.get("sortie", ""), compte.get("erreurs", ""),
+                                        prepa["cible"])
+        compte["traduction"] = lecteur.resumer(compte.get("sortie", ""),
+                                               compte.get("erreurs", ""), prepa["cible"],
+                                               compte.get("secondes"),
+                                               partiel=bool(compte.get("depasse")))
+    else:
+        compte["traduction"] = _traduire(nom, compte.get("sortie", ""))
+    compte["explication"] = remarques + expliquer(vrai_nom, compte)
     return compte
+
+
+def duree(secondes):
+    """« 45 s », « 3 min 12 s », « 20 min »."""
+    from . import spiderfoot
+    return spiderfoot.duree(secondes)
 
 
 def expliquer(nom, compte):
@@ -281,9 +319,16 @@ def expliquer(nom, compte):
                        "« installer-… » à double-cliquer) : il ne réessaie que les outils "
                        "ratés.")
         return phrases
+    if compte.get("panne"):
+        return [f"{nom} s'est arrêté en erreur.", compte["panne"]]
     if compte.get("depasse"):
-        return [f"{nom} a dépassé le temps maximum ({compte.get('delai', '?')} s) et a été "
-                "arrêté. La cible est peut-être très grosse ou lente, ou Internet est lent."]
+        temps = duree(compte.get("delai")) or "?"
+        if (compte.get("sortie") or "").strip():
+            return [f"{nom} a dépassé le temps maximum ({temps}) : Vigie l'a arrêté, lui et "
+                    "tout ce qu'il avait lancé, et garde ce qu'il avait déjà trouvé. Le "
+                    "résumé ci-dessous est donc INCOMPLET."]
+        return [f"{nom} a dépassé le temps maximum ({temps}) et a été arrêté sans rien avoir "
+                "écrit. La cible est peut-être très grosse ou lente, ou Internet est lent."]
     sortie = (compte.get("sortie") or "") + "\n" + (compte.get("erreurs") or "")
     if compte.get("code"):
         phrases.append(f"{nom} s'est arrêté en erreur.")
@@ -301,8 +346,8 @@ def expliquer(nom, compte):
                        "Souvent, ça veut dire qu'il n'y a rien de public sur cette cible.")
         phrases += erreurs.expliquer(sortie)
         return phrases
-    phrases.append(f"{nom} a bien tourné ({compte.get('secondes', 0)} s). Le résumé est "
-                   "ci-dessous.")
+    phrases.append(f"{nom} a bien tourné ({duree(compte.get('secondes', 0)) or '0 s'}). "
+                   "Le résumé est ci-dessous.")
     if not compte.get("verifiee"):
         phrases.append("La ligne de lancement a été devinée par Vigie dans la documentation "
                        "de l'outil : vérifie que le résultat a du sens.")
@@ -317,7 +362,6 @@ def raison_installation(nom):
 
 def _lancer_commande(commande, arguments, delai):
     import shutil
-    import subprocess
     import time
     chemin = shutil.which(commande, path=outils.chemin_recherche())
     if not chemin:
@@ -328,21 +372,81 @@ def _lancer_commande(commande, arguments, delai):
         os.makedirs(dossier, exist_ok=True)
     except OSError:
         dossier = None
+    # PYTHONUNBUFFERED : un outil Python écrit au fil de l'eau ; sinon, arrêté au bout
+    # du temps maximum, il perd ce qu'il gardait en mémoire avant de l'écrire.
+    environnement = {**os.environ, "PATH": outils.chemin_recherche(),
+                     "PYTHONUNBUFFERED": "1"}
     depart = time.monotonic()
-    try:
-        fini = subprocess.run([chemin] + arguments, capture_output=True, text=True,
-                              timeout=delai, errors="replace", cwd=dossier,
-                              stdin=subprocess.DEVNULL)
-    except subprocess.TimeoutExpired:
-        return {"lance": False, "depasse": True, "delai": delai,
-                "raison": f"dépassement de {delai} s",
-                "secondes": round(time.monotonic() - depart, 1), "sortie": ""}
+    code, sortie, erreurs, depasse = _executer([chemin] + arguments, delai, dossier,
+                                               environnement)
     secondes = round(time.monotonic() - depart, 1)
     # On retire les codes couleur ANSI : sinon l'écran affiche « [92m », « [0m »… au
     # lieu du texte (beaucoup d'outils colorent même sans vrai terminal, ex. Arjun).
-    propre = outils.sans_couleurs(fini.stdout or "")
-    erreurs_propres = outils.sans_couleurs(fini.stderr or "")
-    sortie = propre + ("\n" + erreurs_propres if fini.returncode else "")
-    return {"lance": True, "echoue": fini.returncode != 0 or not propre.strip(),
-            "raison": "", "secondes": secondes, "code": fini.returncode, "sortie": sortie,
+    propre = outils.sans_couleurs(sortie)
+    erreurs_propres = outils.sans_couleurs(erreurs)
+    if depasse:
+        return {"lance": True, "depasse": True, "partiel": bool(propre.strip()),
+                "delai": delai, "raison": f"dépassement de {delai} s", "code": None,
+                "echoue": not propre.strip(), "secondes": secondes, "sortie": propre,
+                "erreurs": erreurs_propres}
+    sortie = propre + ("\n" + erreurs_propres if code else "")
+    return {"lance": True, "echoue": code != 0 or not propre.strip(),
+            "raison": "", "secondes": secondes, "code": code, "sortie": sortie,
             "erreurs": erreurs_propres}
+
+
+# Arrêt d'un outil qui dépasse son temps : d'abord comme un Ctrl+C (beaucoup d'outils
+# écrivent alors ce qu'ils ont trouvé, SpiderFoot note son scan « arrêté »), puis de
+# plus en plus fort. (signal, secondes laissées pour finir)
+_ARRET = (("SIGINT", 5), ("SIGTERM", 3), ("SIGKILL", 3))
+
+
+def _signaler(processus, nom_signal):
+    """Envoie le signal à l'outil ET à tout ce qu'il a lancé (son groupe de processus) :
+    SpiderFoot, par exemple, scanne dans un processus à part qui survivrait sinon."""
+    import signal
+    sig = getattr(signal, nom_signal, None)
+    try:
+        if sig is not None and hasattr(os, "killpg"):
+            os.killpg(processus.pid, sig)
+        elif processus.poll() is None:
+            processus.kill()
+    except OSError:          # déjà fini (ProcessLookupError) ou plus à nous
+        pass
+
+
+def _executer(argv, delai, dossier=None, env=None):
+    """Lance argv (sans shell) et attend au plus `delai` secondes.
+
+    Renvoie (code, sortie, erreurs, dépassé). Au-delà du délai, l'outil et tout son
+    groupe sont arrêtés, et on garde ce qu'il avait déjà écrit (code None).
+    """
+    import subprocess
+    processus = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 stdin=subprocess.DEVNULL, cwd=dossier, env=env,
+                                 start_new_session=True)
+    try:
+        sortie, erreurs = processus.communicate(timeout=delai)
+        return processus.returncode, outils._texte(sortie), outils._texte(erreurs), False
+    except subprocess.TimeoutExpired as depassement:
+        sortie, erreurs = depassement.stdout, depassement.stderr
+    for nom_signal, attente in _ARRET:
+        _signaler(processus, nom_signal)
+        try:
+            sortie, erreurs = processus.communicate(timeout=attente)
+            break
+        except subprocess.TimeoutExpired as encore:
+            sortie, erreurs = encore.stdout or sortie, encore.stderr or erreurs
+    _signaler(processus, "SIGKILL")       # rien ne doit continuer à tourner derrière
+    if processus.poll() is None:
+        processus.kill()
+    for tuyau in (processus.stdout, processus.stderr):
+        try:
+            tuyau.close()
+        except (OSError, AttributeError):
+            pass
+    try:
+        processus.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        pass
+    return None, outils._texte(sortie), outils._texte(erreurs), True
