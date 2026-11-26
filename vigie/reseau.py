@@ -15,7 +15,7 @@ RESOLVEURS = ["https://dns.google/resolve", "https://cloudflare-dns.com/dns-quer
 # question et ne tient pas les milliers de questions de dnstwist (essai réel du
 # 21/11/2026 : plus de 10 minutes avec la box, 13 secondes avec ces résolveurs).
 SERVEURS_DNS = ["8.8.8.8", "1.1.1.1"]
-TYPES_DNS = {"TXT": 16, "MX": 15, "CNAME": 5, "A": 1}
+TYPES_DNS = {"TXT": 16, "MX": 15, "CNAME": 5, "A": 1, "AAAA": 28, "SRV": 33}
 
 
 class ErreurReseau(ControleImpossible):

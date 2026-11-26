@@ -49,7 +49,7 @@ MODULES = {
                     "defaut": True, "nom": "Fiche DNS complète (dnsrecon)"},
     "toutes_pages": {"fonction": complements.analyser_pages, "bloc": "Exposition",
                      "actif": False, "defaut": False,
-                     "nom": "Toutes les pages vues par Chrome (Unlighthouse, ~1 min 30)"},
+                     "nom": "Toutes les pages vues par Chrome (Unlighthouse, plusieurs minutes)"},
     "bibliotheques": {"fonction": bibliotheques.analyser, "bloc": "Exposition", "actif": False,
                       "defaut": True, "nom": "Bibliothèques JavaScript du site (Retire.js)"},
     "liens": {"fonction": liens.analyser, "bloc": "Exposition", "actif": False,

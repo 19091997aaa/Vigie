@@ -16,6 +16,7 @@ article menait à une page supprimée.
 import csv
 import io
 import os
+import re
 import tempfile
 import urllib.parse
 
@@ -52,6 +53,29 @@ def _chemin(url):
     return (morceaux.hostname or "") + (morceaux.path or "/")
 
 
+# Fausses alertes propres à WordPress (cas réel du 26/11/2026 sur pavillon-noir.tech) :
+# ces adresses sont dans le code de la page, pas des liens qu'un visiteur clique.
+#   - /wp-json/... : l'accès technique de WordPress pour les programmes ;
+#   - /feed/ : les flux RSS, souvent coupés exprès par une extension de sécurité ;
+#   - xmlrpc.php, oembed, /comments/feed : accès techniques ;
+#   - image-300x158.jpg : les tailles de miniature proposées au navigateur (srcset),
+#     qui n'existent pas toujours ; le navigateur prend alors une autre taille.
+TECHNIQUES_WORDPRESS = re.compile(
+    r"/wp-json(/|$)|/feed/?$|/xmlrpc\.php|/oembed|[?&](?:rest_route|feed)=|"
+    r"/wp-content/uploads/.+-\d{2,4}x\d{2,4}\.(?:jpe?g|png|gif|webp|avif)$", re.I)
+# Le site a refusé le robot (protection anti-robots), il n'a pas dit « page absente ».
+BLOQUE_ROBOT = re.compile(r"\b(401|403|405|406|429|999)\b")
+
+
+def vraie_erreur(casse):
+    """Un lien interne vraiment cassé ? Non pour les adresses techniques de WordPress et
+    pour les refus anti-robots : ce ne sont pas des pages perdues pour un visiteur."""
+    morceaux = urllib.parse.urlparse(casse["url"])
+    if TECHNIQUES_WORDPRESS.search(morceaux.path + ("?" + morceaux.query if morceaux.query else "")):
+        return False
+    return not BLOQUE_ROBOT.search(casse.get("erreur") or "")
+
+
 # Réglages lus par LinkChecker (section [checking] de son fichier de configuration).
 REGLAGES = {"maxrunseconds": 240, "maxnumurls": 400, "timeout": 10, "aborttimeout": 30,
             "maxrequestspersecond": 5, "recursionlevel": 2, "threads": 4}
@@ -73,7 +97,8 @@ def analyser(cible):
             "https://" + cible.domaine + "/"], delai=360, dossier=dossier, partiel=True)
     casses = lire_sortie(texte, cible.domaine)
     brut = {"liens_casses": casses, "bornes": dict(REGLAGES)}
-    internes = [c for c in casses if c["interne"]]
+    internes = [c for c in casses if c["interne"] and vraie_erreur(c)]
+    brut["ecartes"] = len([c for c in casses if c["interne"]]) - len(internes)
     morts = [c for c in casses if not c["interne"]
              and any(m in c["erreur"].lower() for m in DOMAINE_MORT)]
     constats = []

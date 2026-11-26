@@ -66,6 +66,9 @@ class Base(unittest.TestCase):
         self._sauve_https = reseau.https_repond
         reseau.https_repond = lambda *a, **k: reseau.INCONNU
         self.addCleanup(setattr, reseau, "https_repond", self._sauve_https)
+        # La Wayback Machine n'est jamais interrogée pour de vrai : « rien d'archivé ».
+        self.addCleanup(setattr, archives, "wayback", archives.wayback)
+        archives.wayback = lambda domaine: []
         self._sauve = (reseau.dns, site._ouvrir, site._jours_certificat, outils.executer,
                        metadonnees._ouvrir)
         # Aucun essai ne télécharge pour de vrai, et aucun résultat d'un essai ne
@@ -2402,6 +2405,10 @@ class Fiabilite(Base):
     def test_dnsrecon_raison_en_francais(self):
         outils.executer_detail = lambda *a, **k: resultat(
             "[-] Could not resolve domain: ex.fr\n", "", 1)
+
+        def dns_coupe(nom, typ):
+            raise reseau.ErreurReseau("DNS injoignable")
+        reseau.dns = dns_coupe  # Vigie non plus ne peut pas lire la fiche : pas de repli
         from vigie.modules import complements
         with self.assertRaises(ControleImpossible) as empechement:
             complements.analyser_dns(CIBLE)
@@ -2942,3 +2949,222 @@ class TestBrancherALaMain(unittest.TestCase):
     def test_formulaire_dans_la_page(self):
         from vigie import interface_outils
         self.assertIn("/outil/brancher", interface_outils.page())
+
+
+class RapportDiagComplet(Base):
+    """Relecture du diagnostic complet du 26/11/2026 sur pavillon-noir.tech (68/100) :
+    incohérences qu'un client remarquerait, faux « correct », faux positifs, outils en panne."""
+
+    def test_dmarc_quarantaine_ne_dit_pas_que_rien_ne_bloque(self):
+        from vigie import consequences
+        absent = consequences.pour({"cle": "dmarc", "niveau": CRITIQUE,
+                                    "titre": "DMARC absent — vu par checkdmarc"})
+        quarantaine = consequences.pour({
+            "cle": "dmarc", "niveau": INFO,
+            "titre": "DMARC en quarantaine, pas encore en blocage — vu par checkdmarc"})
+        self.assertIn("Rien ne dit", absent["attaquant"])
+        self.assertNotIn("Rien ne dit", quarantaine["attaquant"])
+        self.assertIn("indésirable", quarantaine["attaquant"])
+        self.assertIn("assurance", quarantaine)      # le reste de la fiche est gardé
+        # La fiche commune n'est pas modifiée par la variante.
+        self.assertIn("Rien ne dit", consequences.CONSEQUENCES["dmarc"]["attaquant"])
+
+    def test_unlighthouse_sans_duree_fausse_et_sans_recompter_l_accueil(self):
+        from vigie.modules import complements
+        self.assertNotIn("1 min 30", MODULES["toutes_pages"]["nom"])
+        self.assertTrue(complements.est_accueil("https://ex.fr/", "ex.fr"))
+        self.assertTrue(complements.est_accueil("https://www.ex.fr", "ex.fr"))
+        self.assertFalse(complements.est_accueil("https://ex.fr/article/", "ex.fr"))
+        vrai = (complements.pdf.trouver_navigateur, complements.lire_unlighthouse,
+                outils.disponible)
+        self.addCleanup(lambda: setattr(complements.pdf, "trouver_navigateur", vrai[0])
+                        or setattr(complements, "lire_unlighthouse", vrai[1])
+                        or setattr(outils, "disponible", vrai[2]))
+        complements.pdf.trouver_navigateur = lambda: "/bin/chrome"
+        outils.executer = lambda *a, **k: ""
+        outils.disponible = lambda nom: True
+        complements.lire_unlighthouse = lambda dossier: (30, [
+            (5.4, "https://ex.fr/article/"), (4.8, "https://ex.fr/")])
+        constats, _ = complements.analyser_pages(CIBLE)
+        self.assertIn("1 page lente sur 30", constats[0].titre)
+        self.assertNotIn("(4.8 s)", constats[0].explication)
+        self.assertIn("mesurée par Lighthouse", constats[0].explication)
+        # Seule l'accueil était lente : « correct » pour les autres pages.
+        complements.lire_unlighthouse = lambda dossier: (30, [(4.8, "https://ex.fr/")])
+        self.assertEqual(complements.analyser_pages(CIBLE)[0][0].niveau, OK)
+
+    def test_sitespeed_meme_cle_que_lighthouse_et_resume_lu(self):
+        from vigie.modules import complet
+        mesures = complet.lire_resume_sitespeed(
+            "INFO: https://ex.fr/ 18 requests, 236 kb, firstPaint: 312ms, Load: 1.23s, "
+            "LCP: 4.70s (1 run)")
+        self.assertEqual(mesures["fullyLoaded"], 1230)
+        self.assertEqual(mesures["largestContentfulPaint"], 4700)
+        appels = []
+
+        def faux(nom, arguments, **k):
+            appels.append(arguments)
+            return resultat("[2026-11-26] INFO: https://ex.fr/ Load: 5.1s, LCP: 4.7s (1 run)\n"
+                            "[2026-11-26] INFO: HTML stored in /tmp/x/resultat")
+        outils.executer_detail = faux
+        constats, _ = complet.analyser_sitespeed(CIBLE)
+        self.assertIn("analysisstorer", appels[0])
+        self.assertEqual(constats[0].cle, "lenteur")     # fusionné avec Lighthouse
+        self.assertIn("4.7 secondes", constats[0].titre)
+
+    def test_sitespeed_sans_mesure_dit_l_erreur(self):
+        from vigie.modules import complet
+        outils.executer_detail = lambda *a, **k: resultat(
+            "[x] ERROR: Could not start Chrome\n[x] INFO: HTML stored in /tmp/x")
+        with self.assertRaises(ControleImpossible) as empechement:
+            complet.analyser_sitespeed(CIBLE)
+        self.assertIn("Could not start Chrome", str(empechement.exception))
+
+    def test_tlsx_cite_comme_source_du_certificat_www(self):
+        vrai = outils.disponible
+        self.addCleanup(setattr, outils, "disponible", vrai)
+        outils.disponible = lambda nom: True
+        tlsx = json.dumps({"subject_an": ["ex.fr", "www.ex.fr"]})
+
+        def faux(nom, arguments, **k):
+            if nom == "tlsx":
+                return tlsx
+            return ecrit_fichier("--json_out", LotDix.SSLYZE)(nom, arguments)
+        outils.executer = faux
+        constats, _ = chiffrement.analyser(CIBLE)
+        www = next(c for c in constats if c.cle == "certificat_www")
+        self.assertEqual(www.sources, [chiffrement.SOURCE_TLSX])
+        self.assertTrue(all(not c.sources for c in constats if c.cle != "certificat_www"))
+
+    def test_metagoofil_en_zero_seconde_n_est_pas_un_correct(self):
+        from vigie.modules import complet
+        outils.executer_detail = lambda *a, **k: resultat("", "", 0)
+        with self.assertRaises(ControleImpossible) as empechement:
+            complet.analyser_metagoofil(CIBLE)
+        self.assertIn("n'a pas eu lieu", str(empechement.exception))
+        # Un plantage : la vraie ligne d'erreur est donnée.
+        outils.executer_detail = lambda *a, **k: resultat(
+            "", "Traceback (most recent call last):\n  File x\nImportError: googlesearch", 1)
+        with self.assertRaises(ControleImpossible) as empechement:
+            complet.analyser_metagoofil(CIBLE)
+        self.assertIn("ImportError: googlesearch", str(empechement.exception))
+        # Une vraie recherche qui ne trouve rien : là, « correct ».
+        self.assertEqual(complet.metagoofil_a_cherche(
+            resultat("[*] Searching for 40 .pdf files\n"), 0.5), "")
+        self.assertEqual(complet.metagoofil_a_cherche(resultat(""), 250), "")
+
+    def test_gau_muet_verifie_par_la_wayback_machine(self):
+        outils.executer = lambda *a, **k: ""
+        archives.wayback = lambda domaine: ["https://ex.fr/", "https://ex.fr/2026/05/article/"]
+        constats, brut = archives.analyser(CIBLE)
+        self.assertEqual(brut["archives"]["source"], "wayback")
+        self.assertIn("2 pages archivées", constats[0].titre)
+        archives._CACHE.clear()
+        archives.wayback = lambda domaine: None   # Wayback injoignable : on ne conclut pas
+        with self.assertRaises(ControleImpossible):
+            archives.analyser(CIBLE)
+        archives._CACHE.clear()
+        archives.wayback = lambda domaine: []     # les deux d'accord : vraiment rien
+        constats, _ = archives.analyser(CIBLE)
+        self.assertEqual(constats[0].niveau, OK)
+        self.assertIn("Wayback", constats[0].explication)
+
+    def test_myspace_faux_positif_ecarte(self):
+        sites = pseudos.recouper({
+            "Sherlock": [{"site": "Myspace", "adresse": "a"}, {"site": "YouTube", "adresse": "b"}],
+            "Social Analyzer": [{"site": "myspace.com", "adresse": "a"},
+                                {"site": "youtube", "adresse": "b"}]})
+        self.assertEqual(list(sites), ["youtube"])
+
+    def test_liens_techniques_wordpress_ecartes(self):
+        from vigie.modules import liens
+        outils.executer = lambda *a, **k: (
+            "urlname;parentname;base;result;warningstring;infostring;valid;url\n"
+            "https://ex.fr/index.php/wp-json/wp/v2/categories/7;https://ex.fr/c/;;404 Not Found;;;False;x\n"
+            "https://ex.fr/index.php/category/ia/feed/;https://ex.fr/c/;;404 Not Found;;;False;x\n"
+            "https://ex.fr/wp-content/uploads/2026/10/illu-168-300x158.jpg;https://ex.fr/c/;;"
+            "404 Not Found;;;False;x\n"
+            "https://ex.fr/contact/;https://ex.fr/;;403 Forbidden;;;False;x\n"
+            "https://ex.fr/vieil-article/;https://ex.fr/c/;;404 Not Found;;;False;x\n")
+        constats, brut = liens.analyser(CIBLE)
+        casse = next(c for c in constats if c.cle == "liens_casses")
+        self.assertEqual(casse.titre, "1 lien cassé sur votre site")
+        self.assertIn("vieil-article", casse.explication)
+        self.assertEqual(brut["ecartes"], 4)
+
+    def test_dnstwist_trop_long_puis_recherche_reduite(self):
+        appels = []
+        vrai = outils.disponible
+        self.addCleanup(setattr, outils, "disponible", vrai)
+        outils.disponible = lambda nom: True
+
+        def faux(nom, arguments, delai=0, **k):
+            appels.append((list(arguments), delai))
+            if "--fuzzers" not in arguments:
+                raise ControleImpossible("l'outil dnstwist n'a pas répondu en 240 secondes")
+            return resultat(Domaines.SORTIE)
+        outils.executer_detail = faux
+        constats, brut = domaines.analyser(CIBLE)
+        self.assertEqual(len(appels), 2)
+        self.assertIn("--fuzzers", appels[1][0])
+        self.assertIn("fautes de frappe courantes", brut["note"])
+        self.assertIn("fautes de frappe", constats[0].explication)
+        # Tout le contrôle tient dans son délai, et le message dit la vraie durée.
+        self.assertLess(domaines.DELAI_COMPLET + domaines.DELAI_REDUIT,
+                        MODULES["domaines"]["delai"])
+
+        def toujours_trop_long(nom, arguments, delai=0, **k):
+            raise ControleImpossible(f"l'outil dnstwist n'a pas répondu en {delai} secondes")
+        outils.executer_detail = toujours_trop_long
+        with self.assertRaises(ControleImpossible) as empechement:
+            domaines.analyser(CIBLE)
+        self.assertIn("9 min au total", str(empechement.exception))
+        self.assertNotIn("540", str(empechement.exception))
+
+    def test_whatweb_lance_avec_le_correctif_ruby(self):
+        from vigie.modules import complet
+        vus = {}
+
+        def faux(nom, arguments, env=None, dossier=None, **k):
+            vus["env"] = env
+            correctif = env["RUBYOPT"].split("-r", 1)[1]
+            with open(correctif, encoding="utf-8") as lu:
+                vus["correctif"] = lu.read()
+            journal = next(a.split("=", 1)[1] for a in arguments if a.startswith("--log-json="))
+            with open(journal, "w", encoding="utf-8") as f:
+                json.dump([{"plugins": {"WordPress": {"version": ["6.4"]}}}], f)
+            return resultat()
+        outils.executer_detail = faux
+        constats, brut = complet.analyser_whatweb(CIBLE)
+        self.assertIn("exists?", vus["correctif"])
+        self.assertIn("WordPress 6.4", brut["whatweb"]["technos"])
+
+    def test_trace_ruby_et_python_donnent_la_vraie_erreur(self):
+        ruby = ("/usr/share/whatweb/lib/whatweb/x.rb:12:in `load': undefined method "
+                "`exists?' for class File (NoMethodError)\n"
+                "\tfrom /usr/share/whatweb/lib/y.rb:3:in `go'\n"
+                "\tfrom /usr/bin/whatweb:257:in `<main>'")
+        raison = outils.pourquoi(resultat("", ruby, 1))
+        self.assertIn("Ruby", raison)
+        self.assertIn("NoMethodError", raison)
+        python = "Traceback (most recent call last):\n  File \"x\", line 1\nKeyError: 'SOA'"
+        self.assertIn("KeyError: 'SOA'", outils.pourquoi(resultat("", python, 1)))
+
+    def test_dnsrecon_plante_vigie_lit_la_fiche_et_le_bilan_le_dit(self):
+        from vigie import diag_gratuit
+        from vigie.modules import complements
+        outils.executer_detail = lambda *a, **k: resultat(
+            "", "Traceback (most recent call last):\nKeyError: 'SOA'", 1)
+        reponses = {("_imaps._tcp.ex.fr", "SRV"): ["0 1 993 ssl0.ovh.net."],
+                    ("ex.fr", "AAAA"): ["2001:db8::1"]}
+        reseau.dns = lambda nom, typ: reponses.get((nom, typ), [])
+        constats, brut = complements.analyser_dns(CIBLE)
+        self.assertIn("lecture des mails (IMAP chiffré)", brut["dns_complet"]["services"])
+        self.assertNotIn("dnsrecon", constats[0].titre)
+        self.assertIn("KeyError", brut["panne"]["dnsrecon"])
+        deroule = [{"module": "dns_complet", "nom": "Fiche DNS", "etat": "fini",
+                    "detail": "1 point(s) relevé(s)", "duree": 2, "panne": brut["panne"]}]
+        ligne = next(l for l in diag_gratuit.bilan(deroule, installe=lambda c: True)
+                     if l["outil"] == "dnsrecon")
+        self.assertEqual(ligne["etat"], "non_realise")
+        self.assertIn("Vigie a lu lui-même", ligne["texte"])

@@ -34,16 +34,43 @@ def lire_sortie(texte):
     return imitateurs
 
 
-def arguments(domaine, resolveurs_publics=True):
+# Les fautes de frappe les plus courantes : quelques centaines de variantes au lieu de
+# plusieurs milliers. Servent quand le DNS est trop lent pour la recherche complète.
+FUZZERS_REDUITS = "addition,hyphenation,omission,plural,repetition,transposition,vowel-swap"
+
+
+def arguments(domaine, resolveurs_publics=True, reduit=False):
     """dnstwist interroge des résolveurs publics, 32 questions à la fois : un nom de
     domaine un peu long donne plus de 10 000 variantes à vérifier."""
     args = ["--format", "json", "--registered", "--threads", "32"]
+    if reduit:
+        args += ["--fuzzers", FUZZERS_REDUITS]
     if resolveurs_publics:
         args += ["--nameservers", ",".join(reseau.SERVEURS_DNS)]
     return args + [domaine]
 
 
 SANS_MODULE_DNS = "missing dnspython"
+# Délais. Le contrôle entier a 15 minutes (modules/__init__.py) : les deux essais doivent
+# tenir dedans, et le message doit dire la VRAIE durée. Cas réel du 26/11/2026 : 4 min
+# + 9 min = coupé à 13 min, et le rapport disait « pas répondu en 540 secondes ».
+DELAI_COMPLET = 240
+DELAI_MACHINE = 540
+DELAI_REDUIT = 300
+
+
+def _essai(domaine, delai, **options):
+    """Résultat de dnstwist, ou None s'il a dépassé son délai."""
+    try:
+        return outils.executer_detail("dnstwist", arguments(domaine, **options), delai=delai)
+    except ControleImpossible:
+        if not outils.disponible("dnstwist"):
+            raise
+        return None
+
+
+def _minutes(secondes):
+    return f"{secondes // 60} min" + (f" {secondes % 60} s" if secondes % 60 else "")
 
 
 def lancer(domaine):
@@ -55,25 +82,45 @@ def lancer(domaine):
     d'erreur, rien sur la sortie normale). On le relance alors sur le DNS de la machine :
     plus lent, mais le contrôle se fait.
 
+    Si la recherche complète dépasse son délai (le DNS répond, mais trop lentement pour
+    des milliers de questions), on ne relance PAS la même recherche ailleurs : on la
+    refait réduite aux fautes de frappe courantes, et le rapport le dit.
+
     Autre cas : avec --registered, une sortie vide veut dire qu'AUCUN nom n'a répondu,
     pas même le domaine de la société. Ce n'est pas « aucun imitateur » : c'est le DNS
     qui n'a pas répondu. On réessaie sur le DNS de la machine, puis on le dit.
     """
-    note = ""
-    # Délais : 4 min avec les résolveurs publics (13 s d'habitude), puis 9 min par le
-    # DNS de la machine. Total sous les 15 min du contrôle (modules/__init__.py).
-    try:
-        resultat = outils.executer_detail("dnstwist", arguments(domaine), delai=240)
-    except ControleImpossible:
-        if not outils.disponible("dnstwist"):
-            raise
-        resultat = None  # délai dépassé : les résolveurs publics ne répondent pas
+    resultat = _essai(domaine, DELAI_COMPLET)
     sans_module = resultat is not None and SANS_MODULE_DNS in (resultat.stderr or "").lower()
-    if resultat is None or sans_module or not (resultat.stdout or "").strip():
-        note = ("dnstwist sans module DNS : passé par le DNS de la machine"
-                if sans_module else
-                "aucune réponse des résolveurs publics : passé par le DNS de la machine")
-        resultat = outils.executer_detail("dnstwist", arguments(domaine, False), delai=540)
+    if sans_module:
+        note = "dnstwist sans module DNS : passé par le DNS de la machine"
+        resultat = _essai(domaine, DELAI_MACHINE, resolveurs_publics=False)
+        if resultat is None:
+            raise ControleImpossible(
+                f"dnstwist n'a pas fini en {_minutes(DELAI_MACHINE)} : il lui manque son module "
+                "DNS (dnspython), il passe donc par le DNS de la machine, trop lent. Relancer "
+                "l'installeur, qui ajoute ce module")
+    elif resultat is None:
+        note = ("recherche complète trop longue (plus de "
+                f"{_minutes(DELAI_COMPLET)}) : refaite sur les fautes de frappe courantes")
+        resultat = _essai(domaine, DELAI_REDUIT, reduit=True)
+        if resultat is None:
+            raise ControleImpossible(
+                f"dnstwist n'a pas fini en {_minutes(DELAI_COMPLET + DELAI_REDUIT)} au total "
+                f"(recherche complète {_minutes(DELAI_COMPLET)}, puis recherche réduite "
+                f"{_minutes(DELAI_REDUIT)}) : les serveurs DNS répondent trop lentement à "
+                "ses milliers de questions. À relancer sur une autre connexion")
+    elif not (resultat.stdout or "").strip():
+        note = ("aucune réponse des résolveurs publics : refaite sur les fautes de frappe "
+                "courantes, par le DNS de la machine")
+        resultat = _essai(domaine, DELAI_REDUIT, resolveurs_publics=False, reduit=True)
+        if resultat is None:
+            raise ControleImpossible(
+                "dnstwist n'a eu de réponse ni des résolveurs publics, ni du DNS de la "
+                f"machine en {_minutes(DELAI_COMPLET + DELAI_REDUIT)} : le pare-feu filtre "
+                "sans doute ses questions DNS")
+    else:
+        note = ""
     if not (resultat.stdout or "").strip():
         if resultat.returncode:
             raise ControleImpossible("dnstwist s'est arrêté sans résultat — "
@@ -91,10 +138,13 @@ def analyser(cible):
     brut = {"imitateurs": imitateurs}
     if note:
         brut["note"] = note
+    reduit = ("refaite sur les fautes de frappe courantes" in note)
+    precision = (" Recherche limitée aux fautes de frappe les plus courantes : le DNS "
+                 "était trop lent pour tester toutes les variantes." if reduit else "")
     if not imitateurs:
         return [Constat(BLOC, OK, "Aucun domaine imitateur enregistré",
                         "Aucune variante trompeuse de votre nom de domaine n'est enregistrée "
-                        "aujourd'hui.", cle="domaines_imitateurs")], brut
+                        "aujourd'hui." + precision, cle="domaines_imitateurs")], brut
     # Un imitateur qui peut recevoir du mail (MX) est le plus dangereux : faux mails crédibles.
     avec_mail = [i for i in imitateurs if i["mx"]]
     niveau = IMPORTANT if avec_mail else INFO
@@ -107,6 +157,6 @@ def analyser(cible):
     return [Constat(
         BLOC, niveau, f"{len(imitateurs)} domaines imitent le vôtre",
         f"Variantes enregistrées : {noms}.{detail} Un escroc peut s'en servir pour piéger "
-        "vos clients ou vos salariés.",
+        "vos clients ou vos salariés." + precision,
         "Surveiller ces domaines, signaler les plus proches pour fermeture, et prévenir "
         "vos équipes de vérifier l'adresse exacte.", cle="domaines_imitateurs")], brut

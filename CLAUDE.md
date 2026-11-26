@@ -176,6 +176,20 @@ Rappel honnête : Vigie pilote le **moteur en ligne de commande** des outils (so
 traduites) ; services (Wazuh, OpenVAS), applis (Burp, Ghidra) et exploration à la main
 restent dans l'interface de l'outil.
 
+**Relecture du 1er rapport complet (26/11/2026, 68/100)** : un texte de conséquence peut
+avoir des **variantes** selon la situation réelle (`consequences.VARIANTES`, ex. DMARC en
+quarantaine ≠ absent). Une même mesure = **une seule ligne** (vitesse de l'accueil : clé
+`lenteur` pour Lighthouse et sitespeed.io ; Unlighthouse ne recompte pas l'accueil). Un
+constat porte le nom de l'outil **qui l'a vu** (`sources=`, ex. tlsx dans le module SSLyze).
+**Jamais un « correct » sans vraie recherche** : Metagoofil fini en < 5 s = non réalisé ;
+gau muet = Vigie relit la Wayback Machine. Faux positifs écartés : `pseudos.FAUX_POSITIFS`
+(Myspace), `liens.TECHNIQUES_WORDPRESS` (wp-json, feed, miniatures) et refus anti-robots.
+Pannes : dnstwist trop long = recherche réduite aux fautes courantes, 9 min au total, durée
+vraie dans le message ; dnsrecon planté = Vigie lit lui-même SRV/IPv6 et le bilan dit
+« en panne » (`panne` dans les données) ; WhatWeb lancé avec un correctif Ruby (`RUBYOPT`) ;
+sitespeed.io avec `analysisstorer` + lecture du résumé. `outils.pourquoi` donne maintenant
+la **vraie ligne d'erreur** d'une trace Python ou Ruby.
+
 **Conséquences pour le dirigeant (24/11/2026)** : demande d'Anass, chaque constat non
 « Correct » a un onglet **Conséquences** (ce qu'un attaquant peut faire / ce que ça coûte /
 côté loi / côté assurance / exemple réel sourcé) à côté de l'onglet **À corriger

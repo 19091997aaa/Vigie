@@ -77,8 +77,14 @@ def lancer(cible, noms_modules, chemin_autorisation=None, date=None, suivi=None,
         duree = time.monotonic() - debut
         termines.add(nom)
         resultats[nom] = resultat
-        deroule.append({"module": nom, "nom": MODULES[nom]["nom"], "etat": etat,
-                        "detail": detail, "duree": round(duree, 1)})
+        etape = {"module": nom, "nom": MODULES[nom]["nom"], "etat": etat,
+                 "detail": detail, "duree": round(duree, 1)}
+        # Un contrôle fait par Vigie lui-même parce que l'outil a planté (dnsrecon,
+        # 26/11/2026) : le bilan des 42 outils doit montrer la panne, pas « lancé ».
+        panne = (resultat[1] or {}).get("panne") if resultat and isinstance(resultat[1], dict) else None
+        if panne:
+            etape["panne"] = panne
+        deroule.append(etape)
         suivi(nom, etat, detail if etat != "fini" else f"{detail} — {_duree(duree)}")
 
     try:

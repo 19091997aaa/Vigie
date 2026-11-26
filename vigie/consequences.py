@@ -474,6 +474,24 @@ ASSURANCE_QUESTIONNAIRE = ("C'est une question de votre assureur cyber. Si vous 
                            "réduite (Code des assurances, art. L.113-9), voire le contrat "
                            "annulé en cas de fausse déclaration volontaire (art. L.113-8).")
 
+# Variantes d'une fiche selon la situation réelle, reconnue au titre du constat.
+# Cas réel du 26/11/2026 : DMARC était en quarantaine, mais le rapport disait « rien ne
+# dit aux messageries de refuser un faux mail », texte écrit pour un DMARC absent. Le
+# client voit la contradiction. Les rubriques données ici remplacent celles de la fiche.
+VARIANTES = {
+    "dmarc": [
+        (re.compile(r"quarantaine|quarantine", re.I), {
+            "attaquant": "Les faux mails à votre nom sont envoyés en courrier indésirable, "
+                         "mais pas refusés : ils arrivent quand même chez le destinataire. "
+                         "Un client qui fouille ses indésirables, ou une messagerie qui "
+                         "applique mal la consigne, peut encore se faire piéger.",
+            "entreprise": "Le risque de fausse facture ou de faux ordre de virement est "
+                          "réduit, mais pas supprimé : il suffit d'une personne qui sort le "
+                          "faux mail des indésirables.",
+        }),
+    ],
+}
+
 # Constats créés sans clé : on les reconnaît à leur titre (sans toucher aux modules).
 PAR_TITRE = [
     (re.compile(r"n'est pas chiffré$"), "technos_non_chiffre"),
@@ -539,7 +557,11 @@ def pour(constat):
         fiche = dict(CONSEQUENCES_ASSUREUR.get(cle[len("assureur_"):], {}))
         fiche["assurance"] = ASSURANCE_QUESTIONNAIRE
     else:
-        fiche = CONSEQUENCES.get(cle, {})
+        fiche = dict(CONSEQUENCES.get(cle, {}))
+        for motif, rubriques in VARIANTES.get(cle, ()):
+            if motif.search(constat.get("titre") or ""):
+                fiche.update(rubriques)
+                break
     resultat = {nom: fiche[nom] for nom, _ in RUBRIQUES if fiche.get(nom)}
     if resultat and cle in EXEMPLES:
         resultat["exemple"] = dict(EXEMPLES[cle])

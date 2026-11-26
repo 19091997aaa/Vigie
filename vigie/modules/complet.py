@@ -28,6 +28,7 @@ import json
 import os
 import re
 import tempfile
+import time
 import urllib.parse
 
 from .. import indices, outils, reseau
@@ -166,15 +167,55 @@ def lire_whatweb(data):
     return {"technos": technos, "avec_version": avec_version}
 
 
+# WhatWeb 0.5.5 (paquet apt d'Ubuntu) plante dès le démarrage avec un Ruby récent : il
+# appelle des fonctions que Ruby a retirées (File.exists? en 3.2, URI.escape en 3.0,
+# Fixnum en 3.2). Cas réel du 26/11/2026 sur la VM Ubuntu : « from /usr/bin/whatweb:257 ».
+# Ce petit correctif, chargé par Ruby avant WhatWeb (variable RUBYOPT), les remet en
+# place. Il ne change rien à ce que fait WhatWeb, ni au site visité.
+CORRECTIF_RUBY = """\
+# Correctif Vigie : fonctions retirées des Ruby récents, encore appelées par WhatWeb.
+[File, Dir].each do |classe|
+  unless classe.respond_to?(:exists?)
+    classe.singleton_class.send(:alias_method, :exists?, :exist?)
+  end
+end
+class Object
+  def taint; self; end unless method_defined?(:taint)
+  def untaint; self; end unless method_defined?(:untaint)
+  def tainted?; false; end unless method_defined?(:tainted?)
+end
+Fixnum = Integer unless defined?(Fixnum)
+Bignum = Integer unless defined?(Bignum)
+require "uri"
+unless URI.respond_to?(:escape)
+  module URI
+    def self.escape(texte, *motif)
+      DEFAULT_PARSER.escape(texte, *motif)
+    end
+    def self.encode(texte, *motif)
+      DEFAULT_PARSER.escape(texte, *motif)
+    end
+    def self.unescape(texte)
+      DEFAULT_PARSER.unescape(texte)
+    end
+  end
+end
+"""
+
+
 def _whatweb_une_fois(url):
     """(infos ou None, résultat brut de l'outil)."""
     with tempfile.TemporaryDirectory() as dossier:
         journal = os.path.join(dossier, "whatweb.json")
+        correctif = os.path.join(dossier, "correctif_vigie.rb")
+        with open(correctif, "w", encoding="utf-8") as fichier:
+            fichier.write(CORRECTIF_RUBY)
+        options_ruby = (os.environ.get("RUBYOPT", "") + " -r" + correctif).strip()
         # Pas de « --no-errors » : quand WhatWeb ne voit rien, on veut savoir pourquoi.
         resultat = outils.executer_detail(
             "whatweb", ["--color=never", "-a", "1", "--open-timeout", "20",
                         "--read-timeout", "30", f"--log-json={journal}", url],
-            delai=120, dossier=dossier)
+            delai=120, dossier=dossier, env={"RUBYOPT": options_ruby})
         try:
             with open(journal, encoding="utf-8") as lu:
                 return lire_whatweb(json.load(lu)), resultat
@@ -230,10 +271,11 @@ def _valeur(objet, cle):
 
 
 def lire_sitespeed(dossier):
+    """Les mesures dans les fichiers JSON de sitespeed.io (n'importe lequel : le nom des
+    fichiers change d'une version à l'autre, et sans l'extension « analysisstorer » il
+    n'écrit que des pages HTML — cas réel du 26/11/2026)."""
     mesures = {}
     for chemin in glob.glob(os.path.join(dossier, "**", "*.json"), recursive=True):
-        if "browsertime" not in os.path.basename(chemin):
-            continue
         try:
             with open(chemin, encoding="utf-8") as lu:
                 data = json.load(lu)
@@ -247,28 +289,63 @@ def lire_sitespeed(dossier):
     return mesures
 
 
+# Le résumé que sitespeed.io affiche à la fin : « ... Load: 1.23s, ... LCP: 980ms ... ».
+_RESUME_SITESPEED = {"fullyLoaded": r"(?:fullyLoaded|Load)", "largestContentfulPaint":
+                     r"(?:LCP|largestContentfulPaint)", "firstContentfulPaint":
+                     r"(?:FCP|firstContentfulPaint)"}
+
+
+def lire_resume_sitespeed(texte):
+    """Les mesures lues dans le résumé affiché par sitespeed.io (en millisecondes)."""
+    mesures = {}
+    for cle, nom in _RESUME_SITESPEED.items():
+        trouve = re.search(r"\b" + nom + r":\s*([\d.]+)\s*(ms|s)\b", texte or "")
+        if trouve:
+            valeur = float(trouve.group(1))
+            mesures[cle] = valeur * 1000 if trouve.group(2) == "s" else valeur
+    return mesures
+
+
+def _erreur_sitespeed(resultat):
+    """La ligne ERROR de sitespeed.io, sinon la raison générale."""
+    texte = (resultat.stdout or "") + "\n" + (resultat.stderr or "")
+    erreurs = [l.strip() for l in texte.splitlines() if re.search(r"\bERROR\b", l)]
+    if erreurs:
+        return "message de l'outil : " + erreurs[-1][:160]
+    return outils.pourquoi(resultat)
+
+
 def analyser_sitespeed(cible):
     with tempfile.TemporaryDirectory() as dossier:
         sortie = os.path.join(dossier, "resultat")
         resultat = outils.executer_detail(
             "sitespeed.io", [_url(cible), "-n", "1", "--headless", "true",
+                             "--plugins.add", "analysisstorer",
                              "--outputFolder", sortie], delai=420, dossier=dossier)
         mesures = lire_sitespeed(sortie)
     if not mesures:
-        raise ControleImpossible("sitespeed.io n'a rien mesuré (" +
-                                 (_derniere_ligne(resultat.stderr or resultat.stdout)
-                                  or "navigateur absent ?") + ")")
-    charge = mesures.get("fullyLoaded") or mesures.get("largestContentfulPaint")
+        mesures = lire_resume_sitespeed((resultat.stdout or "") + "\n" + (resultat.stderr or ""))
+    if not mesures:
+        raise ControleImpossible("sitespeed.io n'a rien mesuré : le navigateur n'a sans doute "
+                                 "pas pu ouvrir la page — " + _erreur_sitespeed(resultat))
+    charge = mesures.get("largestContentfulPaint") or mesures.get("fullyLoaded")
     if not charge:
         return [], {"sitespeed": mesures}
     secondes = round(charge / 1000, 1)
-    lente = secondes > 5
-    return [Constat(BLOC, INFO,
-                    f"Page d'accueil chargée en {secondes} s" + (" : c'est lent" if lente else ""),
-                    "Mesure faite par un vrai navigateur (sitespeed.io). Au-delà de 3 à 5 "
-                    "secondes, une partie des visiteurs repart avant d'avoir vu la page.",
-                    "Alléger les images et les extensions du site." if lente else "",
-                    cle="vitesse_sitespeed", hors_note=True)], {"sitespeed": mesures}
+    lente = secondes > 4
+    # Même clé que Lighthouse (« lenteur ») : une seule ligne « page d'accueil lente »
+    # dans le rapport, même si deux outils l'ont mesurée (26/11/2026 : deux chiffres pour
+    # la même page déroutent le client).
+    if lente:
+        return [Constat(BLOC, INFO, f"Votre page d'accueil met {secondes} secondes à s'afficher",
+                        "Mesure faite par un vrai navigateur (sitespeed.io). Au-delà de 4 "
+                        "secondes, une partie des visiteurs repart avant d'avoir vu la page.",
+                        "Alléger les images et activer un cache (sur WordPress, une "
+                        "extension suffit).", cle="lenteur", hors_note=True)], \
+            {"sitespeed": mesures}
+    return [Constat(BLOC, OK, f"Page d'accueil affichée en {secondes} s",
+                    "Mesure faite par un vrai navigateur (sitespeed.io) : c'est rapide.",
+                    cle="lenteur", hors_note=True)], {"sitespeed": mesures}
 
 
 # ---------------------------------------------------------------------------
@@ -346,21 +423,40 @@ def analyser_uncover(cible):
 # par ExifTool (noms COMPTÉS, jamais listés).
 
 TYPES_DOCUMENTS = "pdf,doc,docx,xls,xlsx,ppt,pptx,odt,ods"
+# Metagoofil attend entre deux recherches Google : une vraie recherche prend des minutes.
+# Fini en moins de 5 secondes sans rien trouver = il n'a rien cherché (cas réel du
+# 26/11/2026 : « 0 s », et le rapport affichait « aucun document » comme si c'était prouvé).
+DUREE_MINIMUM_RECHERCHE = 5
+
+
+def metagoofil_a_cherche(resultat, duree):
+    """Metagoofil a-t-il vraiment interrogé Google ? Sinon : la raison, en français."""
+    texte = (resultat.stdout or "") + "\n" + (resultat.stderr or "")
+    if re.search(r"429|too many requests|captcha|unusual traffic", texte, re.I):
+        return "Google a bloqué la recherche (trop de questions) : réessayer plus tard"
+    if resultat.returncode not in (0, None) or "Traceback" in texte:
+        return "Metagoofil s'est arrêté sans chercher — " + outils.pourquoi(resultat)
+    if duree < DUREE_MINIMUM_RECHERCHE and not re.search(r"search", texte, re.I):
+        return ("Metagoofil s'est arrêté au bout de " + str(round(duree)) + " s sans "
+                "interroger Google : la recherche n'a pas eu lieu — " + outils.pourquoi(resultat))
+    return ""
 
 
 def analyser_metagoofil(cible):
     with tempfile.TemporaryDirectory() as dossier:
         documents = os.path.join(dossier, "documents")
         os.makedirs(documents)
+        debut = time.monotonic()
         resultat = outils.executer_detail(
             "metagoofil", ["-d", cible.domaine, "-t", TYPES_DOCUMENTS, "-l", "40", "-n", "10",
                            "-o", documents, "-w"], delai=420, dossier=dossier)
+        duree = time.monotonic() - debut
         fichiers = [f for f in os.listdir(documents)
                     if os.path.isfile(os.path.join(documents, f))]
         if not fichiers:
-            if re.search(r"429|too many requests|captcha", resultat.stdout + resultat.stderr, re.I):
-                raise ControleImpossible("Google a bloqué la recherche (trop de questions) : "
-                                         "réessayer plus tard")
+            raison = metagoofil_a_cherche(resultat, duree)
+            if raison:
+                raise ControleImpossible(raison)
             return [Constat(BLOC, OK, "Aucun document de la société trouvé par Google",
                             "Les moteurs de recherche ne référencent aucun PDF, Word ou "
                             "Excel publié sur ce domaine.", cle="documents_google")], \

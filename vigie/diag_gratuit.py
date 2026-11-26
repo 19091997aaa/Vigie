@@ -109,6 +109,9 @@ def bilan(deroule, installe=None):
         elif not installe(fiche["commande"]):
             etat, duree = "absent", None
             texte = "à installer : " + outils.astuce_installation(fiche["commande"])
+        elif etape["etat"] == "fini" and (etape.get("panne") or {}).get(fiche["commande"]):
+            etat, duree = "non_realise", etape["duree"]
+            texte = etape["panne"][fiche["commande"]]
         elif etape["etat"] == "fini":
             etat = "lance"
             texte, duree = f"{etape['nom']} : {etape['detail']}", etape["duree"]
