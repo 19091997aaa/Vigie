@@ -148,16 +148,112 @@ def attendre_memoire(minimum_mo=MEMOIRE_MINI_MO, attente_max=300, pause=5):
     return attendu
 
 
+# ---------------------------------------------------------------------------
+# Place disque. Le 26/11/2026, Stratus Red Team a raté sur « no space left on device »
+# dans /opt/vigie-outils/tmp : les restes de compilation (go-build…, pip-…) d'une
+# installation coupée, le cache de Go et celui de pip remplissaient le disque des
+# outils (garak et Nebula pèsent ~6 Go chacun, à cause de la bibliothèque d'IA torch).
+
+PLACE_MINI_MO = 6000   # en dessous, on fait le ménage avant de compiler
+# Les dossiers provisoires des compilateurs (go, pip) : jamais ceux d'un autre programme.
+_RESTES = re.compile(r"^(?:go-build|go-link|pip-)", re.I)
+_ACTIFS = 0                       # compilations en cours
+_VERROU_PLACE = threading.Lock()  # personne ne démarre pendant le ménage
+
+
+def place_libre_mo(chemin=None):
+    """La place libre (Mo) sur le disque des outils (ou de chemin)."""
+    chemin = chemin or os.environ.get("TMPDIR") or dossiers()[0]
+    while chemin and not os.path.exists(chemin):
+        chemin = os.path.dirname(chemin)
+    try:
+        return shutil.disk_usage(chemin or "/").free // (1024 * 1024)
+    except OSError:
+        return None
+
+
+def _vider(dossier, garder=None):
+    """Supprime le contenu d'un dossier (pas le dossier lui-même). garder(nom) dit quoi
+    supprimer ; sans garder, tout part. Renvoie les Mo libérés."""
+    if not dossier or not os.path.isdir(dossier):
+        return 0
+    avant = place_libre_mo(dossier) or 0
+    for nom in os.listdir(dossier):
+        if garder and not garder(nom):
+            continue
+        chemin = os.path.join(dossier, nom)
+        if os.path.isdir(chemin) and not os.path.islink(chemin):
+            shutil.rmtree(chemin, ignore_errors=True)
+        else:
+            try:
+                os.remove(chemin)
+            except OSError:
+                pass
+    return max(0, (place_libre_mo(dossier) or 0) - avant)
+
+
+def _a_vigie(variable):
+    """Le dossier de la variable (TMPDIR, GOCACHE…) seulement s'il est DANS le dossier
+    des outils de Vigie (/opt/vigie-outils) : jamais le /tmp ou un cache du système."""
+    dossier = os.environ.get(variable, "")
+    racine = os.environ.get("VIGIE_OUTILS_RACINE", "")
+    if racine and dossier and os.path.realpath(dossier).startswith(
+            os.path.realpath(racine) + os.sep):
+        return dossier
+    return ""
+
+
+def nettoyer_restes():
+    """Au DÉBUT d'une installation (rien ne tourne encore) : les restes d'une installation
+    coupée (mémoire pleine, coupure) dans le dossier temporaire de Vigie. Renvoie les Mo
+    libérés."""
+    return _vider(_a_vigie("TMPDIR"))
+
+
+def faire_de_la_place():
+    """Libère de la place SANS toucher aux outils installés : restes de compilation,
+    caches de Go, de pip et de uv. Seulement quand aucune compilation ne tourne (voir
+    chantier). Renvoie les Mo libérés."""
+    libere = _vider(_a_vigie("TMPDIR"), garder=lambda nom: bool(_RESTES.match(nom)))
+    for variable in ("GOCACHE", "PIP_CACHE_DIR", "UV_CACHE_DIR"):
+        libere += _vider(_a_vigie(variable))
+    return libere
+
+
+def apres_go():
+    """Après une compilation Go : ses dossiers provisoires et son cache de compilation
+    (des centaines de Mo par outil, inutiles une fois le programme posé)."""
+    libere = _vider(_a_vigie("TMPDIR"), garder=lambda nom: nom.startswith(("go-build",
+                                                                           "go-link")))
+    return libere + _vider(_a_vigie("GOCACHE"))
+
+
 @contextlib.contextmanager
 def chantier(commande):
-    """Une compilation à la fois (ou le nombre réglé), et seulement avec assez de
-    mémoire libre. Les autres commandes passent sans attendre."""
+    """Une compilation à la fois (ou le nombre réglé), seulement avec assez de mémoire
+    libre et assez de place disque. Les autres commandes passent sans attendre.
+
+    Le ménage (caches, restes) ne se fait que quand AUCUNE autre compilation ne tourne :
+    vider le cache de Go sous les pieds d'une compilation la ferait rater."""
+    global _ACTIFS
     if not est_compilation(commande):
         yield
         return
     with _LOURDS:
         attendre_memoire()
-        yield
+        with _VERROU_PLACE:
+            if _ACTIFS == 0:
+                libre = place_libre_mo()
+                if libre is not None and libre < PLACE_MINI_MO:
+                    faire_de_la_place()
+            _ACTIFS += 1
+        try:
+            yield
+        finally:
+            with _VERROU_PLACE:
+                _ACTIFS -= 1
+                if _ACTIFS == 0 and os.path.basename(commande[0]) == "go":
+                    apres_go()
 
 
 def _lancer(commande, delai=900, env=None, dossier=None):
@@ -561,8 +657,20 @@ def installer_npm(paquet, binaires=None):
     env = dict(os.environ, PATH=bin_node + os.pathsep + os.environ.get("PATH", ""),
                npm_config_cache=os.path.join(racine, "cache", "npm"),
                npm_config_update_notifier="false", npm_config_fund="false")
-    reussi, message, sortie = _lancer([npm, "install", "-g", "--prefix", prefixe, paquet],
-                                      env=env)
+    commande = [npm, "install", "-g", "--prefix", prefixe, paquet]
+    reussi, message, sortie = _lancer(commande, env=env)
+    if not reussi and re.search(r"\bENOTEMPTY\b|\bEEXIST\b", sortie or ""):
+        # Le reste d'une installation coupée (promptfoo, 26/11/2026) bloque npm : on
+        # retire ce paquet-là seulement (et ses dossiers provisoires), puis on réessaie.
+        modules = os.path.join(prefixe, "lib", "node_modules")
+        cible = os.path.join(modules, *re.sub(r"(?<=.)@[^/]*$", "", paquet).split("/"))
+        provisoires = os.path.dirname(cible)
+        if os.path.isdir(provisoires):
+            for nom in os.listdir(provisoires):
+                if nom.startswith("." + os.path.basename(cible) + "-"):
+                    shutil.rmtree(os.path.join(provisoires, nom), ignore_errors=True)
+        shutil.rmtree(cible, ignore_errors=True)
+        reussi, message, sortie = _lancer(commande, env=env)
     if not reussi:
         return False, "npm : " + (erreur_npm(sortie) or message), []
     # La commande qui porte le nom du paquet d'abord (lighthouse avant chrome-debug).

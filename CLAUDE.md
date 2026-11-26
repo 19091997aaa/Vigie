@@ -172,6 +172,15 @@ machine seulement) : Anass montre le programme ou son dossier, Vigie écrit un l
 de la commande attendue (jamais par-dessus un vrai programme), vérifie qu'il démarre (pas
 pour une appli ou un service) et le note dans `~/vigie-installation.json`. L'installeur
 reconnaît un outil « à la main » déjà présent au lieu de le noter en échec.
+**2e installation complète (26/11/2026, 130 prêts / 2 vrais échecs)** : pipx **ignore
+`--python` quand on lui passe `--force`** → la réparation « Python 3.12 » désinstalle
+d'abord puis réinstalle ; un « déjà installé » de pipx (reste d'une installation coupée)
+est vérifié et refait. Un outil qui ne démarre pas dit toujours pourquoi (commande
+introuvable, arrêt par le système, code). Disque : restes `go-build*`/`pip-*` et caches
+Go/pip/uv vidés quand il reste < 6 Go et qu'aucune autre compilation ne tourne
+(`recettes.chantier`), cache Go vidé après chaque `go install`, dossier temporaire vidé au
+départ. npm ENOTEMPTY = reste retiré puis 2e essai. Une recette qui rate ne retombe plus
+sur un module deviné « (dépôt) ». garak et Nebula pèsent ~6 Go chacun (torch + CUDA).
 Rappel honnête : Vigie pilote le **moteur en ligne de commande** des outils (sorties JSON/XML
 traduites) ; services (Wazuh, OpenVAS), applis (Burp, Ghidra) et exploration à la main
 restent dans l'interface de l'outil.
