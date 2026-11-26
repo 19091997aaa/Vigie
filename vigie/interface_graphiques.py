@@ -149,8 +149,8 @@ def _carte(nom, etat):
     case = ""
     if graphiques.demande_engagement(nom):
         case = ("<label><input type='checkbox' name='engagement' value='oui' required>"
-                "Je ne vise que mon labo ou une cible couverte par une autorisation "
-                "signée.</label>")
+                "Je ne vise que mes propres cibles (mon domaine, mon labo) ou une cible "
+                "couverte par une autorisation signée.</label>")
     note = f"<p class='note'>{e(fiche['note'])}</p>" if fiche.get("note") else ""
     return (f"<div class='carte' data-nom='{e(nom)}'><span class='genre'>{e(graphiques.GENRES[fiche['genre']])}"
             f"</span><h3>{e(nom)}</h3>{pastille}<p>{e(_role(nom))}</p>{note}"

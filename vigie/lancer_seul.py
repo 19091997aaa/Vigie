@@ -13,6 +13,7 @@ Rien n'est lancé via un shell : les arguments passent en liste.
 """
 import os
 import re
+import urllib.parse
 import shlex
 
 from . import erreurs, fiches_outils, lanceur, manuel, outils, registre
@@ -132,6 +133,18 @@ def verifier_lancable(nom, autorisation_ok=False):
                     "(onglet « Outils manuels »). Il ne part jamais seul sans accord.")
 
 
+def hote(cible):
+    """Le nom de machine visé par une cible (« https://a.fr:8443/x » -> « a.fr »)."""
+    texte = (cible or "").strip().lower()
+    if "://" in texte:
+        texte = urllib.parse.urlsplit(texte).hostname or ""
+    else:
+        texte = texte.split("/")[0]
+        if texte.count(":") == 1:          # « a.fr:8443 » (pas une adresse IPv6)
+            texte = texte.split(":")[0]
+    return texte.strip(".")
+
+
 def _traduire(nom, sortie):
     """Un résumé en français si un traducteur existe pour cet outil, sinon None.
 
@@ -155,7 +168,7 @@ def fiche_claire(nom):
     return fiches_outils.fiche(nom, info(nom))
 
 
-def preparer(nom, cible):
+def preparer(nom, cible, propre_ok=False):
     """Tout ce qu'on vérifie AVANT de lancer, avec une explication en français.
 
     Renvoie {"cible": cible arrangée, "remarques": [...], "ligne": (commande, args,
@@ -163,7 +176,8 @@ def preparer(nom, cible):
     outil actif/payant/inconnu, outil qui ne se lance pas sur une cible (service,
     logiciel à fenêtres, Windows…), cible qui ne correspond pas, ligne inconnue.
     """
-    verifier_lancable(nom, autorisation_ok=False)   # passif seulement
+    # Passif seulement, sauf sur une propre cible prouvée (vérifiée par l'appelant).
+    verifier_lancable(nom, autorisation_ok=propre_ok)
     vrai_nom = info(nom)["nom"]
     fiche = fiche_claire(nom)
     cible = (cible or "").strip()
@@ -191,7 +205,7 @@ def preparer(nom, cible):
 DOSSIER_TRAVAIL = "~/vigie-travail"
 
 
-def lancer(nom, cible, delai=300):
+def lancer(nom, cible, delai=300, propre_ok=False):
     """Lance UN outil PASSIF sur la cible et renvoie le compte rendu.
 
     Le compte rendu contient toujours une explication en français (« explication »,
@@ -199,7 +213,7 @@ def lancer(nom, cible, delai=300):
     Refuse (Refus) un outil inconnu, payant, actif/offensif, ou qui ne se lance pas
     sur cette cible : la raison est dite en français.
     """
-    prepa = preparer(nom, cible)
+    prepa = preparer(nom, cible, propre_ok=propre_ok)
     commande, arguments, verifiee = prepa["ligne"]
     vrai_nom = info(nom)["nom"]
     compte = _lancer_commande(commande, arguments, delai)
