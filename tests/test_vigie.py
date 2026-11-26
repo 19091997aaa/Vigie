@@ -2869,3 +2869,76 @@ class TestInstalleurSobreEnMemoire(unittest.TestCase):
                                  journal=lambda *a: None, parallele=2,
                                  apres_chaque=lambda c: vus.append(len(c)))
         self.assertEqual(vus, [1, 2, 3])
+
+
+class TestBrancherALaMain(unittest.TestCase):
+    """« Je l'ai installé à la main » : relier un outil posé par Anass (26/11/2026)."""
+
+    def setUp(self):
+        from vigie import a_la_main
+        self.dossier = tempfile.mkdtemp()
+        self.bin = os.path.join(self.dossier, "bin")
+        os.makedirs(self.bin)
+        self.rapport = os.path.join(self.dossier, "vigie-installation.json")
+        self.patchs = [mock.patch.object(a_la_main, "dossier_commandes", return_value=self.bin),
+                       mock.patch.dict(os.environ, {"PATH": self.bin + os.pathsep
+                                                    + os.environ.get("PATH", "")})]
+        for p in self.patchs:
+            p.start()
+
+    def tearDown(self):
+        import shutil
+        for p in self.patchs:
+            p.stop()
+        shutil.rmtree(self.dossier, ignore_errors=True)
+
+    def _faux_outil(self, chemin):
+        os.makedirs(os.path.dirname(chemin), exist_ok=True)
+        with open(chemin, "w") as f:
+            f.write("#!/bin/sh\necho 'Usage: chainsaw [options] <cmd> -- un faux outil pour le test'\n")
+        os.chmod(chemin, 0o755)
+
+    def test_programme_dans_un_dossier(self):
+        from vigie import a_la_main
+        self._faux_outil(os.path.join(self.dossier, "telecharge", "chainsaw"))
+        message = a_la_main.brancher("Chainsaw", os.path.join(self.dossier, "telecharge"),
+                                     rapport=self.rapport)
+        self.assertIn("démarre bien", message)
+        lanceur = os.path.join(self.bin, "chainsaw")
+        self.assertTrue(os.access(lanceur, os.X_OK))
+        with open(self.rapport) as f:
+            details = json.load(f)["details"]
+        self.assertEqual(details[0]["nom"], "Chainsaw")
+        self.assertTrue(details[0]["repond"])
+        self.assertEqual(details[0]["methode"], "installé à la main")
+
+    def test_refus_clairs(self):
+        from vigie import a_la_main
+        with self.assertRaises(a_la_main.Refus):
+            a_la_main.brancher("Chainsaw", "/nulle/part/chainsaw", rapport=self.rapport)
+        with self.assertRaises(a_la_main.Refus):
+            a_la_main.brancher("Outil inconnu", self.dossier, rapport=self.rapport)
+        with self.assertRaises(a_la_main.Refus):
+            a_la_main.brancher("Chainsaw", self.dossier + '/a"b', rapport=self.rapport)
+
+    def test_ne_remplace_jamais_un_vrai_programme(self):
+        from vigie import a_la_main
+        self._faux_outil(os.path.join(self.bin, "chainsaw"))  # un vrai programme déjà là
+        self._faux_outil(os.path.join(self.dossier, "x", "chainsaw"))
+        with self.assertRaises(a_la_main.Refus):
+            a_la_main.brancher("Chainsaw", os.path.join(self.dossier, "x", "chainsaw"),
+                               rapport=self.rapport)
+
+    def test_installeur_reconnait_un_outil_deja_pose(self):
+        from vigie import installeur
+        self._faux_outil(os.path.join(self.bin, "chainsaw"))
+        with mock.patch.object(installeur, "_lancer") as lancer:
+            compte = installeur.installer_un(
+                {"nom": "Chainsaw", "lien": "https://github.com/WithSecureLabs/chainsaw"})
+        lancer.assert_not_called()
+        self.assertTrue(compte["installe"])
+        self.assertEqual(compte["methode"], "installé à la main")
+
+    def test_formulaire_dans_la_page(self):
+        from vigie import interface_outils
+        self.assertIn("/outil/brancher", interface_outils.page())
