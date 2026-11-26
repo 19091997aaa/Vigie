@@ -48,13 +48,14 @@ def _section_mes_cibles(dossier):
     lignes = []
     for domaine, fiche in sorted(donnees["domaines"].items()):
         if fiche.get("prouve_le"):
-            etat = f"<b class='ok'>prouvé</b> le {e(fiche['prouve_le'][:10])}"
+            etat = f"<b class='ok'>à toi</b> (code DNS vérifié le {e(fiche['prouve_le'][:10])})"
             action = ""
         else:
-            etat = ("<b class='attente'>en attente de preuve</b> : ajoute chez ton hébergeur "
-                    f"un enregistrement <b>TXT</b> sur <b>{e(domaine)}</b> avec la valeur "
-                    f"<code>{e(fiche['jeton'])}</code>")
-            action = _bouton("prouver", domaine, "Vérifier le code DNS")
+            etat = ("<b class='ok'>à toi</b> (attestation de propriété). "
+                    "<span class='aide'>Preuve DNS en plus, facultative : un enregistrement "
+                    f"<b>TXT</b> sur <b>{e(domaine)}</b> avec <code>{e(fiche['jeton'])}</code>."
+                    "</span>")
+            action = _bouton("prouver", domaine, "J'ai posé le code : vérifier")
         lignes.append(f"<li><b>{e(domaine)}</b> : {etat} {action}"
                       f"{_bouton('retirer', domaine, 'Retirer', discret=True)}</li>")
     for reseau_ip in donnees["reseaux"]:
@@ -64,10 +65,10 @@ def _section_mes_cibles(dossier):
              "<p class='aide'>Aucune pour l'instant.</p>")
     return f"""<h2>Mes propres cibles (sans autorisation)</h2>
 <p class="aide">Ton site et tes machines de labo : pas besoin de t'autoriser toi-même.
-Un domaine compte seulement une fois <b>prouvé</b> (un code à poser dans son DNS, relu à
-chaque lancement). Un sous-domaine qui pointe vers une autre machine ou un autre service
-ne compte pas. Les machines de labo : adresses privées seulement. Tout est noté au
-journal. Pour toute autre cible, l'autorisation signée reste obligatoire.</p>
+Tu coches une fois « je suis propriétaire » et c'est bon. Un sous-domaine qui pointe vers
+une autre machine ou un autre service (une boutique en ligne…) reste bloqué. Les machines
+de labo : adresses privées seulement. Tout est noté au journal. Pour toute autre cible,
+l'autorisation signée reste obligatoire.</p>
 {liste}
 <form method="post" action="/manuel/cibles" class="ligne">
 <input type="hidden" name="action" value="domaine">

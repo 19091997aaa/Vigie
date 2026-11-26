@@ -45,17 +45,19 @@ class Base(unittest.TestCase):
 
 
 class Domaines(Base):
-    def test_domaine_declare_non_prouve_ne_compte_pas(self):
+    def test_domaine_atteste_compte_sans_preuve(self):
+        # L'attestation suffit : le domaine lui-même passe sans code DNS.
         mes_cibles.ajouter_domaine(self.dossier, self.journal, "mon-site.fr")
-        raison = mes_cibles.raison_refus(self.dossier, "mon-site.fr", FauxDNS({}))
-        self.assertIn("pas encore prouvé", raison)
+        self.assertIsNone(mes_cibles.raison_refus(self.dossier, "mon-site.fr", FauxDNS({})))
 
-    def test_preuve_absente_refusee(self):
-        mes_cibles.ajouter_domaine(self.dossier, self.journal, "mon-site.fr")
-        with self.assertRaises(mes_cibles.Refus) as refus:
+    def test_preuve_dns_facultative_reste_possible(self):
+        _, jeton = mes_cibles.ajouter_domaine(self.dossier, self.journal, "mon-site.fr")
+        with self.assertRaises(mes_cibles.Refus):   # code pas encore posé
             mes_cibles.prouver_domaine(self.dossier, self.journal, "mon-site.fr",
                                        resoudre=FauxDNS({}))
-        self.assertIn("TXT", str(refus.exception))
+        dns = FauxDNS({("mon-site.fr", "TXT"): [jeton]})
+        self.assertTrue(mes_cibles.prouver_domaine(self.dossier, self.journal,
+                                                   "mon-site.fr", resoudre=dns))
 
     def test_domaine_prouve_couvert(self):
         dns = self.prouver()
@@ -88,19 +90,22 @@ class Domaines(Base):
         raison = mes_cibles.raison_refus(self.dossier, "shop.mon-site.fr", dns)
         self.assertIn("shops.hebergeur.com", raison)
 
-    def test_dns_injoignable_refuse(self):
+    def test_sous_domaine_dns_injoignable_refuse(self):
         self.prouver()
 
         def panne(nom, typ):
             raise reseau.ErreurReseau("pas d'internet")
-        self.assertIn("impossible de prouver",
-                      mes_cibles.raison_refus(self.dossier, "mon-site.fr", panne))
+        # Le domaine lui-même passe (déjà attesté) ; un sous-domaine non vérifiable, non.
+        self.assertIsNone(mes_cibles.raison_refus(self.dossier, "mon-site.fr", panne))
+        self.assertIn("impossible de vérifier",
+                      mes_cibles.raison_refus(self.dossier, "www.mon-site.fr", panne))
 
     def test_journal(self):
         self.prouver()
         with open(os.path.join(self.journal, "mes-cibles.jsonl"), encoding="utf-8") as f:
             actions = [json.loads(l)["action"] for l in f]
-        self.assertEqual(actions, ["domaine déclaré", "domaine prouvé (code DNS lu)"])
+        self.assertEqual(actions, ["domaine déclaré (attestation de propriété)",
+                                   "domaine prouvé (code DNS lu)"])
 
 
 class Labo(Base):
@@ -158,7 +163,7 @@ class Interface(Base):
         texte = interface_manuel.gerer_cibles("action=domaine&valeur=mon-site.fr&atteste=oui",
                                               self.dossier, self.journal)
         self.assertIn("vigie-verification=", texte)
-        self.assertIn("en attente de preuve", interface_manuel.page(self.dossier))
+        self.assertIn("attestation de propriété", interface_manuel.page(self.dossier))
 
     def test_attestation_obligatoire(self):
         with self.assertRaises(mes_cibles.Refus):

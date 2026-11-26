@@ -230,8 +230,9 @@ de démarrage viennent des docs : à confirmer sur la VM.
 **Mes propres cibles (26/11/2026)** : demande d'Anass, pas d'autorisation signée à
 lui-même pour SES cibles (`vigie/mes_cibles.py`, partie « Mes propres cibles » de l'onglet
 « Outils manuels », route `/manuel/cibles`, depuis la machine seulement). Un **domaine**
-compte seulement une fois **prouvé** par un code TXT `vigie-verification=…` dans son DNS,
-**relu à chaque lancement**. Un **sous-domaine** compte seulement s'il pointe vers les mêmes
+compte dès qu'Anass **atteste** en être le propriétaire (case cochée, notée au journal) ;
+le code TXT `vigie-verification=…` reste **facultatif** (preuve plus forte, pour le jour où
+Vigie teste le site d'un client). Un **sous-domaine** compte seulement s'il pointe vers les mêmes
 adresses que le domaine prouvé (ou une VM déclarée) et sans CNAME vers un autre service.
 **VM de labo** : adresses privées RFC 1918 seulement (pas `is_private` de Python, trop large).
 Une IP publique n'est jamais « à soi ». Sur ces cibles : outils manuels sans fiche

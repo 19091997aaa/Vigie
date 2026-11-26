@@ -5,14 +5,15 @@ virtuelles de labo ne doit pas demander une autorisation signée à lui-même. M
 faute de frappe ou un sous-domaine qui pointe chez quelqu'un d'autre ne doit jamais
 passer. Donc :
 
-  - Un DOMAINE ne compte que s'il est PROUVÉ : Vigie donne un code, Anass le colle dans
-    la zone DNS du domaine (enregistrement TXT), Vigie le lit. Seul le propriétaire du
-    domaine peut faire ça. Le code est relu à CHAQUE lancement : s'il disparaît, le
-    domaine ne compte plus.
-  - Un SOUS-DOMAINE du domaine prouvé ne compte que s'il pointe vers la MÊME machine
+  - Un DOMAINE compte dès qu'Anass atteste en être le propriétaire (une case cochée, une
+    fois, notée au journal avec l'heure). Un code DNS reste possible EN PLUS, pour une
+    preuve plus forte (utile le jour où Vigie teste le site d'un client), mais il n'est
+    plus obligatoire : Anass l'a trouvé trop compliqué (26/11/2026).
+  - Un SOUS-DOMAINE du domaine déclaré ne compte que s'il pointe vers la MÊME machine
     que le domaine (mêmes adresses IP) ou vers une VM déclarée. Un sous-domaine qui
     renvoie vers un autre service (CNAME vers un hébergeur, une boutique en ligne…)
-    ou une autre adresse ne compte pas : cette machine-là n'est pas à Anass.
+    ou une autre adresse ne compte pas : cette machine-là n'est pas à Anass. Ce
+    garde-fou lit le DNS public (lecture seule), pas besoin que le code soit posé.
   - Une MACHINE DE LABO (VM) se déclare par son adresse ou son réseau, et seulement des
     adresses PRIVÉES (192.168.x.x, 10.x.x.x, 172.16-31.x.x) : elles ne sont pas sur
     internet, ce ne peut être que du matériel à soi.
@@ -96,17 +97,18 @@ def nettoyer_domaine(texte):
 
 
 def ajouter_domaine(dossier, journal, texte):
-    """Déclare un domaine (pas encore prouvé). Renvoie (domaine, valeur TXT à poser)."""
+    """Déclare un domaine comme étant le sien (attestation cochée). Renvoie
+    (domaine, valeur TXT à poser) : le code DNS reste possible, en sécurité en plus."""
     domaine = nettoyer_domaine(texte)
     donnees = lire(dossier)
     fiche = donnees["domaines"].get(domaine)
     if not fiche:
         fiche = {"jeton": PREFIXE + secrets.token_hex(16), "prouve_le": "",
-                 "declare_le": _maintenant()}
+                 "declare_le": _maintenant(), "atteste_le": _maintenant()}
         donnees["domaines"][domaine] = fiche
         _ecrire(dossier, donnees)
-        _noter(journal, {"action": "domaine déclaré", "cible": domaine,
-                         "attestation": ATTESTATION})
+        _noter(journal, {"action": "domaine déclaré (attestation de propriété)",
+                         "cible": domaine, "attestation": ATTESTATION})
     return domaine, fiche["jeton"]
 
 
@@ -209,24 +211,25 @@ def raison_refus(dossier, cible, resoudre=reseau.dns):
     if not racine:
         return f"{cible} n'est pas dans tes propres cibles : autorisation signée obligatoire."
     fiche = donnees["domaines"][racine]
-    if not fiche.get("prouve_le"):
-        return (f"{racine} est déclaré mais pas encore prouvé : pose le code DNS et "
-                "clique sur « Vérifier ».")
+    # Le domaine LUI-MÊME : l'attestation de propriété suffit (code DNS facultatif).
+    if cible == racine:
+        if fiche.get("prouve_le"):
+            try:
+                if fiche["jeton"] not in _txt(racine, resoudre):
+                    return (f"Le code de preuve n'est plus dans le DNS de {racine}. Remets-le, "
+                            "ou retire puis rajoute le domaine (l'attestation suffit).")
+            except reseau.ErreurReseau:
+                return None   # déjà prouvé une fois : une panne DNS ne doit pas bloquer
+        return None
+    # Un SOUS-domaine : même s'il appartient au domaine, il peut pointer ailleurs
+    # (boutique en ligne, hébergeur…). On vérifie qu'il mène bien à TA machine.
     try:
-        # Le code doit TOUJOURS être là : relu à chaque lancement.
-        if fiche["jeton"] not in _txt(racine, resoudre):
-            return (f"Le code de preuve n'est plus dans le DNS de {racine} : le domaine ne "
-                    "compte plus comme le tien. Remets-le, puis « Vérifier ».")
-        # Pas de renvoi vers un service extérieur (CNAME hors du domaine prouvé).
         for alias in resoudre(cible, "CNAME"):
             alias = alias.strip().lower().rstrip(".")
             if alias and alias != racine and not alias.endswith("." + racine):
                 return (f"{cible} renvoie vers {alias}, un service qui n'est pas à toi "
                         "(hébergeur, boutique en ligne…). Il faut l'autorisation de ce "
                         "service.")
-        if cible == racine:
-            return None
-        # Un sous-domaine : mêmes machines que le domaine prouvé, ou une VM déclarée.
         a_tester = _adresses(cible, resoudre)
         if not a_tester:
             return f"{cible} ne pointe vers aucune adresse : rien à tester."
@@ -238,5 +241,7 @@ def raison_refus(dossier, cible, resoudre=reseau.dns):
                     f"que {racine}. Rien ne prouve qu'elle est à toi : autorisation signée "
                     "obligatoire.")
     except reseau.ErreurReseau as erreur:
-        return f"Vigie n'arrive pas à lire le DNS ({erreur}) : impossible de prouver."
+        return (f"Vigie n'arrive pas à lire le DNS de {cible} ({erreur}) : impossible de "
+                "vérifier que ce sous-domaine est bien à toi. Réessaie, ou vise le domaine "
+                "principal.")
     return None
