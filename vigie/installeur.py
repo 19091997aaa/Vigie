@@ -330,6 +330,12 @@ def installer_un(outil, a_blanc=False):
     un outil qui se pose à la main (serveur, Windows, Kali…) n'est même pas essayé."""
     from . import recettes
     raison = recettes.manuel(outil["nom"])
+    if raison or (not a_blanc and not methodes(outil) and not recettes.pour(outil["nom"])):
+        # Un outil qui se pose à la main est peut-être DÉJÀ là (posé par Anass, ou
+        # branché depuis l'interface) : on le reconnaît au lieu de noter « échec ».
+        deja = "" if a_blanc else _deja_pose(outil)
+        if deja:
+            return _compte(outil, True, True, deja, "installé à la main")
     if raison:
         return _compte(outil, raison="à installer à la main : " + raison, manuel=True)
     recette = _par_recette(outil, a_blanc)
@@ -340,6 +346,15 @@ def installer_un(outil, a_blanc=False):
         resultat["raison"] = (recette["raison"] + " | " + resultat["raison"])[:300]
         resultat.pop("manuel", None)
     return resultat
+
+
+def _deja_pose(outil):
+    """La commande de l'outil s'il est déjà sur la machine, sinon ""."""
+    from . import a_la_main
+    try:
+        return a_la_main.deja_la(outil["nom"])
+    except Exception:  # registre illisible, etc. : on continue comme avant
+        return ""
 
 
 # Python de secours. La VM d'Anass a Python 3.14 (très récent) : beaucoup d'outils ne

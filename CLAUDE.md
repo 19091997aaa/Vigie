@@ -166,6 +166,15 @@ Depuis : nombre d'installations de front = « auto » d'après la mémoire libre
 passent **une par une** et attendent 1 Go libre (`recettes.chantier`, `--compilations`) ;
 Go/make limités à 2 cœurs ; le bilan est écrit **après chaque outil** (une coupure ne perd
 plus rien, la relance reprend). build-essential + python3-dev ajoutés à la base apt.
+**Outils installés à la main (26/11/2026)** : onglet « Lancer un outil », section
+« Je l'ai installé à la main » (`vigie/a_la_main.py`, route `/outil/brancher`, depuis la
+machine seulement) : Anass montre le programme ou son dossier, Vigie écrit un lanceur au nom
+de la commande attendue (jamais par-dessus un vrai programme), vérifie qu'il démarre (pas
+pour une appli ou un service) et le note dans `~/vigie-installation.json`. L'installeur
+reconnaît un outil « à la main » déjà présent au lieu de le noter en échec.
+Rappel honnête : Vigie pilote le **moteur en ligne de commande** des outils (sorties JSON/XML
+traduites) ; services (Wazuh, OpenVAS), applis (Burp, Ghidra) et exploration à la main
+restent dans l'interface de l'outil.
 
 **Conséquences pour le dirigeant (24/11/2026)** : demande d'Anass, chaque constat non
 « Correct » a un onglet **Conséquences** (ce qu'un attaquant peut faire / ce que ça coûte /

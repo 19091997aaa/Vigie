@@ -454,6 +454,18 @@ def fabrique(sortie, code):
                     return
                 self._envoyer(303, "", [("Location", f"/comparer/{ident}")])
                 return
+            if self.path == "/outil/brancher":
+                # Relier un programme de la machine : seulement depuis la machine
+                # elle-même, jamais depuis un téléphone du réseau local.
+                if self.client_address[0] not in ("127.0.0.1", "::1"):
+                    self._envoyer(403, interface_outils.page(
+                        "Brancher un outil se fait depuis l'ordinateur où il est installé, "
+                        "pas depuis le téléphone."))
+                    return
+                taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
+                corps = self.rfile.read(taille).decode("utf-8", "replace")
+                self._envoyer(200, interface_outils.brancher(corps))
+                return
             if self.path == "/outil/lancer":
                 taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
                 corps = self.rfile.read(taille).decode("utf-8", "replace")
