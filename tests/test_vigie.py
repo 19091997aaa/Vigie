@@ -1580,10 +1580,20 @@ class TestLancerSeul(unittest.TestCase):
         # « hydra -P {cible} » dans la liste de mots de passe, « bash airgeddon.sh » sur
         # le script. On préfère ne rien proposer qu'une commande cassée.
         from vigie import lancer_seul
-        for nom in ("gobuster", "feroxbuster", "ffuf", "XSStrike", "THC-Hydra", "Medusa",
+        for nom in ("gobuster", "feroxbuster", "ffuf", "THC-Hydra", "Medusa",
                     "airgeddon", "enum4linux-ng"):
             self.assertFalse(lancer_seul.lancable_ici(nom),
                              f"{nom} ne devrait plus être proposé au lancement")
+
+    def test_xsstrike_a_sa_vraie_recette(self):
+        # XSStrike : l'usage « python xsstrike.py -u … » n'est plus deviné, mais
+        # l'installeur écrit un lanceur « xsstrike » : sa fiche donne la vraie ligne.
+        from vigie import lancer_seul
+        commande, arguments, verifiee = lancer_seul.ligne_lancement("XSStrike",
+                                                                     "https://ex.fr/?q=1")
+        self.assertEqual((commande, arguments, verifiee),
+                         ("xsstrike", ["-u", "https://ex.fr/?q=1"], True))
+        self.assertTrue(lancer_seul.lancable_ici("XSStrike"))
 
     def test_recette_cewl_corrigee(self):
         # CeWL tombait en erreur : la cible remplaçait « wordlist.txt ». Recette propre.
@@ -3609,3 +3619,313 @@ class TestTriOutilsALaMain(unittest.TestCase):
         self.assertEqual(commandes, ["maester"])
         self.assertIn("Install-Module -Name Maester -Repository PSGallery", appels[0][-1])
         self.assertIn("Get-Help Invoke-Maester", lanceur)
+
+
+class TestSpiderFoot(unittest.TestCase):
+    """SpiderFoot piloté par Vigie (spiderfoot.py) : sources choisies, résumé, pannes."""
+
+    CIBLE = "pavillon-noir.tech"
+
+    @staticmethod
+    def _json(*evenements):
+        """La sortie de SpiderFoot : « [ », un objet par ligne, « ] »."""
+        return "[" + ",\n".join(json.dumps({"generated": 1, "type": t, "data": d,
+                                            "module": m, "source": src})
+                                for t, d, m, src in evenements) + "]\n"
+
+    def _depart(self):
+        return [("Internet Name", self.CIBLE, "SpiderFoot UI", self.CIBLE),
+                ("Domain Name", self.CIBLE, "SpiderFoot UI", self.CIBLE)]
+
+    def test_fiche_et_ligne(self):
+        from vigie import fiches_outils, lancer_seul, spiderfoot
+        self.assertTrue(lancer_seul.lancable_ici("SpiderFoot"))
+        commande, arguments, verifiee = lancer_seul.ligne_lancement("SpiderFoot", self.CIBLE)
+        self.assertEqual(commande, "spiderfoot")
+        self.assertTrue(verifiee)
+        self.assertEqual(arguments[:2], ["-s", self.CIBLE])
+        self.assertEqual(arguments[arguments.index("-m") + 1], ",".join(spiderfoot.MODULES))
+        self.assertEqual(arguments[arguments.index("-o") + 1], "json")
+        self.assertEqual(arguments[arguments.index("-F") + 1], ",".join(spiderfoot.TYPES))
+        self.assertNotIn("-u", arguments)          # jamais « tous les modules d'un usage »
+        fiche = fiches_outils.fiche("SpiderFoot")
+        self.assertEqual((fiche["cible"], fiche["delai"]), ("domaine", spiderfoot.DELAI))
+        # Une adresse de site tapée par erreur redevient le domaine.
+        cible, _ = fiches_outils.adapter_cible("SpiderFoot", "https://www.ex.fr/page", fiche)
+        self.assertNotIn("/", cible)
+
+    def test_aucune_source_de_fuite_d_attaque_ni_de_personne(self):
+        # Les règles d'or : pas de fuites ni de dark web à froid, pas de scan actif, pas
+        # de données personnelles. Liste fermée, rien d'écarté n'y revient.
+        from vigie import spiderfoot
+        self.assertEqual(len(spiderfoot.MODULES), 25)
+        self.assertEqual(len(set(spiderfoot.MODULES)), 25)
+        ecartes = {m for liste in spiderfoot.ECARTES.values() for m in liste}
+        self.assertFalse(set(spiderfoot.MODULES) & ecartes)
+        for module in spiderfoot.MODULES:
+            self.assertNotRegex(module, r"pwned|dehashed|leak|psbdmp|tor|onion|ahmia|dark|"
+                                        r"breach|portscan|brute|zonexfer|nmap|nuclei|email|"
+                                        r"names|social|accounts|hunter|phone")
+        interdits = {"EMAILADDR", "HUMAN_NAME", "PHONE_NUMBER", "PHYSICAL_ADDRESS",
+                     "DOMAIN_WHOIS", "RAW_RIR_DATA", "RAW_DNS_RECORDS", "SSL_CERTIFICATE_RAW",
+                     "USERNAME", "ACCOUNT_EXTERNAL_OWNED", "PASSWORD_COMPROMISED"}
+        self.assertFalse(set(spiderfoot.TYPES) & interdits)
+
+    def test_lecture_robuste(self):
+        # Une bibliothèque écrit au milieu du JSON, et un scan coupé n'a pas de « ] ».
+        from vigie import spiderfoot
+        sortie = ('[{"generated": 1, "type": "Internet Name", "data": "www.ex.fr", '
+                  '"module": "sfp_crt", "source": "ex.fr"}Error trying to connect to '
+                  'socket: closing socket\n,\n{"generated": 2, "type": "IP Address", '
+                  '"data": "192.0.2.1", "module": "sfp_dnsresolve", "source": "ex.fr"},\n'
+                  '{"generated": 3, "type": "Similar Dom')
+        trouves = spiderfoot.evenements(sortie)
+        self.assertEqual([(e["code"], e["data"]) for e in trouves],
+                         [("INTERNET_NAME", "www.ex.fr"), ("IP_ADDRESS", "192.0.2.1")])
+
+    def test_resume_mauvaises_nouvelles_d_abord(self):
+        from vigie import spiderfoot
+        sortie = self._json(*self._depart(),
+                            ("Internet Name", "www." + self.CIBLE, "sfp_crt", self.CIBLE),
+                            ("Internet Name", "mail." + self.CIBLE, "sfp_crt", self.CIBLE),
+                            ("Internet Name", "blog." + self.CIBLE, "sfp_dnsraw", self.CIBLE),
+                            ("IP Address", "192.0.2.10", "sfp_dnsresolve", self.CIBLE),
+                            ("Blacklisted IP Address", "Spamhaus (Zen) [192.0.2.10]",
+                             "sfp_spamhaus", "192.0.2.10"),
+                            ("SSL Certificate Expired", "Nov  1 00:00:00 2026 GMT",
+                             "sfp_sslcert", "blog." + self.CIBLE),
+                            ("Affiliate - Internet Name Hijackable", "vieux.herokuapp.com",
+                             "sfp_subdomain_takeover", "vieux.herokuapp.com"),
+                            ("Similar Domain", "pavilon-noir.tech", "sfp_similar",
+                             self.CIBLE),
+                            ("Hosting Provider", "OVH: https://ovh.com", "sfp_hosting",
+                             "192.0.2.10"),
+                            ("Email Gateway (DNS 'MX' Records)", "mx1.mail.ovh.net",
+                             "sfp_dnsraw", self.CIBLE))
+        texte = spiderfoot.resumer(sortie, "", self.CIBLE, 192)
+        self.assertIn("(3 min 12 s)", texte)
+        self.assertLess(texte.index("À regarder en premier"),
+                        texte.index("Ce que SpiderFoot a trouvé"))
+        for attendu in ("Listes noires : 1 signalement", "Spamhaus (Zen) [192.0.2.10]",
+                        "Certificat HTTPS expiré sur blog." + self.CIBLE,
+                        "vieux.herokuapp.com", "3 sous-domaines", "blog, mail, www",
+                        "pavilon-noir.tech", "Hébergeur : OVH", "mx1.mail.ovh.net"):
+            self.assertIn(attendu, texte)
+        self.assertNotIn("Rien d'alarmant", texte)
+        self.assertNotIn("incomplet", texte)
+        self.assertEqual(spiderfoot.panne(sortie, "", self.CIBLE), "")
+
+    def test_jamais_rien_d_alarmant_sans_recherche(self):
+        # Seule la cible de départ revient : aucune source n'a rien dit, on ne rassure pas.
+        from vigie import spiderfoot
+        texte = spiderfoot.resumer(self._json(*self._depart()), "", self.CIBLE, 20)
+        self.assertNotIn("Rien d'alarmant", texte)
+        self.assertIn("rien trouvé de public", texte)
+
+    def test_plantage_silencieux_tld(self):
+        # SpiderFoot répond « fini » (code 0, « [] ») quand il n'a pas pu télécharger la
+        # liste des extensions de domaines : Vigie lit sa trace et le dit en français.
+        from vigie import erreurs, spiderfoot
+        trace = ("Process Process-1:\nTraceback (most recent call last):\n  File "
+                 "\"sfscan.py\", line 206, in __init__\n    raise ValueError(\"Could not "
+                 "update TLD list\")\nValueError: Could not update TLD list\n")
+        raison = spiderfoot.panne("[]\n", trace, self.CIBLE)
+        self.assertIn("publicsuffix.org", raison)
+        self.assertIn("Internet", raison)
+        self.assertTrue(erreurs.expliquer(trace))
+        autre = trace.replace("Could not update TLD list", "boum")
+        self.assertIn("ValueError: boum", spiderfoot.panne("[]\n", autre, self.CIBLE))
+
+    def test_sources_injoignables(self):
+        from vigie import spiderfoot
+        journal = "\n".join(
+            f"2026-11-26 12:36:18,685 [ERROR] sflib : Failed to connect to https://{h}/x: "
+            "HTTPSConnectionPool(...)" for h in ("crt.sh", "urlscan.io", "api.mnemonic.no",
+                                                "www.openphish.com"))
+        journal += "\n2026-11-26 12:36:26,447 [INFO] sf : Scan completed with status FINISHED"
+        lu = spiderfoot.journal(journal)
+        self.assertEqual(lu["statut"], "FINISHED")
+        self.assertEqual(len(lu["injoignables"]), 4)
+        # Rien trouvé ET 4 sources muettes : c'est une panne, pas un « rien à signaler ».
+        self.assertIn("4 sources sans réponse", spiderfoot.panne(
+            self._json(*self._depart()), journal, self.CIBLE))
+        # Quelque chose trouvé malgré tout : résultat gardé, mais dit incomplet.
+        sortie = self._json(*self._depart(),
+                            ("Internet Name", "www." + self.CIBLE, "sfp_dnsraw", self.CIBLE))
+        self.assertEqual(spiderfoot.panne(sortie, journal, self.CIBLE), "")
+        texte = spiderfoot.resumer(sortie, journal, self.CIBLE, 60)
+        self.assertIn("résultat incomplet : 4 sources sans réponse", texte)
+        self.assertIn("Rien d'alarmant vu par les sources qui ont répondu", texte)
+
+    def test_resolveur_public_regle_une_fois(self):
+        import sqlite3
+        from vigie import spiderfoot
+        with tempfile.TemporaryDirectory() as dossier:
+            base = os.path.join(dossier, "spiderfoot.db")
+            self.assertFalse(spiderfoot.regler_resolveur("8.8.8.8", base))   # pas de base
+            with sqlite3.connect(base) as connexion:
+                connexion.execute("CREATE TABLE tbl_config (scope VARCHAR NOT NULL, opt "
+                                  "VARCHAR NOT NULL, val VARCHAR NOT NULL, PRIMARY KEY "
+                                  "(scope, opt))")
+            self.assertTrue(spiderfoot.regler_resolveur("8.8.8.8", base))
+            self.assertFalse(spiderfoot.regler_resolveur("9.9.9.9", base))   # choix gardé
+            with sqlite3.connect(base) as connexion:
+                valeur = connexion.execute("SELECT val FROM tbl_config WHERE scope = "
+                                           "'GLOBAL' AND opt = '_dnsserver'").fetchone()
+            self.assertEqual(valeur, ("8.8.8.8",))
+            remarques = spiderfoot.avant_lancement(None, "1.1.1.1", base)
+            self.assertEqual(remarques, [])                       # déjà réglé : silence
+
+    def test_lancement_plante_en_silence_dit_erreur(self):
+        from vigie import lancer_seul, spiderfoot
+        trace = "Traceback (most recent call last):\nValueError: Could not update TLD list\n"
+        vus = {}
+
+        def faux(commande, arguments, delai):
+            vus["delai"] = delai
+            return {"lance": True, "code": 0, "secondes": 3.5, "sortie": "[]\n",
+                    "erreurs": trace, "echoue": False}
+        with mock.patch.object(lancer_seul, "_lancer_commande", faux), \
+                mock.patch("shutil.which", return_value=None):
+            compte = lancer_seul.lancer("SpiderFoot", self.CIBLE, propre_ok=True)
+        self.assertEqual(vus["delai"], spiderfoot.DELAI)        # 20 minutes, pas 5
+        self.assertTrue(compte["panne"])
+        self.assertEqual(compte["explication"][0], "SpiderFoot s'est arrêté en erreur.")
+        self.assertIn("publicsuffix.org", compte["explication"][1])
+
+    def test_spiderfoot_reste_actif_hors_diagnostic(self):
+        # Famille « audit » : jamais proposé sans autorisation, ni dans le diagnostic.
+        from vigie import lancer_seul
+        with self.assertRaises(lancer_seul.Refus):
+            lancer_seul.verifier_lancable("SpiderFoot")
+        self.assertTrue(lancer_seul.info("SpiderFoot")["autorisation_requise"])
+
+    def test_recette_officielle_python_312(self):
+        # Le paquet PyPI « spiderfoot-ng » est un fork tiers : retiré, jamais installé.
+        from vigie import installeur, recettes, registre
+        fiche = next(o for o in registre.charger() if o["nom"] == "SpiderFoot")
+        for _, commande in installeur.methodes(fiche):
+            self.assertNotIn("spiderfoot-ng", " ".join(commande)
+                             if isinstance(commande, (list, tuple)) else str(commande))
+        appels, lanceurs = [], {}
+        with tempfile.TemporaryDirectory() as dossier, \
+                mock.patch.object(recettes, "dossiers",
+                                  return_value=(dossier, os.path.join(dossier, "bin"))), \
+                mock.patch.object(recettes, "python_a_part",
+                                  return_value=("/py312/bin/python3", "")) as python, \
+                mock.patch.object(recettes, "_lancer",
+                                  side_effect=lambda argv, **_: (appels.append(argv)
+                                                                 or (True, "", ""))), \
+                mock.patch.object(recettes, "ecrire_lanceur",
+                                  side_effect=lambda chemin, lignes: lanceurs.update(
+                                      {os.path.basename(chemin): lignes})):
+            reussi, _, commandes = recettes.RECETTES["spiderfoot"][1]()
+        self.assertTrue(reussi)
+        self.assertEqual(commandes, ["spiderfoot"])
+        python.assert_called_once_with("3.12")
+        self.assertEqual(appels[0], ["pipx", "uninstall", "spiderfoot-ng"])
+        self.assertIn("https://github.com/smicallef/spiderfoot", appels[1])
+        self.assertEqual(appels[2][:3], ["/py312/bin/python3", "-m", "venv"])
+        self.assertTrue(lanceurs["spiderfoot"][-1].endswith('sf.py" "$@"'))
+
+    def test_python_a_part_verifie_l_empreinte(self):
+        import hashlib
+        import io
+        import tarfile
+        from vigie import recettes
+        with tempfile.TemporaryDirectory() as dossier:
+            archive = os.path.join(dossier, "py.tar.gz")
+            with tarfile.open(archive, "w:gz") as tar:
+                contenu = b"#!/bin/sh\necho 3.12\n"
+                membre = tarfile.TarInfo("python/bin/python3")
+                membre.size, membre.mode = len(contenu), 0o755
+                tar.addfile(membre, io.BytesIO(contenu))
+            with open(archive, "rb") as lu:
+                bonne = hashlib.sha256(lu.read()).hexdigest()
+            nom = "cpython-3.12.16+20261124-x86_64-unknown-linux-gnu-install_only.tar.gz"
+
+            def telecharger(empreinte):
+                def faux(url, destination, delai=300):
+                    if url == recettes.PBS:
+                        contenu = json.dumps({"tag": "20261124",
+                                              "asset_url_prefix": "https://x/20261124"})
+                    elif url.endswith("SHA256SUMS"):
+                        contenu = f"{empreinte}  {nom}\n"
+                    else:
+                        with open(archive, "rb") as lu, open(destination, "wb") as ecrit:
+                            ecrit.write(lu.read())
+                        return
+                    with open(destination, "w", encoding="utf-8") as ecrit:
+                        ecrit.write(contenu)
+                return faux
+            racine = os.path.join(dossier, "racine")
+            with mock.patch.object(recettes, "dossiers", return_value=(racine, dossier)), \
+                    mock.patch.object(recettes, "_triplet",
+                                      return_value="x86_64-unknown-linux-gnu"):
+                with mock.patch.object(recettes, "_telecharger", telecharger("0" * 64)):
+                    python, erreur = recettes.python_a_part("3.12")
+                self.assertIsNone(python)
+                self.assertIn("empreinte", erreur)
+                with mock.patch.object(recettes, "_telecharger", telecharger(bonne)):
+                    python, erreur = recettes.python_a_part("3.12")
+            self.assertEqual(erreur, "")
+            self.assertEqual(python, os.path.join(racine, "python3.12", "bin", "python3"))
+            self.assertTrue(os.access(python, os.X_OK))
+
+
+@unittest.skipUnless(sys.platform.startswith("linux"), "groupes de processus Linux")
+class TestArretAuTempsMaximum(unittest.TestCase):
+    """Un outil trop long est arrêté avec TOUT ce qu'il a lancé, sortie partielle gardée."""
+
+    @staticmethod
+    def _vivant(pid):
+        try:
+            with open(f"/proc/{pid}/stat", encoding="utf-8") as lu:
+                return lu.read().rsplit(")", 1)[1].split()[0] != "Z"   # zombie = fini
+        except OSError:
+            return False
+
+    def _script(self, dossier, corps):
+        chemin = os.path.join(dossier, "outil")
+        with open(chemin, "w", encoding="utf-8") as ecrit:
+            ecrit.write("#!/bin/sh\n" + corps)
+        os.chmod(chemin, 0o755)
+        return chemin
+
+    def test_fin_normale(self):
+        from vigie import lancer_seul
+        with tempfile.TemporaryDirectory() as dossier:
+            outil = self._script(dossier, "echo trouvé\necho souci >&2\nexit 3\n")
+            code, sortie, erreurs, depasse = lancer_seul._executer([outil], 30, dossier)
+        self.assertEqual((code, sortie, erreurs, depasse), (3, "trouvé\n", "souci\n", False))
+
+    def test_depassement_arrete_le_groupe_et_garde_le_partiel(self):
+        from vigie import lancer_seul
+        with tempfile.TemporaryDirectory() as dossier:
+            fichier_pid = os.path.join(dossier, "petit-enfant")
+            # Comme SpiderFoot : le vrai travail tourne dans un processus à part.
+            outil = self._script(dossier, f"sleep 120 &\necho $! > {fichier_pid}\n"
+                                          "echo 'premier résultat'\nsleep 120\n")
+            debut = time.monotonic()
+            code, sortie, _, depasse = lancer_seul._executer([outil], 1, dossier)
+            duree = time.monotonic() - debut
+            with open(fichier_pid, encoding="utf-8") as lu:
+                petit_enfant = int(lu.read())
+            for _ in range(50):
+                if not self._vivant(petit_enfant):
+                    break
+                time.sleep(0.1)
+        self.assertTrue(depasse)
+        self.assertIsNone(code)
+        self.assertIn("premier résultat", sortie)
+        self.assertLess(duree, 20)
+        self.assertFalse(self._vivant(petit_enfant), "le processus lancé par l'outil tourne "
+                                                     "encore")
+
+    def test_compte_rendu_partiel(self):
+        from vigie import lancer_seul
+        compte = {"lance": True, "depasse": True, "delai": 1200, "code": None,
+                  "sortie": "www.ex.fr\n", "erreurs": ""}
+        phrases = lancer_seul.expliquer("SpiderFoot", compte)
+        self.assertIn("20 min", phrases[0])
+        self.assertIn("INCOMPLET", phrases[0])

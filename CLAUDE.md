@@ -244,6 +244,24 @@ Nikto, Wapiti, Katana, Dalfox, dirsearch, sqlmap, tlsx, WPProbe, Metagoofil. Un 
 lançable = lui écrire une fiche avec sa `ligne` et son type de cible, jamais compter sur le
 deviné. Les codes couleur ANSI des sorties sont retirés par `outils.sans_couleurs()`.
 
+**SpiderFoot (26/11/2026)** : demande d'Anass (« lui-même regroupe »). La doc proposait
+`pipx install spiderfoot-ng` : **fork tiers, pas l'officiel** → retiré de `docs_outils.json`,
+désinstallé par la recette. Recette `recettes.RECETTES["spiderfoot"]` = dépôt officiel
+smicallef/spiderfoot + **Python 3.12 à part** (`recettes.python_a_part` : python-build-standalone
+officiel, empreinte SHA256SUMS vérifiée ; lxml < 5 ne s'installe pas sous 3.14). Lanceur
+`spiderfoot` = `sf.py` → son interface web s'ouvre par « Ouvrir un outil ». En ligne de
+commande depuis « Lancer un outil » (famille audit : propres cibles seulement) avec
+`vigie/spiderfoot.py` : **25 modules seulement** (`MODULES`, publics, gratuits, sans clé ;
+`ECARTES` = fuites/dark web, scans actifs, données personnelles, trop lents), sortie
+filtrée `-F` (jamais WHOIS brut ni données brutes), résumé français (mauvaises nouvelles
+d'abord). SpiderFoot répond code 0 même planté : `spiderfoot.panne()` lit son journal
+(liste des extensions publicsuffix.org non téléchargée, sources injoignables). Avant le
+scan, le réglage `_dnsserver` de sa base est mis sur un résolveur public (box lente).
+Délai par fiche (`fiches_outils._f(delai=)`, 20 min pour SpiderFoot) ; au-delà,
+`lancer_seul._executer` arrête **tout le groupe de processus** (Ctrl+C puis de force) et
+garde la sortie partielle (`PYTHONUNBUFFERED=1`). Le scan reste visible dans l'interface
+de SpiderFoot (onglet « Scans »).
+
 **Mes propres cibles (26/11/2026)** : demande d'Anass, pas d'autorisation signée à
 lui-même pour SES cibles (`vigie/mes_cibles.py`, partie « Mes propres cibles » de l'onglet
 « Outils manuels », route `/manuel/cibles`, depuis la machine seulement). Un **domaine**

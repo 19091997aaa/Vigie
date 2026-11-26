@@ -37,7 +37,7 @@
   "lien": "https://github.com/smicallef/spiderfoot",
   "categorie": "OSINT : pseudos, e-mails, images, métadonnées",
   "facette": "multi",
-  "install": "git clone + pip3 install -r requirements.txt puis python3 ./sf.py -l 127.0.0.1:5001 (ou pipx install spiderfoot-ng ; docker)",
+  "install": "git clone + pip3 install -r requirements.txt puis python3 ./sf.py -l 127.0.0.1:5001 (ou docker). NB 26/11/2026 : « spiderfoot-ng » (PyPI) n'est PAS l'officiel (fork tiers) : ne pas l'installer.",
   "usage": "SURTOUT via interface web (sf.py -l host:port). CLI possible : sf.py -s {cible} -t <type>. Framework, pas une commande simple.",
   "annexes": "des centaines de modules ; beaucoup exigent des clés API pour être efficaces. Interface web embarquée.",
   "cle_api": "optionnelle (nombreux modules)",

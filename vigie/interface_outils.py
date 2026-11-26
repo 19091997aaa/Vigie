@@ -290,7 +290,7 @@ def lancer(corps, dossier_cibles=None, journal="journal"):
         try:
             compte = lancer_seul.lancer(nom, cible, propre_ok=propre)
             reussi = bool(compte.get("lance")) and not compte.get("code") \
-                and bool((compte.get("sortie") or "").strip())
+                and not compte.get("panne") and bool((compte.get("sortie") or "").strip())
             brut = (compte.get("sortie") or "")
             if compte.get("erreurs") and compte["erreurs"] not in brut:
                 brut += "\n" + compte["erreurs"]
@@ -300,6 +300,7 @@ def lancer(corps, dossier_cibles=None, journal="journal"):
                     "d'installation sur cette machine)")
             etat = {"etat": "fini" if compte.get("lance") else "erreur",
                     "outil": compte["outil"], "reussi": reussi,
+                    "partiel": bool(compte.get("depasse")),
                     "explication": compte.get("explication", []),
                     "resultat": compte.get("traduction") if reussi else "",
                     "brut": brut.strip(), "commande": compte.get("commande", "")}
@@ -322,7 +323,8 @@ def page_resultat(ident):
     if en_cours:
         titre = "En cours…"
     elif etat.get("reussi"):
-        titre = "Terminé"
+        titre = "Résultat partiel (temps maximum atteint)" if etat.get("partiel") \
+            else "Terminé"
     else:
         titre = "N'a pas marché" if etat["etat"] == "erreur" or etat.get("explication") \
             else "Terminé"

@@ -28,6 +28,10 @@ MOTIFS = [
      "renvoyé une page qui change à chaque fois, ou bloque les robots. On peut "
      "réessayer : si ça recommence, viser une page précise du site (par exemple se "
      "terminant par « .php » ou « /api ») plutôt que l'accueil."),
+    (r"Could not update TLD list",
+     "SpiderFoot n'a pas pu démarrer : au début de chaque scan, il télécharge la liste "
+     "officielle des extensions de domaines (.fr, .com…) sur publicsuffix.org, et ça n'a "
+     "pas marché. Vérifie qu'Internet marche sur cet ordinateur, puis relance."),
     # --- Réseau -----------------------------------------------------------
     (r"temporary failure in name resolution|could not resolve host|name or service not "
      r"known|nodename nor servname|getaddrinfo failed|no such host|NXDOMAIN|"
