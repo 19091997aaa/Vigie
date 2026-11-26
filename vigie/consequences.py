@@ -17,6 +17,7 @@ Un seul endroit : ce fichier. Une clé = la même clé que le constat (`Constat.
 """
 import re
 
+from . import failles
 from .modeles import OK
 
 # --- Morceaux réutilisés (textes vérifiés, voir docs/sources-consequences.md) --------
@@ -547,9 +548,11 @@ def cle_effective(constat):
     return ""
 
 
-def pour(constat):
+def pour(constat, autorise=False):
     """Les conséquences d'un constat (dictionnaire), ou {} s'il est correct ou inconnu.
-    Ne renvoie que les rubriques remplies, dans l'ordre de RUBRIQUES."""
+    Ne renvoie que les rubriques remplies, dans l'ordre de RUBRIQUES, plus la fiche de la
+    table des failles F01-F34 (« faille ») quand le constat y correspond. `autorise` = le
+    client a signé l'autorisation (sinon les failles de case C restent cachées)."""
     if constat.get("niveau") == OK:
         return {}
     cle = cle_effective(constat)
@@ -565,4 +568,7 @@ def pour(constat):
     resultat = {nom: fiche[nom] for nom, _ in RUBRIQUES if fiche.get(nom)}
     if resultat and cle in EXEMPLES:
         resultat["exemple"] = dict(EXEMPLES[cle])
+    faille = failles.pour(dict(constat, cle=cle), autorise)
+    if faille:
+        resultat["faille"] = faille
     return resultat

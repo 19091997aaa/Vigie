@@ -2565,6 +2565,95 @@ class Recettes(unittest.TestCase):
             with open(os.path.join(dossier, "bin", "sitespeed.io"), encoding="utf-8") as lu:
                 self.assertIn("node22", lu.read())
 
+class TableFailles(unittest.TestCase):
+    """La table F01-F34 d'Anass branchée sur l'onglet Conséquences (26/11/2026)."""
+
+    def test_le_json_et_les_csv_disent_la_meme_chose(self):
+        import csv
+        from vigie import failles
+        table = failles.failles()
+        self.assertEqual(sorted(table), [f"F{i:02d}" for i in range(1, 35)])
+        with open(os.path.join(failles.DOSSIER, "pavillon-noir-failles-consequences.csv"),
+                  encoding="utf-8-sig", newline="") as lu:
+            lignes = list(csv.DictReader(lu, delimiter=";"))
+        self.assertEqual(len(lignes), 34)
+        for ligne in lignes:
+            for colonne in failles.COLONNES_CLIENT:
+                self.assertEqual(ligne[colonne], table[ligne["id"]][colonne],
+                                 f"{ligne['id']} / {colonne}")
+        with open(os.path.join(failles.DOSSIER, "pavillon-noir-cas-reels.csv"),
+                  encoding="utf-8-sig", newline="") as lu:
+            cas = {c["id"]: c for c in csv.DictReader(lu, delimiter=";")}
+        for cid, c in failles.cas_reels().items():
+            self.assertEqual(cas[cid]["fiabilite"], c["fiabilite"])
+
+    def test_chaque_correspondance_vise_une_faille_qui_existe(self):
+        from vigie import consequences, failles
+        table = failles.failles()
+        for cle, regles in failles.CORRESPONDANCE.items():
+            for _, fid in regles:
+                self.assertIn(fid, table, cle)
+            if not cle.startswith("assureur_"):
+                self.assertIn(cle, consequences.CONSEQUENCES, cle)
+
+    def test_dmarc_absent_et_p_none_ne_sont_pas_la_meme_faille(self):
+        from vigie import failles
+        absent = {"cle": "dmarc", "titre": "Aucune consigne contre l'usurpation (DMARC absent)"}
+        surveillance = {"cle": "dmarc", "titre": "DMARC en simple surveillance (p=none)"}
+        quarantaine = {"cle": "dmarc", "titre": "DMARC en quarantaine, pas encore en blocage"}
+        self.assertEqual(failles.identifiant(absent), "F04")
+        self.assertEqual(failles.identifiant(surveillance), "F05")
+        self.assertEqual(failles.identifiant(quarantaine), "")
+        sosie = {"cle": "domaines_imitateurs", "titre": "3 domaines imitent le vôtre",
+                 "explication": "Dont 1 capables de recevoir du courrier."}
+        self.assertEqual(failles.identifiant(sosie), "F11")
+        self.assertEqual(failles.identifiant({"cle": "https_www.ex.fr"}), "F17")
+
+    def test_garde_fous(self):
+        from vigie import failles
+        table = failles.failles()
+        # Jamais la phrase pour le téléphone ni les colonnes d'entraînement.
+        fiche = failles.pour({"cle": "spf", "titre": "SPF absent"})
+        for colonne in failles.COLONNES_ENTRAINEMENT:
+            self.assertNotIn(colonne, fiche)
+        # Seulement les cas « forte ».
+        tous = failles.cas_reels()
+        forts = {c["titre"] for c in tous.values() if c["fiabilite"] == "forte"}
+        for cle in failles.CORRESPONDANCE:
+            for cas in failles.pour({"cle": cle, "titre": "absent 3389 445"}, True).get("cas", []):
+                self.assertIn(cas["titre"], forts)
+        # Case C : cachée sans autorisation, montrée avec.
+        mfa = {"cle": "assureur_mfa_distance", "titre": "x"}
+        self.assertEqual(failles.pour(mfa, autorise=False), {})
+        self.assertEqual(failles.pour(mfa, autorise=True)["id"], "F07")
+        # Fuites : jamais à froid, même marquées « A » dans la table.
+        for fid in failles.FUITES:
+            self.assertFalse(failles.montrable(table[fid], autorise=False))
+        self.assertFalse(failles.montrable(table["F33"], autorise=True))   # à construire
+
+    def test_le_rapport_n_affiche_jamais_la_phrase_telephone(self):
+        from vigie import failles
+        constats = [Constat("Exposition", CRITIQUE, f"x {cle}", "absent 3389 445", "y", cle=cle)
+                    for cle in failles.CORRESPONDANCE]
+        signee = {"fichier": "a.pdf", "empreinte_sha256": "0" * 64}
+        r = rapport.construire("S", "ex.fr", "2026-11-26", constats, {}, [], signee)
+        sorties = [rapport.en_html(r), rapport.en_texte(r), json.dumps(r, ensure_ascii=False)]
+        try:
+            sorties.append(rapport.en_html(r, public="executif"))
+        except TypeError:
+            pass
+        for faille in failles.failles().values():
+            for colonne in ("phrase_telephone", "place_dans_l_offre"):
+                if faille.get(colonne):
+                    for sortie in sorties:
+                        self.assertNotIn(faille[colonne], sortie, faille["id"])
+        self.assertIn("Faille F04", sorties[0])
+        self.assertIn("Faille F07", sorties[0])   # autorisation signée : la case C apparaît
+        sans = rapport.en_html(rapport.construire("S", "ex.fr", "2026-11-26", constats, {}, [],
+                                                  None))
+        self.assertNotIn("Faille F07", sans)
+
+
 class Consequences(unittest.TestCase):
     """L'onglet « Conséquences » : attaquant, entreprise, loi, assurance (24/11/2026)."""
 
