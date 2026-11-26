@@ -227,6 +227,23 @@ Shannon, Strix…). Rien n'est scanné à l'ouverture. Outils d'audit et GATE : 
 `journal/ouvertures.jsonl`. Toujours jamais dans un diagnostic ni en automatique. Les lignes
 de démarrage viennent des docs : à confirmer sur la VM.
 
+**« Lançable » honnête (26/11/2026)** : retour d'Anass sur la VM, trop d'outils étaient
+marqués « lançable » puis tombaient sur « Vigie ne sait pas encore le lancer » ou lançaient
+une commande cassée. Cause : `lancer_seul._depuis_usage` devinait une ligne depuis l'usage
+du catalogue même quand la cible atterrissait sur un dictionnaire, un fichier de sortie ou
+le nom du programme (`gobuster -u {url} -w {wordlist}`, `hydra -P {cible}`, `bash
+airgeddon.sh`, CeWL…). Désormais `_depuis_usage` ne devine QUE les lignes sûres (un seul
+emplacement de cible, aucun `{wordlist}`/`{port}`/script `python x.py`, aucun morceau resté
+qui ressemble à une cible). `lancer_seul.lancable_ici(nom)` décide « proposable au
+lancement » = mode « cible » + ligne connue + ligne SÛRE (vérifiée, ou type de cible connu
+pour que Vigie valide). « Lancer un outil » (`interface_outils.py`) n'offre dans le menu et
+ne marque `lançable` QUE ces outils ; le reste est `à ouvrir` (il a sa propre interface,
+dans `graphiques.INTERFACES`) ou `à la main` (badges + légende). Vraies recettes ajoutées
+(fiche `ligne=` dans `fiches_outils.py`, cible validée) pour le bloc domaine/URL : CeWL,
+Nikto, Wapiti, Katana, Dalfox, dirsearch, sqlmap, tlsx, WPProbe, Metagoofil. Un nouvel outil
+lançable = lui écrire une fiche avec sa `ligne` et son type de cible, jamais compter sur le
+deviné. Les codes couleur ANSI des sorties sont retirés par `outils.sans_couleurs()`.
+
 **Mes propres cibles (26/11/2026)** : demande d'Anass, pas d'autorisation signée à
 lui-même pour SES cibles (`vigie/mes_cibles.py`, partie « Mes propres cibles » de l'onglet
 « Outils manuels », route `/manuel/cibles`, depuis la machine seulement). Un **domaine**

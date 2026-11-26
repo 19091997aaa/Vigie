@@ -1573,6 +1573,39 @@ class TestLancerSeul(unittest.TestCase):
         from vigie import lancer_seul
         self.assertIsNone(lancer_seul.ligne_lancement("Recon-ng", "ex.fr"))
 
+    def test_deviné_cassé_pas_proposé(self):
+        # Les usages à plusieurs trous (URL + dictionnaire) ou où la cible atterrit sur
+        # un fichier / le nom du programme ne sont plus devinés (26/11/2026) : avant,
+        # « gobuster -u {url} -w {wordlist} » mettait la cible dans le dictionnaire,
+        # « hydra -P {cible} » dans la liste de mots de passe, « bash airgeddon.sh » sur
+        # le script. On préfère ne rien proposer qu'une commande cassée.
+        from vigie import lancer_seul
+        for nom in ("gobuster", "feroxbuster", "ffuf", "XSStrike", "THC-Hydra", "Medusa",
+                    "airgeddon", "enum4linux-ng"):
+            self.assertFalse(lancer_seul.lancable_ici(nom),
+                             f"{nom} ne devrait plus être proposé au lancement")
+
+    def test_recette_cewl_corrigee(self):
+        # CeWL tombait en erreur : la cible remplaçait « wordlist.txt ». Recette propre.
+        from vigie import lancer_seul
+        commande, arguments, verifiee = lancer_seul.ligne_lancement("CeWL", "https://ex.fr/")
+        self.assertEqual(commande, "cewl")
+        self.assertEqual(arguments[-1], "https://ex.fr/")     # la cible, au bon endroit
+        self.assertTrue(verifiee)
+
+    def test_outils_web_ont_une_recette(self):
+        # Le bloc domaine/URL : vraies recettes, plus de « ne sait pas lancer ».
+        from vigie import lancer_seul
+        for nom in ("Nikto", "Wapiti", "Katana", "Dalfox", "dirsearch", "sqlmap", "tlsx",
+                    "WPProbe"):
+            self.assertTrue(lancer_seul.lancable_ici(nom), nom)
+
+    def test_outil_sans_cible_pas_lancable(self):
+        # Aircrack-ng / arp-scan : pas de cible (Wi-Fi, réseau local) -> jamais « lançable ».
+        from vigie import lancer_seul
+        for nom in ("Aircrack-ng", "arp-scan", "Masscan", "Betterleaks"):
+            self.assertFalse(lancer_seul.lancable_ici(nom), nom)
+
     def test_refuse_outil_actif_sans_autorisation(self):
         from vigie import lancer_seul
         with self.assertRaises(lancer_seul.Refus):
@@ -1630,6 +1663,24 @@ class TestInterfaceOutils(unittest.TestCase):
         self.assertIn("✓ Sherlock", p)
         premier = re.search(r"<optgroup label='Diagnostic[^']*'><option value='([^']+)'", p)
         self.assertEqual(premier.group(1), "Sherlock")
+
+    def test_badges_catalogue_honnetes(self):
+        # Un outil sans recette ne doit JAMAIS être marqué « lançable » : il est « à la
+        # main » (Aircrack-ng) ou « à ouvrir » s'il a sa propre interface (OWASP ZAP).
+        from vigie import interface_outils
+        p = interface_outils.page()
+        self.assertRegex(p, r"<li>Aircrack-ng<span class='marque m-main'>à la main</span>")
+        self.assertRegex(p, r"<li>OWASP ZAP<span class='marque m-ouvrir'>à ouvrir</span>")
+        self.assertRegex(p, r"<li>Sherlock<span class='marque m-pret'>lançable</span>")
+
+    def test_outil_sans_recette_absent_du_menu(self):
+        # Les outils non lançables ne sont plus proposés dans le menu déroulant.
+        from vigie import interface_outils
+        p = interface_outils.page()
+        options = re.findall(r"<option value='([^']+)'", p)
+        for nom in ("Aircrack-ng", "arp-scan", "AdGuard Home", "gobuster", "Betterleaks"):
+            self.assertNotIn(nom, options, f"{nom} ne doit plus être proposé au lancement")
+        self.assertIn("Sherlock", options)          # un vrai lançable reste proposé
 
 
 class TestPresence(unittest.TestCase):
