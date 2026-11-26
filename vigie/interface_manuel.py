@@ -15,7 +15,7 @@ import secrets
 import threading
 import urllib.parse
 
-from . import __version__, audit_actif, manuel, mandat, ports, rapport
+from . import __version__, audit_actif, manuel, mandat, mes_cibles, ports, rapport
 
 NUMERO = re.compile(r"[0-9]{8}-[0-9a-f]{6}")
 FICHIER = re.compile(r"[A-Za-z0-9 ._-]{1,120}")
@@ -33,9 +33,89 @@ def _fichiers(dossier):
     return fiches, signees
 
 
-def _options(noms):
-    return "".join(f"<option>{html.escape(n)}</option>" for n in noms) or \
-        "<option value=''>(aucun fichier)</option>"
+def _options(noms, propre=False):
+    choix = "".join(f"<option>{html.escape(n)}</option>" for n in noms)
+    if propre:   # en tête : pas d'autorisation, la cible doit être une des miennes
+        return ("<option value=''>Aucune : c'est une de mes propres cibles</option>"
+                + choix)
+    return choix or "<option value=''>(aucun fichier)</option>"
+
+
+def _section_mes_cibles(dossier):
+    """« Mes propres cibles » : domaines prouvés par le DNS et VM de labo."""
+    e = html.escape
+    donnees = mes_cibles.lire(dossier)
+    lignes = []
+    for domaine, fiche in sorted(donnees["domaines"].items()):
+        if fiche.get("prouve_le"):
+            etat = f"<b class='ok'>prouvé</b> le {e(fiche['prouve_le'][:10])}"
+            action = ""
+        else:
+            etat = ("<b class='attente'>en attente de preuve</b> : ajoute chez ton hébergeur "
+                    f"un enregistrement <b>TXT</b> sur <b>{e(domaine)}</b> avec la valeur "
+                    f"<code>{e(fiche['jeton'])}</code>")
+            action = _bouton("prouver", domaine, "Vérifier le code DNS")
+        lignes.append(f"<li><b>{e(domaine)}</b> : {etat} {action}"
+                      f"{_bouton('retirer', domaine, 'Retirer', discret=True)}</li>")
+    for reseau_ip in donnees["reseaux"]:
+        lignes.append(f"<li><b>{e(reseau_ip)}</b> : machine ou réseau de labo "
+                      f"{_bouton('retirer', reseau_ip, 'Retirer', discret=True)}</li>")
+    liste = (f"<ul class='mes-cibles'>{''.join(lignes)}</ul>" if lignes else
+             "<p class='aide'>Aucune pour l'instant.</p>")
+    return f"""<h2>Mes propres cibles (sans autorisation)</h2>
+<p class="aide">Ton site et tes machines de labo : pas besoin de t'autoriser toi-même.
+Un domaine compte seulement une fois <b>prouvé</b> (un code à poser dans son DNS, relu à
+chaque lancement). Un sous-domaine qui pointe vers une autre machine ou un autre service
+ne compte pas. Les machines de labo : adresses privées seulement. Tout est noté au
+journal. Pour toute autre cible, l'autorisation signée reste obligatoire.</p>
+{liste}
+<form method="post" action="/manuel/cibles" class="ligne">
+<input type="hidden" name="action" value="domaine">
+<label>Mon domaine <input name="valeur" placeholder="pavillon-noir.tech" required
+ autocapitalize="none" autocomplete="off"></label>
+<label class="aide"><input type="checkbox" name="atteste" value="oui" required>
+Je suis propriétaire de ce domaine.</label>
+<button type="submit">Ajouter le domaine</button></form>
+<form method="post" action="/manuel/cibles" class="ligne">
+<input type="hidden" name="action" value="reseau">
+<label>Ma machine ou mon réseau de labo <input name="valeur" placeholder="192.168.56.0/24"
+ required autocapitalize="none" autocomplete="off"></label>
+<label class="aide"><input type="checkbox" name="atteste" value="oui" required>
+Ces machines sont à moi (mon labo).</label>
+<button type="submit">Ajouter la machine</button></form>"""
+
+
+def _bouton(action, valeur, texte, discret=False):
+    e = html.escape
+    return (f"<form method='post' action='/manuel/cibles' class='enligne'>"
+            f"<input type='hidden' name='action' value='{action}'>"
+            f"<input type='hidden' name='valeur' value='{e(valeur)}'>"
+            f"<button type='submit' class='{'discret' if discret else 'petit'}'>{e(texte)}"
+            f"</button></form>")
+
+
+def gerer_cibles(corps, dossier, journal):
+    """Traite les formulaires de « Mes propres cibles ». Renvoie le message à afficher.
+    Lève mes_cibles.Refus (en français) si la demande n'est pas acceptée."""
+    c = _champs(corps)
+    un = lambda nom: (c.get(nom, [""])[0] or "").strip()[:200]  # noqa: E731
+    action, valeur = un("action"), un("valeur")
+    if action in ("domaine", "reseau") and un("atteste") != "oui":
+        raise mes_cibles.Refus("Coche la case : tu attestes que cette cible est à toi.")
+    if action == "domaine":
+        domaine, jeton = mes_cibles.ajouter_domaine(dossier, journal, valeur)
+        return (f"{domaine} est ajouté. Pour le prouver : ajoute chez ton hébergeur un "
+                f"enregistrement TXT sur {domaine} avec la valeur {jeton}, puis clique "
+                "sur « Vérifier le code DNS ».")
+    if action == "prouver":
+        mes_cibles.prouver_domaine(dossier, journal, valeur)
+        return f"{valeur} est prouvé : les outils manuels peuvent le viser sans autorisation."
+    if action == "reseau":
+        return f"{mes_cibles.ajouter_reseau(dossier, journal, valeur)} est ajouté à ton labo."
+    if action == "retirer":
+        mes_cibles.retirer(dossier, journal, valeur)
+        return f"{valeur} est retiré de tes cibles."
+    raise mes_cibles.Refus("Demande inconnue.")
 
 
 def page(dossier, message="", ok=""):
@@ -56,13 +136,15 @@ def page(dossier, message="", ok=""):
 <div class="couv">
 <div class="enseigne">{rapport.LOGO}<div class="mot">Vigie<small>Sécurité</small></div></div>
 <h1>Outils manuels</h1>
-<div class="meta"><span>Contrôles actifs, un par un, uniquement sur autorisation signée</span></div>
+<div class="meta"><span>Contrôles actifs, un par un : sur autorisation signée, ou sur tes propres cibles prouvées</span></div>
 </div>
 <div class="corps">
 {bandeau}
 <p class="aide">Ces outils touchent les machines de la cible. Sans autorisation écrite et signée,
 c'est un délit (article 323-1 du Code pénal). Vigie refuse tout lancement hors du périmètre,
 des dates ou des tests signés, et note chaque lancement dans le journal.</p>
+
+{_section_mes_cibles(dossier)}
 
 <h2>1. Préparer l'autorisation à faire signer</h2>
 <form method="post" action="/manuel/autorisation">
@@ -83,8 +165,8 @@ des dates ou des tests signés, et note chaque lancement dans le journal.</p>
 <form method="post" action="/manuel/lancer">
 <label>Outil <select name="outil">{outils_html}</select></label>
 <label>Cible <input name="cible" required autocapitalize="none" autocomplete="off"></label>
-<label>Fiche d'autorisation <select name="fiche">{_options(fiches)}</select></label>
-<label>Autorisation signée <select name="signee">{_options(signees)}</select></label>
+<label>Fiche d'autorisation <select name="fiche">{_options(fiches, propre=True)}</select></label>
+<label>Autorisation signée <select name="signee">{_options(signees, propre=True)}</select></label>
 <label>Confirmation <span class="aide">Retape la cible exactement.</span>
 <input name="confirmation" required autocapitalize="none" autocomplete="off"></label>
 <button type="submit">Lancer, après vérification</button>
@@ -107,6 +189,14 @@ button { font:inherit; font-weight:800; padding:14px; border:0; border-radius:10
   background:#fbeceb; color:#8a1d16; }
 .bandeau { padding:13px 16px; border-radius:10px; border-left:4px solid #1e7a46;
   background:var(--fond); }
+form.ligne { grid-template-columns:1fr; border:1px solid var(--trait); border-radius:10px;
+  padding:12px 14px; }
+form.enligne { display:inline; margin:0 0 0 8px; }
+button.petit, button.discret { padding:5px 10px; font-size:13px; }
+button.discret { background:#eceef1; color:#5c6676; }
+.mes-cibles li { margin:8px 0; line-height:1.6; }
+.mes-cibles code { background:var(--fond); padding:2px 6px; border-radius:6px; word-break:break-all; }
+b.ok { color:#1e7a46; } b.attente { color:#9a5f00; }
 pre { white-space:pre-wrap; font-size:13px; background:var(--fond); padding:12px;
   border-radius:10px; }
 """
@@ -149,18 +239,20 @@ def lancer(corps, dossier, journal):
             or "/" in fiche + signee or ".." in fiche + signee:
         raise manuel.Refus("Choisis la fiche et le fichier signé dans les listes.")
     ident = secrets.token_urlsafe(9)
-    args = (un("outil"), un("cible"), os.path.join(dossier, fiche),
-            os.path.join(dossier, signee), un("confirmation"), journal)
+    # Fiche vide = « une de mes propres cibles » : vérifiée par mes_cibles.py.
+    args = (un("outil"), un("cible"), os.path.join(dossier, fiche) if fiche else None,
+            os.path.join(dossier, signee) if fiche and signee else None,
+            un("confirmation"), journal)
     # Les vérifications sont refaites par manuel.lancer : ici, on en fait une à blanc
     # tout de suite pour pouvoir répondre « refusé » sans attendre l'outil.
-    _verifier(*args)
+    _verifier(*args, dossier_cibles=dossier)
     with VERROU:
         LANCEMENTS[ident] = {"etat": "en_cours", "outil": args[0], "cible": args[1],
                              "resultat": ""}
 
     def travail():
         try:
-            chemin = manuel.lancer(*args)
+            chemin = manuel.lancer(*args, dossier_cibles=dossier)
             with open(chemin, encoding="utf-8") as fichier:
                 brut = fichier.read()
             texte = _traduire(args[0], chemin) or brut[:20000]
@@ -173,18 +265,24 @@ def lancer(corps, dossier, journal):
     return ident
 
 
-def _verifier(nom, cible, fiche, signee, confirmation, journal):
+def _verifier(nom, cible, fiche, signee, confirmation, journal, dossier_cibles=None):
     """Mêmes contrôles que manuel.lancer, sans lancer ni écrire au journal."""
     if nom not in manuel.OUTILS:
         raise manuel.Refus(f"Outil inconnu : {nom}")
     cible = cible.strip().lower()
     if not manuel.CIBLE.fullmatch(cible):
         raise manuel.Refus(f"Cible invalide : {cible!r}")
-    raison = mandat.couvre(mandat.lire(fiche), cible, manuel.OUTILS[nom]["test"])
-    if raison:
-        raise manuel.Refus(raison)
-    if not os.path.isfile(signee):
-        raise manuel.Refus("Le fichier signé est introuvable.")
+    if not fiche:
+        raison = mes_cibles.raison_refus(dossier_cibles, cible) if dossier_cibles else \
+            "Il faut la fiche de l'autorisation."
+        if raison:
+            raise manuel.Refus(raison)
+    else:
+        raison = mandat.couvre(mandat.lire(fiche), cible, manuel.OUTILS[nom]["test"])
+        if raison:
+            raise manuel.Refus(raison)
+        if not signee or not os.path.isfile(signee):
+            raise manuel.Refus("Le fichier signé est introuvable.")
     if confirmation.strip().lower() != cible:
         raise manuel.Refus("Confirmation manquante : retape exactement la cible.")
 

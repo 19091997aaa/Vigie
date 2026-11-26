@@ -19,7 +19,7 @@ import json
 import os
 import re
 
-from . import autorisation, mandat, outils
+from . import autorisation, mandat, mes_cibles, outils
 from .modeles import ControleImpossible
 
 # nom -> catalogue (outils.CATALOGUE), type de test de l'autorisation, arguments, rôle.
@@ -54,8 +54,13 @@ def _journal(dossier, entree):
         fichier.write(json.dumps(entree, ensure_ascii=False) + "\n")
 
 
-def lancer(nom, cible, fiche, signee, confirmation, journal="journal", jour=None, delai=1800):
-    """Lance un outil manuel si tout est en règle. Renvoie le chemin de la sortie."""
+def lancer(nom, cible, fiche, signee, confirmation, journal="journal", jour=None, delai=1800,
+           dossier_cibles=None):
+    """Lance un outil manuel si tout est en règle. Renvoie le chemin de la sortie.
+
+    Sans fiche d'autorisation, la cible doit être une des PROPRES cibles d'Anass,
+    prouvée (mes_cibles.py, dans dossier_cibles) : son domaine prouvé par le DNS ou une
+    VM de labo à adresse privée. Sinon : refus, autorisation signée obligatoire."""
     cible = (cible or "").strip().lower()
     trace = {"outil": nom, "cible": cible, "fiche": os.path.basename(fiche or "")}
     try:
@@ -64,13 +69,18 @@ def lancer(nom, cible, fiche, signee, confirmation, journal="journal", jour=None
         if not CIBLE.fullmatch(cible):
             raise Refus(f"Cible invalide : {cible!r} (un nom de domaine ou une adresse IP)")
         if not fiche:
-            raise Refus("Il faut la fiche de l'autorisation (autorisation_<n°>.json).")
-        lue = mandat.lire(fiche)
-        trace["autorisation"] = lue.get("numero", "")
-        raison = mandat.couvre(lue, cible, OUTILS[nom]["test"], jour)
-        if raison:
-            raise Refus(raison)
-        trace.update(autorisation.verifier(signee))      # l'autorisation signée, par empreinte
+            raison = (mes_cibles.raison_refus(dossier_cibles, cible) if dossier_cibles
+                      else "Il faut la fiche de l'autorisation (autorisation_<n°>.json).")
+            if raison:
+                raise Refus(raison)
+            trace["autorisation"] = "propre cible (" + mes_cibles.ATTESTATION + ")"
+        else:
+            lue = mandat.lire(fiche)
+            trace["autorisation"] = lue.get("numero", "")
+            raison = mandat.couvre(lue, cible, OUTILS[nom]["test"], jour)
+            if raison:
+                raise Refus(raison)
+            trace.update(autorisation.verifier(signee))  # l'autorisation signée, par empreinte
         if (confirmation or "").strip().lower() != cible:
             raise Refus("Confirmation manquante : retaper exactement la cible pour lancer.")
     except ControleImpossible as refus:

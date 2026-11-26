@@ -227,6 +227,18 @@ Shannon, Strix…). Rien n'est scanné à l'ouverture. Outils d'audit et GATE : 
 `journal/ouvertures.jsonl`. Toujours jamais dans un diagnostic ni en automatique. Les lignes
 de démarrage viennent des docs : à confirmer sur la VM.
 
+**Mes propres cibles (26/11/2026)** : demande d'Anass, pas d'autorisation signée à
+lui-même pour SES cibles (`vigie/mes_cibles.py`, partie « Mes propres cibles » de l'onglet
+« Outils manuels », route `/manuel/cibles`, depuis la machine seulement). Un **domaine**
+compte seulement une fois **prouvé** par un code TXT `vigie-verification=…` dans son DNS,
+**relu à chaque lancement**. Un **sous-domaine** compte seulement s'il pointe vers les mêmes
+adresses que le domaine prouvé (ou une VM déclarée) et sans CNAME vers un autre service.
+**VM de labo** : adresses privées RFC 1918 seulement (pas `is_private` de Python, trop large).
+Une IP publique n'est jamais « à soi ». Sur ces cibles : outils manuels sans fiche
+(confirmation toujours retapée) et outils actifs/offensifs de « Lancer un outil ». Tout est
+noté (`journal/mes-cibles.jsonl`, `journal/lancements.jsonl`). Toute autre cible :
+autorisation signée, inchangé. Jamais dans le diagnostic ni en automatique.
+
 **Table des failles F01-F34 (26/11/2026)** : la table « telle faille, telle conséquence »
 d'Anass est dans `vigie/donnees_failles/` (JSON = source lue ; 2 CSV pour Excel, un test
 vérifie qu'ils collent). `vigie/failles.py` relie les codes de constat à Fxx

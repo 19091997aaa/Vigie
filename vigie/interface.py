@@ -489,12 +489,28 @@ def fabrique(sortie, code):
                 taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
                 corps = self.rfile.read(taille).decode("utf-8", "replace")
                 try:
-                    ident = interface_outils.lancer(corps)
+                    ident = interface_outils.lancer(corps, AUTORISATIONS, JOURNAL)
                     self._envoyer(303, "", [("Location", f"/outil/resultat/{ident}")])
                 except interface_outils.lancer_seul.Refus as erreur:
                     self._envoyer(400, interface_outils.page(str(erreur)))
                 return
 
+            if self.path == "/manuel/cibles":
+                # Déclarer ses propres cibles : depuis la machine elle-même seulement.
+                if self.client_address[0] not in ("127.0.0.1", "::1"):
+                    self._envoyer(403, interface_manuel.page(
+                        AUTORISATIONS, "Tes propres cibles se déclarent depuis "
+                        "l'ordinateur où tourne Vigie, pas depuis le téléphone."))
+                    return
+                taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
+                corps = self.rfile.read(taille).decode("utf-8", "replace")
+                try:
+                    texte = interface_manuel.gerer_cibles(corps, AUTORISATIONS, JOURNAL)
+                    self._envoyer(200, interface_manuel.page(AUTORISATIONS,
+                                                             ok=html.escape(texte)))
+                except interface_manuel.mes_cibles.Refus as erreur:
+                    self._envoyer(400, interface_manuel.page(AUTORISATIONS, str(erreur)))
+                return
             if self.path in ("/manuel/autorisation", "/manuel/lancer"):
                 taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
                 corps = self.rfile.read(taille).decode("utf-8", "replace")

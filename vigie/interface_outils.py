@@ -10,7 +10,8 @@ import html
 import secrets
 import threading
 
-from . import __version__, fiches_outils, lancer_seul, presence, rapport, registre
+from . import (__version__, fiches_outils, lancer_seul, manuel, mes_cibles, presence, rapport,
+               registre)
 
 LANCEMENTS = {}
 VERROU = threading.Lock()
@@ -64,7 +65,38 @@ def _options_passifs(etats=None):
             _option(o, etats.get(o["nom"]))
             for o in sorted(passifs, key=lambda x: (not etats.get(x["nom"]), x["nom"].lower())))
         morceaux.append(f"<optgroup label='{etiquettes[fam]}'>{options}</optgroup>")
+    # Actifs et offensifs : seulement sur MES propres cibles prouvées (mes_cibles.py).
+    for fam, etiquette in (("audit", "Actifs : seulement sur mes propres cibles"),
+                           ("gate", "Offensifs : seulement sur mes propres cibles")):
+        actifs = [o for o in groupes.get(fam, [])
+                  if not o["payant"] and o["autorisation_requise"]]
+        if actifs:
+            options = "".join(
+                _option(o, etats.get(o["nom"]))
+                for o in sorted(actifs, key=lambda x: (not etats.get(x["nom"]),
+                                                       x["nom"].lower())))
+            morceaux.append(f"<optgroup label='{etiquette}'>{options}</optgroup>")
     return "".join(morceaux)
+
+
+def verifier_propre_cible(nom, cible, dossier_cibles):
+    """Pour un outil actif ou offensif : la cible doit être une des miennes, prouvée.
+    Renvoie True si l'outil peut partir sur cette cible, False s'il est passif.
+    Lève lancer_seul.Refus (en français) sinon."""
+    fiche = lancer_seul.info(nom)
+    if not fiche or not fiche["autorisation_requise"] or fiche["payant"]:
+        return False
+    hote = lancer_seul.hote(cible)
+    if not dossier_cibles or not hote:
+        raise lancer_seul.Refus(
+            f"{fiche['nom']} est un outil {'offensif' if fiche['attaque'] else 'actif'} : "
+            "il ne part que sur une de tes propres cibles prouvées (onglet « Outils "
+            "manuels », partie « Mes propres cibles »), ou avec une autorisation signée.")
+    raison = mes_cibles.raison_refus(dossier_cibles, hote)
+    if raison:
+        raise lancer_seul.Refus(raison + " (Tes propres cibles se déclarent dans « Outils "
+                                "manuels ».)")
+    return True
 
 
 def aide(o):
@@ -177,9 +209,10 @@ def page(message="", ok=""):
 <div class="couv"><div class="enseigne">{rapport.LOGO}<div class="mot">Vigie<small>Sécurité</small></div></div>
 <h1>Lancer un outil</h1><div class="meta"><span>Un outil, une cible, à la demande</span></div></div>
 <div class="corps">{bandeau}
-<p>Choisis un outil <b>passif</b> et une cible (domaine, pseudo, e-mail… selon l'outil).
-Les outils <b>actifs</b> ou offensifs se lancent dans
-<a href="/manuel">Outils manuels</a>, avec autorisation signée.</p>
+<p>Choisis un outil et une cible (domaine, pseudo, e-mail… selon l'outil). Les outils
+<b>actifs</b> ou <b>offensifs</b> ne partent que sur <b>tes propres cibles prouvées</b>
+(ton domaine, tes machines de labo : à déclarer dans <a href="/manuel">Outils manuels</a>).
+Pour toute autre cible, il faut une autorisation signée.</p>
 <form method="post" action="/outil/lancer">
 <label>Outil<select name="nom" id="choix-outil">{_options_passifs(etats)}</select></label>
 <p class="aide-outil" id="aide-outil"></p>
@@ -207,15 +240,24 @@ Les outils <b>actifs</b> ou offensifs se lancent dans
 </main></body></html>"""
 
 
-def lancer(corps):
+def lancer(corps, dossier_cibles=None, journal="journal"):
     """Lance un outil passif en arrière-plan. Renvoie l'identifiant de suivi.
     Lève lancer_seul.Refus (raison en clair, en français) si le lancement n'est pas
     permis ou ne peut pas marcher : outil actif, service, mauvaise cible…"""
     c = _champs(corps)
     nom = (c.get("nom", [""])[0] or "").strip()[:80]
     cible = (c.get("cible", [""])[0] or "").strip()[:200]
-    lancer_seul.verifier_lancable(nom, autorisation_ok=False)   # refuse actif/payant/inconnu
-    prepa = lancer_seul.preparer(nom, cible)                    # explique tout refus
+    # Actif ou offensif : seulement sur une propre cible prouvée (sinon refus).
+    propre = verifier_propre_cible(nom, cible, dossier_cibles)
+    lancer_seul.verifier_lancable(nom, autorisation_ok=propre)  # refuse payant/inconnu
+    prepa = lancer_seul.preparer(nom, cible, propre_ok=propre)  # explique tout refus
+    if propre:
+        # La cible arrangée par Vigie doit rester la même machine.
+        if lancer_seul.hote(prepa["cible"]) != lancer_seul.hote(cible):
+            verifier_propre_cible(nom, prepa["cible"], dossier_cibles)
+        manuel._journal(journal, {"outil": nom, "cible": prepa["cible"],
+                                  "autorisation": "propre cible (" + mes_cibles.ATTESTATION
+                                  + ")", "resultat": "lancé", "depuis": "Lancer un outil"})
     ident = secrets.token_urlsafe(9)
     with VERROU:
         LANCEMENTS[ident] = {"etat": "en_cours", "outil": nom,
@@ -225,7 +267,7 @@ def lancer(corps):
 
     def travail():
         try:
-            compte = lancer_seul.lancer(nom, cible)
+            compte = lancer_seul.lancer(nom, cible, propre_ok=propre)
             reussi = bool(compte.get("lance")) and not compte.get("code") \
                 and bool((compte.get("sortie") or "").strip())
             brut = (compte.get("sortie") or "")
