@@ -6,7 +6,7 @@ import secrets
 import threading
 import urllib.parse
 
-from . import fiches_outils, graphiques, rapport
+from . import fiches_outils, graphiques, rapport, recettes
 
 OUVERTURES = {}
 VERROU = threading.Lock()
@@ -34,6 +34,24 @@ CSS = """
 .fam-avert { padding:10px 14px; border-radius:10px; background:#fcf0dc; color:#7a4b00;
   font-size:14px; }
 .fam-avert.gate { background:#fbeceb; color:#8a1d16; }
+.recherche { position:relative; margin:18px 0 6px; display:grid; gap:7px; }
+.recherche label { font-weight:700; font-size:14px; }
+.recherche input { font:inherit; font-size:16px; padding:13px 15px; border:1.5px solid #cfd6e1;
+  border-radius:10px; }
+.recherche input:focus { outline:none; border-color:var(--navy); }
+.suggestions { position:absolute; top:100%; left:0; right:0; z-index:20; list-style:none;
+  margin:4px 0 0; padding:6px 0; background:#fff; border:1px solid var(--trait);
+  border-radius:10px; box-shadow:0 8px 24px rgba(13,30,56,.15); }
+.suggestions li { padding:9px 15px; cursor:pointer; font-size:15px; }
+.suggestions li:hover { background:var(--fond); }
+.carte.trouvee { outline:3px solid #e3a33b; outline-offset:2px; }
+.carte[hidden], .famille-bloc[hidden] { display:none; }
+.carte.absente { background:#f6f7f9; border-style:dashed; }
+.carte.absente h3 { color:#5c6676; }
+.carte .liens { font-size:13.5px; }
+.fam-titre { margin:18px 0 6px; font-size:15px; }
+details.absents { margin:26px 0 10px; }
+details.absents > summary { cursor:pointer; font-weight:800; font-size:17px; padding:10px 0; }
 pre.detail { white-space:pre-wrap; font-size:13px; }
 """
 
@@ -60,45 +78,144 @@ def _role(nom):
     return (graphiques._fiche(nom) or {}).get("categorie", "")
 
 
-def _carte(nom):
+# Recherche : les cartes se filtrent à chaque lettre tapée, et une liste propose les
+# noms qui commencent par ces lettres (puis ceux qui les contiennent). Sans accents ni
+# majuscules : « wi » trouve Wireshark, « ve » trouve Velociraptor et VeraCrypt.
+SCRIPT_RECHERCHE = r"""
+(function () {
+  const champ = document.getElementById("recherche");
+  const liste = document.getElementById("suggestions");
+  const rien = document.getElementById("rien");
+  const absents = document.querySelector("details.absents");
+  const cartes = Array.from(document.querySelectorAll(".carte[data-nom]"));
+  const simple = t => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  function montrer(carte) {
+    if (absents && absents.contains(carte)) absents.open = true;
+    carte.scrollIntoView({behavior: "smooth", block: "center"});
+    carte.classList.add("trouvee");
+    setTimeout(() => carte.classList.remove("trouvee"), 1600);
+  }
+  function filtrer() {
+    const q = simple(champ.value.trim());
+    let visibles = 0;
+    cartes.forEach(c => {
+      const ok = !q || simple(c.dataset.nom).includes(q);
+      c.hidden = !ok;
+      if (ok) visibles++;
+    });
+    document.querySelectorAll(".famille-bloc").forEach(b => {
+      b.hidden = !b.querySelector(".carte:not([hidden])");
+    });
+    if (q && absents && absents.querySelector(".carte:not([hidden])")) absents.open = true;
+    rien.hidden = !q || visibles > 0;
+    liste.innerHTML = "";
+    if (!q) { liste.hidden = true; champ.setAttribute("aria-expanded", "false"); return; }
+    const debut = cartes.filter(c => simple(c.dataset.nom).startsWith(q));
+    const dedans = cartes.filter(c => !debut.includes(c) && simple(c.dataset.nom).includes(q));
+    debut.concat(dedans).slice(0, 8).forEach(c => {
+      const li = document.createElement("li");
+      li.setAttribute("role", "option");
+      li.textContent = c.dataset.nom + (c.classList.contains("absente") ? " (pas installé)" : "");
+      li.addEventListener("mousedown", ev => { ev.preventDefault(); liste.hidden = true; montrer(c); });
+      liste.appendChild(li);
+    });
+    liste.hidden = !liste.children.length;
+    champ.setAttribute("aria-expanded", String(!liste.hidden));
+  }
+  champ.addEventListener("input", filtrer);
+  champ.addEventListener("keydown", ev => {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      const premiere = cartes.find(c => !c.hidden);
+      if (premiere) { liste.hidden = true; montrer(premiere); }
+    } else if (ev.key === "Escape") { champ.value = ""; filtrer(); }
+  });
+  champ.addEventListener("blur", () => setTimeout(() => { liste.hidden = true; }, 150));
+  champ.addEventListener("focus", () => { if (champ.value) filtrer(); });
+})();
+"""
+
+
+def _carte(nom, etat):
+    """Carte d'un outil PRÉSENT sur la machine : bouton « Ouvrir »."""
     e = html.escape
     fiche = graphiques.INTERFACES[nom]
-    etat = graphiques.etat(nom)
     if fiche["genre"] in ("page", "lien"):
         pastille = "<span class='pastille-etat e-present'>dans le navigateur</span>"
     elif etat["en_marche"]:
         pastille = "<span class='pastille-etat e-marche'>en marche</span>"
-    elif etat["present"]:
-        pastille = "<span class='pastille-etat e-present'>installé</span>"
     else:
-        pastille = "<span class='pastille-etat e-absent'>pas trouvé ici</span>"
+        pastille = "<span class='pastille-etat e-present'>installé</span>"
     case = ""
     if graphiques.demande_engagement(nom):
         case = ("<label><input type='checkbox' name='engagement' value='oui' required>"
                 "Je ne vise que mon labo ou une cible couverte par une autorisation "
                 "signée.</label>")
     note = f"<p class='note'>{e(fiche['note'])}</p>" if fiche.get("note") else ""
-    bouton = "Ouvrir" if etat["present"] else "Essayer d'ouvrir"
-    return (f"<div class='carte'><span class='genre'>{e(graphiques.GENRES[fiche['genre']])}"
+    return (f"<div class='carte' data-nom='{e(nom)}'><span class='genre'>{e(graphiques.GENRES[fiche['genre']])}"
             f"</span><h3>{e(nom)}</h3>{pastille}<p>{e(_role(nom))}</p>{note}"
             f"<form method='post' action='/ouvrir/lancer' target='_blank'>"
             f"<input type='hidden' name='nom' value='{e(nom)}'>{case}"
-            f"<button type='submit'>{bouton}</button></form></div>")
+            f"<button type='submit'>Ouvrir</button></form></div>")
+
+
+def _carte_absente(nom):
+    """Carte grisée d'un outil que Vigie ne trouve pas : pas de bouton qui promet."""
+    e = html.escape
+    pistes = graphiques.pistes(nom)
+    cherche = (f"<p class='note'>Vigie a cherché {e(', '.join(pistes))}.</p>"
+               if pistes else "")
+    raison = recettes.MANUELS.get(nom.lower())
+    manuel = (f"<p class='note'>À installer à la main : {e(raison[0])}.</p>"
+              if raison else "")
+    lien = (graphiques._fiche(nom) or {}).get("lien", "")
+    doc = (f" · <a href='{e(lien)}' target='_blank' rel='noopener'>Page officielle</a>"
+           if lien.startswith("https://") else "")
+    return (f"<div class='carte absente' data-nom='{e(nom)}'><span class='genre'>"
+            f"{e(graphiques.GENRES[graphiques.INTERFACES[nom]['genre']])}</span>"
+            f"<h3>{e(nom)}</h3><span class='pastille-etat e-absent'>pas installé ici</span>"
+            f"<p>{e(_role(nom))}</p>{manuel}{cherche}"
+            f"<p class='liens'><a href='/outils-un#a-la-main'>Je l'ai installé à la "
+            f"main</a>{doc}</p></div>")
+
+
+def _blocs(noms, etats, absents=False):
+    blocs = []
+    for fam in ("diag", "secu", "audit", "gate"):
+        liste = [n for n in noms if graphiques.famille(n) == fam]
+        if not liste:
+            continue
+        avert = ""
+        if fam in AVERTISSEMENTS and not absents:
+            avert = f"<p class='fam-avert {fam}'>{html.escape(AVERTISSEMENTS[fam])}</p>"
+        cartes = "".join(_carte_absente(n) if absents else _carte(n, etats[n])
+                         for n in liste)
+        blocs.append(f"<div class='famille-bloc'><h3 class='fam-titre'>{html.escape(TITRES[fam])} ({len(liste)})"
+                     f"</h3>{avert}<div class='cartes'>{cartes}</div></div>")
+    return "".join(blocs)
 
 
 def page(message=""):
     e = html.escape
     bandeau = f"<div class='erreur'>{e(message)}</div>" if message else ""
-    blocs = []
-    for fam in ("diag", "secu", "audit", "gate"):
-        noms = [n for n in graphiques.liste() if graphiques.famille(n) == fam]
-        if not noms:
-            continue
-        avert = ""
-        if fam in AVERTISSEMENTS:
-            avert = f"<p class='fam-avert {fam}'>{e(AVERTISSEMENTS[fam])}</p>"
-        blocs.append(f"<h2>{e(TITRES[fam])} ({len(noms)})</h2>{avert}"
-                     f"<div class='cartes'>{''.join(_carte(n) for n in noms)}</div>")
+    noms = graphiques.liste()
+    etats = {n: graphiques.etat(n) for n in noms}
+    prets = [n for n in noms if etats[n]["present"]]
+    absents = [n for n in noms if not etats[n]["present"]]
+    if prets:
+        partie_prets = _blocs(prets, etats)
+    else:
+        partie_prets = ("<p class='aide'>Aucun de ces outils n'est encore installé sur "
+                        "cette machine.</p>")
+    partie_absents = ""
+    if absents:
+        partie_absents = (
+            f"<details class='absents'><summary>Pas encore sur cette machine "
+            f"({len(absents)})</summary><p class='aide'>Vigie ne trouve pas ces outils "
+            "ici : il ne peut donc pas les ouvrir. Beaucoup sont des serveurs à installer "
+            "à la main. Une fois installé, si Vigie ne le voit toujours pas, utilise "
+            "« Je l'ai installé à la main ».</p>"
+            f"{_blocs(absents, etats, absents=True)}</details>")
     return f"""<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -106,14 +223,22 @@ def page(message=""):
 <div class="couv"><div class="enseigne">{rapport.LOGO}<div class="mot">Vigie<small>Sécurité</small></div></div>
 <h1>Ouvrir un outil</h1><div class="meta"><span>Chaque outil avec sa propre interface</span></div></div>
 <div class="corps">{bandeau}
-<p>Ces outils ne se pilotent pas depuis Vigie : ils ont <b>leur propre écran</b>. Un clic
-sur « Ouvrir » et Vigie fait le reste : il démarre le logiciel (sa fenêtre apparaît), ou
-démarre le service et ouvre sa page web, ou ouvre sa console.</p>
+<p>Ces outils ont <b>leur propre écran</b>. Un clic sur « Ouvrir » et Vigie fait le
+reste : il démarre le logiciel (sa fenêtre apparaît), ou démarre le service et ouvre sa
+page web, ou ouvre sa console.</p>
 <p class="aide">Les fenêtres s'ouvrent sur l'écran de la machine où tourne Vigie. Si un
 service demande les droits administrateur, une fenêtre demande ton mot de passe.</p>
-{''.join(blocs)}
+<div class="recherche"><label for="recherche">Chercher un outil</label>
+<input id="recherche" type="search" placeholder="Tape les premières lettres : gh, wi, sha…"
+ autocomplete="off" autocapitalize="none" role="combobox" aria-controls="suggestions"
+ aria-expanded="false">
+<ul id="suggestions" class="suggestions" role="listbox" hidden></ul>
+<p id="rien" class="aide" hidden>Aucun outil de cet onglet ne porte ce nom.</p></div>
+<h2>Prêts à ouvrir ({len(prets)})</h2>
+{partie_prets}
+{partie_absents}
 <p><a href="/">Accueil</a> · <a href="/outils-un">Lancer un outil</a></p></div>
-</main></body></html>"""
+</main><script>{SCRIPT_RECHERCHE}</script></body></html>"""
 
 
 def lancer(corps, journal=graphiques.JOURNAL):
@@ -162,6 +287,9 @@ def page_suivi(ident):
         # La page de l'outil remplace cet onglet : l'onglet Vigie reste ouvert à côté.
         if not etat.get("garder"):
             script = f"<script>location.replace({_js(etat['url'])});</script>"
+    if etat["etat"] == "erreur" and "pas installé" in etat["texte"]:
+        lien = ("<p><a href='/outils-un#a-la-main'>Il est installé ? Montre à Vigie où il "
+                "est : « Je l'ai installé à la main »</a></p>")
     classe = {"en_cours": "", "fini": " fini", "erreur": " erreur"}[etat["etat"]]
     detail = (f"<details><summary>Détail technique</summary><pre class='detail'>"
               f"{e(etat['detail'])}</pre></details>") if etat.get("detail") else ""

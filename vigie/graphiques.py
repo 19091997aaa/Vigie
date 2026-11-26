@@ -314,7 +314,44 @@ _INTERPRETES = ("python3", "node")
 
 def _moyens(nom):
     """Les moyens de démarrer déclarés, avec le nom de l'outil (pour chercher son dossier)."""
-    return [dict(m, _outil=_dossier_nom(nom)) for m in INTERFACES[nom].get("demarrer", [])]
+    moyens = [dict(m, _outil=_dossier_nom(nom)) for m in INTERFACES[nom].get("demarrer", [])]
+    lanceur = lanceur_a_la_main(nom)
+    if lanceur and not any(m["moyen"] == "cmd" and _trouver(m["argv"][0]) == lanceur
+                           for m in moyens):
+        moyens.append({"moyen": "cmd", "argv": [lanceur], "_outil": _dossier_nom(nom)})
+    return moyens
+
+
+def pistes(nom):
+    """Ce que Vigie a cherché sur la machine, en français (pour les outils absents)."""
+    fiche = INTERFACES[nom]
+    commandes = [a[0] for a in fiche.get("commandes", [])]
+    services, conteneurs_, dossiers = [], [], []
+    for m in fiche.get("demarrer", []):
+        if m["moyen"] in ("cmd", "admin") and m["argv"][0] not in _INTERPRETES:
+            commandes.append(m["argv"][0])
+        elif m["moyen"] in ("cmd", "admin"):
+            dossiers.append(f"{_dossier_nom(nom)}/{m['fichier']}")
+        elif m["moyen"] == "service":
+            services.append(m["nom"])
+        elif m["moyen"] == "docker":
+            conteneurs_.append(m["nom"])
+        elif m["moyen"] == "compose":
+            dossiers.append(f"{m['nom']}/docker-compose.yml")
+    for binaire in _binaires_connus(nom):
+        if binaire not in commandes:
+            commandes.append(binaire)
+    morceaux = []
+    if commandes:
+        morceaux.append("la commande " + " ou ".join(dict.fromkeys(os.path.basename(c)
+                                                                   for c in commandes)))
+    if services:
+        morceaux.append("le service " + " ou ".join(services))
+    if conteneurs_:
+        morceaux.append("le conteneur Docker " + " ou ".join(conteneurs_))
+    if dossiers:
+        morceaux.append("le dossier " + " ou ".join(dossiers))
+    return morceaux
 
 
 def _dossier_nom(nom):
@@ -328,6 +365,35 @@ def commande_dispo(nom):
     for argv in INTERFACES[nom].get("commandes", []):
         if _trouver(argv[0]):
             return argv
+    # Outil posé à la main ou installé sous un autre nom : la commande que Vigie connaît
+    # pour lui (presence.py, rapport d'installation, « Je l'ai installé à la main »).
+    for binaire in _binaires_connus(nom):
+        if _trouver(binaire):
+            return [binaire]
+    return None
+
+
+def _binaires_connus(nom):
+    from . import presence
+    try:
+        return presence.binaires_possibles(nom, presence.rapport_installation())
+    except Exception:  # un rapport d'installation abîmé ne doit pas casser l'onglet
+        return []
+
+
+def lanceur_a_la_main(nom):
+    """Le lanceur écrit par « Je l'ai installé à la main » pour cet outil, ou None."""
+    from . import a_la_main
+    for binaire in _binaires_connus(nom):
+        chemin = _trouver(binaire)
+        if not chemin:
+            continue
+        try:
+            with open(chemin, encoding="utf-8", errors="replace") as fichier:
+                if a_la_main.MARQUE in fichier.read(2000):
+                    return chemin
+        except OSError:
+            continue
     return None
 
 

@@ -148,6 +148,28 @@ class OuvrirAppli(unittest.TestCase):
         self.assertIn("propre fenêtre", fin["message"])
 
 
+class ALaMain(unittest.TestCase):
+    def test_commande_connue_de_vigie(self):
+        # Un outil branché « à la main » sous le nom que Vigie connaît s'ouvre aussi.
+        with tempfile.TemporaryDirectory() as d:
+            script = _script(d, "sleep 1")
+            with mock.patch.object(graphiques, "_binaires_connus", return_value=[script]), \
+                    mock.patch.dict(graphiques.INTERFACES,
+                                    {"Ghidra": _appli(["commande-absente"])}):
+                self.assertEqual(graphiques.commande_dispo("Ghidra"), [script])
+                self.assertTrue(graphiques.etat("Ghidra")["present"])
+
+    def test_lanceur_a_la_main_pour_un_service_web(self):
+        from vigie import a_la_main
+        with tempfile.TemporaryDirectory() as d:
+            lanceur = _script(d, a_la_main.MARQUE + "\nexit 0")
+            fiche = _web("http://127.0.0.1:1", _cmd("commande-absente"))
+            with mock.patch.object(graphiques, "_binaires_connus", return_value=[lanceur]), \
+                    mock.patch.dict(graphiques.INTERFACES, {"Velociraptor": fiche}):
+                self.assertEqual(graphiques.lanceur_a_la_main("Velociraptor"), lanceur)
+                self.assertTrue(graphiques.etat("Velociraptor")["present"])
+
+
 class Journal(unittest.TestCase):
     def test_ouverture_offensive_notee(self):
         with tempfile.TemporaryDirectory() as d:
@@ -161,14 +183,35 @@ class Journal(unittest.TestCase):
 
 
 class Page(unittest.TestCase):
-    def test_page(self):
+    def test_page_separe_prets_et_absents(self):
+        def faux_etat(nom):
+            return {"present": nom in ("Ghidra", "Shannon"), "en_marche": None}
+        with mock.patch.object(graphiques, "etat", side_effect=faux_etat):
+            p = interface_graphiques.page()
+        self.assertIn("Prêts à ouvrir (2)", p)
+        prets, absents = p.split("Pas encore sur cette machine")
+        self.assertIn("Ghidra", prets)
+        self.assertIn("name='engagement'", prets)          # Shannon : case obligatoire
+        self.assertNotIn("Velociraptor", prets)
+        self.assertIn("Velociraptor", absents)
+        self.assertNotIn("<button", absents)              # aucun bouton qui promet
+        self.assertIn("/outils-un#a-la-main", absents)
+        self.assertIn("la commande velociraptor", absents)
+
+    def test_barre_de_recherche(self):
         with mock.patch.object(graphiques, "etat",
                                return_value={"present": False, "en_marche": None}):
             p = interface_graphiques.page()
-        self.assertIn("Ouvrir un outil", p)
-        self.assertIn("Offensif (GATE)", p)
-        self.assertIn("name='engagement'", p)
-        self.assertIn("Ghidra", p)
+        self.assertIn("id=\"recherche\"", p)
+        self.assertIn("data-nom='Velociraptor'", p)
+        self.assertIn("startsWith(q)", p)
+
+    def test_page_rien_d_installe(self):
+        with mock.patch.object(graphiques, "etat",
+                               return_value={"present": False, "en_marche": None}):
+            p = interface_graphiques.page()
+        self.assertIn("Prêts à ouvrir (0)", p)
+        self.assertIn("Aucun de ces outils", p)
 
     def test_suivi_redirige(self):
         with tempfile.TemporaryDirectory() as d:
