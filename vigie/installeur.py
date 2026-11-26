@@ -50,6 +50,7 @@ def preparer_dest(dossier):
     os.environ["GOMODCACHE"] = os.path.join(go_dir, "pkg", "mod")
     os.environ["GOCACHE"] = os.path.join(cache, "go-build")
     os.environ["PIP_CACHE_DIR"] = os.path.join(cache, "pip")
+    os.environ["UV_CACHE_DIR"] = os.path.join(cache, "uv")  # si pipx passe par uv
     os.environ["TMPDIR"] = tmp
     os.environ["PATH"] = bin_dir + os.pathsep + os.environ.get("PATH", "")
     # Les outils installés « à part » (vigie/recettes.py : EyeWitness, Node 22…) aussi.
@@ -142,6 +143,13 @@ def binaires_poses(libelle, sortie, proprietaire, nom, commande=None):
     return [nom.lower(), nom]
 
 
+def _env_essai():
+    """L'environnement d'un essai de démarrage. Une appli à fenêtres (Nebula, en Qt)
+    s'ouvre « hors écran » : rien ne surgit pendant l'installation, et l'essai ne dépend
+    pas de l'écran de la session."""
+    return dict(os.environ, QT_QPA_PLATFORM="offscreen")
+
+
 def repond(binaire, delai=60):
     """L'exécutable démarre-t-il vraiment ? Un paquet installé peut rester une coquille vide.
 
@@ -156,7 +164,8 @@ def repond(binaire, delai=60):
             # des fichiers là où on les lance, ils ne doivent pas salir le dossier Vigie.
             fini = subprocess.run([chemin] + arguments, capture_output=True,
                                   text=True, timeout=delai, errors="replace",
-                                  stdin=subprocess.DEVNULL, cwd=tempfile.gettempdir())
+                                  stdin=subprocess.DEVNULL, cwd=tempfile.gettempdir(),
+                                  env=_env_essai())
         except subprocess.TimeoutExpired:
             return True
         except OSError:
@@ -175,23 +184,48 @@ _PLANTAGE = re.compile(r"^Traceback \(most recent call last\)|^\w*(?:Import|Modu
                        r"Error:", re.M)
 
 
+# Un programme arrêté net ne dit rien : c'est le signal reçu qui explique.
+_SIGNAUX = {9: "arrêté net par le système (mémoire pleine ?)",
+            4: "refusé par le processeur (programme prévu pour un processeur plus récent)",
+            11: "plantage (erreur de mémoire)", 6: "s'est arrêté tout seul (abandon)"}
+
+
 def erreur_demarrage(binaires):
     """Pourquoi l'outil ne démarre pas : la dernière ligne de son message d'erreur
-    (ex. « No module named 'pkg_resources' »), pour l'écrire dans le compte rendu."""
+    (ex. « No module named 'pkg_resources' »), pour l'écrire dans le compte rendu.
+
+    Jamais vide quand on sait quelque chose : le 26/11/2026, auto-archiver, Nebula et
+    garak étaient « installés mais ne démarrent pas » sans aucune raison, parce que leur
+    commande n'existait pas (reste d'une installation coupée) et que Vigie se taisait."""
+    introuvables, muet = [], ""
     for binaire in binaires:
         chemin = shutil.which(binaire)
         if not chemin:
+            introuvables.append(binaire)
             continue
         try:
             fini = subprocess.run([chemin, "--help"], capture_output=True, text=True,
                                   timeout=60, errors="replace", stdin=subprocess.DEVNULL,
-                                  cwd=tempfile.gettempdir())
-        except (subprocess.TimeoutExpired, OSError):
+                                  cwd=tempfile.gettempdir(), env=_env_essai())
+        except subprocess.TimeoutExpired:
+            muet = muet or f"{binaire} ne répond pas en 60 s"
+            continue
+        except OSError as erreur:
+            muet = muet or f"{binaire} ne se lance pas ({erreur.strerror or erreur})"
             continue
         lignes = [l.strip() for l in (fini.stderr or fini.stdout or "").splitlines()
                   if l.strip()]
         if lignes:
             return lignes[-1][:160]
+        if fini.returncode < 0:
+            muet = muet or f"{binaire} : " + _SIGNAUX.get(
+                -fini.returncode, f"arrêté par le système (signal {-fini.returncode})")
+        else:
+            muet = muet or f"{binaire} s'arrête sans aucun message (code {fini.returncode})"
+    if muet:
+        return muet
+    if introuvables:
+        return "aucune commande trouvée (" + ", ".join(introuvables[:3]) + ")"
     return ""
 
 
@@ -341,9 +375,13 @@ def installer_un(outil, a_blanc=False):
     recette = _par_recette(outil, a_blanc)
     if recette and (recette["installe"] or a_blanc):
         return recette
-    resultat = _installer_par_doc(outil, a_blanc)
+    # Quand une recette existe, c'est elle la méthode exacte : si elle rate, on ne
+    # retombe pas sur un « go install <dépôt>@latest » deviné, qui ne peut que rater
+    # avec une erreur trompeuse (Stratus Red Team, 26/11/2026). La doc reste essayée.
+    resultat = _installer_par_doc(outil, a_blanc, devines=not recette)
     if recette and not resultat["installe"]:
-        resultat["raison"] = (recette["raison"] + " | " + resultat["raison"])[:300]
+        resultat["raison"] = " | ".join(r for r in (recette["raison"], resultat["raison"])
+                                        if r)[:300]
         resultat.pop("manuel", None)
     return resultat
 
@@ -364,11 +402,53 @@ def _deja_pose(outil):
 PYTHON_SECOURS = "3.12"
 _PIPX_SECOURS = ["--python", PYTHON_SECOURS, "--fetch-missing-python"]
 _NOM_PIPX = re.compile(r"installed package (\S+)")
+# Un dossier de l'outil existe déjà (installation précédente, ou RESTE d'une installation
+# coupée) : pipx répond « déjà installé », sans rien faire, avec le code 0.
+_DEJA_PIPX = re.compile(r"'([^']+)'(?:\s+\([^)]*\))?\s+(?:already\s+seems\s+to\s+be|is"
+                        r"\s+already)\s+installed", re.I)
+# garak ou Nebula : ~6 Go à télécharger et décompresser (la bibliothèque d'IA torch).
+DELAI_PYTHON = 1800
 
 
-def _pipx_secours(commande, forcer=False):
+def _pipx_secours(commande):
     """La même commande pipx, avec le Python de secours."""
-    return commande[:2] + (["--force"] if forcer else []) + _PIPX_SECOURS + commande[2:]
+    return commande[:2] + _PIPX_SECOURS + commande[2:]
+
+
+def _venv_pipx(commande, sortie):
+    """Le nom sous lequel pipx a rangé l'outil (pour le désinstaller ou le lister)."""
+    for motif in (_NOM_PIPX, _DEJA_PIPX):
+        trouve = motif.search(sortie or "")
+        if trouve:
+            return trouve.group(1)
+    return re.sub(r"\[.*\]$", "", commande[-1])  # le paquet de la doc, sans ses options
+
+
+def _apps_pipx(venv):
+    """Les commandes d'un outil que pipx a déjà rangé (pipx list --json)."""
+    programme = shutil.which("pipx")
+    if not programme:
+        return []
+    try:
+        fini = subprocess.run([programme, "list", "--json"], capture_output=True, text=True,
+                              timeout=120, errors="replace", stdin=subprocess.DEVNULL)
+        donnees = json.loads(fini.stdout or "{}")
+        paquet = donnees.get("venvs", {}).get(venv, {}).get("metadata", {}).get(
+            "main_package", {})
+        return [a for a in paquet.get("apps", []) if isinstance(a, str)]
+    except (subprocess.TimeoutExpired, OSError, ValueError, AttributeError):
+        return []
+
+
+def _reinstaller_pipx(commande, sortie):
+    """Réinstalle l'outil avec le Python de secours.
+
+    pipx IGNORE --python quand on lui passe --force (vérifié : « pipx ignores --python
+    when you pass --force ») : avant le 26/11/2026, la « réparation avec Python 3.12 »
+    réinstallait en fait avec le même Python, et l'outil restait en panne. On retire donc
+    d'abord ce que pipx a posé (l'outil ne démarre pas de toute façon), puis on réinstalle."""
+    _lancer(["pipx", "uninstall", _venv_pipx(commande, sortie)], delai=300)
+    return _lancer(_pipx_secours(commande), delai=DELAI_PYTHON)
 
 
 def _installer_npm(commande):
@@ -383,27 +463,35 @@ def _reparer_pipx(libelle, commande, sortie, candidats):
       1. « No module named 'pkg_resources' » (Impacket, ScoutSuite…) : il manque
          setuptools, que les Python récents ne mettent plus d'office -> on l'ajoute ;
       2. sinon, on le réinstalle avec le Python de secours (3.12).
-    Renvoie (binaire qui répond ou "", libellé, message d'erreur au démarrage)."""
+    Renvoie (binaire qui répond ou "", libellé, message d'erreur au démarrage,
+    toujours installé ?)."""
     pourquoi = erreur_demarrage(candidats)
-    nom = _NOM_PIPX.search(sortie or "")
-    if "pkg_resources" in pourquoi and nom:
-        _lancer(["pipx", "inject", nom.group(1), "setuptools<81"])
+    if "pkg_resources" in pourquoi:
+        _lancer(["pipx", "inject", _venv_pipx(commande, sortie), "setuptools<81"])
         binaire = _premier_qui_repond(candidats)
         if binaire:
-            return binaire, libelle + " + setuptools", ""
+            return binaire, libelle + " + setuptools", "", True
         pourquoi = erreur_demarrage(candidats) or pourquoi
-    reussi, _, sortie2 = _lancer(_pipx_secours(commande, forcer=True))
-    if reussi:
-        candidats = binaires_poses("pipx", sortie2, "", "") + candidats
-        binaire = _premier_qui_repond(candidats)
-        if binaire:
-            return binaire, f"{libelle} avec Python {PYTHON_SECOURS}", ""
-        pourquoi = erreur_demarrage(candidats) or pourquoi
-    return "", libelle, pourquoi
+    reussi, message, sortie2 = _reinstaller_pipx(commande, sortie)
+    if not reussi:
+        # L'ancienne installation (en panne) a été retirée : l'outil n'est plus là.
+        return "", libelle, "; ".join(r for r in (
+            pourquoi, f"réinstallation avec Python {PYTHON_SECOURS} ratée : {message}") if r), \
+            False
+    libelle = f"{libelle} avec Python {PYTHON_SECOURS}"
+    candidats = binaires_poses("pipx", sortie2, "", "") + candidats
+    binaire = _premier_qui_repond(candidats)
+    if binaire:
+        return binaire, libelle, "", True
+    return "", libelle, erreur_demarrage(candidats) or pourquoi, True
 
 
-def _installer_par_doc(outil, a_blanc=False):
+def _installer_par_doc(outil, a_blanc=False, devines=True):
     essais = methodes(outil)
+    if not devines:
+        essais = [(l, c) for l, c in essais if "(dépôt)" not in l]
+        if not essais:
+            return _compte(outil, raison="")
     if not essais:
         raison = ("pas de dépôt" if not depot(outil.get("lien", "")) else
                   "pas de méthode automatique sûre (s'installe à la main, voir sa doc)")
@@ -419,12 +507,14 @@ def _installer_par_doc(outil, a_blanc=False):
         if libelle.startswith("npm"):
             reussi, message, poses = _installer_npm(commande)
             sortie = ""
+        elif libelle.startswith("pipx"):
+            reussi, message, sortie = _lancer(commande, delai=DELAI_PYTHON)
         else:
             reussi, message, sortie = _lancer(commande)
         if not reussi and libelle.startswith("pipx") and "No apps associated" not in sortie \
                 and " absent" not in message:
             # Échec sous le Python de la machine : on retente avec le Python de secours.
-            reussi2, message2, sortie2 = _lancer(_pipx_secours(commande))
+            reussi2, message2, sortie2 = _lancer(_pipx_secours(commande), delai=DELAI_PYTHON)
             if reussi2:
                 reussi, sortie = True, sortie2
                 libelle = f"{libelle} avec Python {PYTHON_SECOURS}"
@@ -441,18 +531,24 @@ def _installer_par_doc(outil, a_blanc=False):
         # de l'outil, sinon il passe à tort pour « installé mais ne démarre pas ».
         candidats = list(poses) if poses else binaires_poses(
             libelle, sortie, proprietaire, depot_nom, commande)
+        if libelle.startswith("pipx") and _DEJA_PIPX.search(sortie or ""):
+            # « Déjà installé » : pipx ne redit pas ses commandes, on les lui demande.
+            candidats = _apps_pipx(_venv_pipx(commande, sortie)) + candidats
         candidats += [b for b in presence.binaires_possibles(outil["nom"])
                       if b not in candidats]
         binaire = _premier_qui_repond(candidats)
         if binaire:
             return _compte(outil, True, True, binaire, libelle)
-        pourquoi = ""
+        pourquoi, toujours = "", True
         if libelle.startswith("pipx"):
-            binaire, libelle, pourquoi = _reparer_pipx(libelle, commande, sortie, candidats)
+            binaire, libelle, pourquoi, toujours = _reparer_pipx(libelle, commande, sortie,
+                                                                 candidats)
             if binaire:
                 return _compte(outil, True, True, binaire, libelle)
         else:
             pourquoi = erreur_demarrage(candidats)
+        if not toujours:
+            return _compte(outil, methode=libelle, raison=f"{libelle} : {pourquoi}"[:300])
         return _compte(outil, True, methode=libelle,
                        raison="installé mais ne démarre pas"
                               + (f" : {pourquoi}" if pourquoi else ""))
@@ -481,6 +577,12 @@ def installer(outils, a_blanc=False, journal=print, parallele=1, apres_chaque=No
     if not parallele:
         parallele = recettes.parallele_auto()
     recettes.limiter_compilations()
+    if not a_blanc:
+        # Les restes d'une installation coupée (mémoire pleine…) dans le dossier
+        # temporaire de Vigie : rien ne tourne encore, on peut tout retirer.
+        libere = recettes.nettoyer_restes()
+        if libere >= 100:
+            journal(f"  ({libere} Mo libérés : restes d'une installation précédente)")
     comptes_rendus = []
 
     def noter(resultat):

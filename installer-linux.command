@@ -55,7 +55,7 @@ if [ -n "$dest" ]; then
   echo "  [ok] $dest est sur un disque séparé (${libre_go:-?} Go libres)"
   # Les caches de compilation (Go surtout) iront aussi sur ce disque.
   export GOCACHE="$dest/cache/go-build" GOMODCACHE="$dest/go/pkg/mod"
-  export PIP_CACHE_DIR="$dest/cache/pip" TMPDIR="$dest/tmp"
+  export PIP_CACHE_DIR="$dest/cache/pip" UV_CACHE_DIR="$dest/cache/uv" TMPDIR="$dest/tmp"
   export GOPATH="$dest/go" GOBIN="$dest/bin"
   mkdir -p "$GOCACHE" "$PIP_CACHE_DIR" "$TMPDIR" "$dest/go" "$dest/bin" 2>/dev/null || true
 fi
@@ -163,6 +163,10 @@ titre "Nettoyage des caches de compilation (récupère de la place)"
 avant="$(df -Pm "${dest:-$HOME}" 2>/dev/null | awk 'NR==2{print $4}')"
 go clean -cache >/dev/null 2>&1 || rm -rf "${GOCACHE:-$HOME/.cache/go-build}" 2>/dev/null || true
 rm -rf "${PIP_CACHE_DIR:-$HOME/.cache/pip}" 2>/dev/null || true
+[ -n "${UV_CACHE_DIR:-}" ] && rm -rf "$UV_CACHE_DIR" 2>/dev/null || true
+# Les dossiers provisoires des compilations (go-build…, pip-…) : plus rien ne tourne.
+[ -n "$dest" ] && [ -d "$dest/tmp" ] && find "$dest/tmp" -mindepth 1 -maxdepth 1 \
+  -exec rm -rf {} + 2>/dev/null || true
 rm -rf "$HOME/.cache/go-build" "$HOME/.cache/pip" 2>/dev/null || true   # restes éventuels sur /
 apres="$(df -Pm "${dest:-$HOME}" 2>/dev/null | awk 'NR==2{print $4}')"
 if [ -n "$avant" ] && [ -n "$apres" ]; then

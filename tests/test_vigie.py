@@ -2520,7 +2520,7 @@ class Recettes(unittest.TestCase):
                                  setattr(installeur, "repond", vrais[1]),
                                  setattr(installeur, "_installer_par_doc", vrais[2])))
         installeur.repond = lambda binaire, delai=25: binaire == "eyewitness"
-        installeur._installer_par_doc = lambda outil, a_blanc=False: {
+        installeur._installer_par_doc = lambda outil, a_blanc=False, devines=True: {
             "nom": outil["nom"], "installe": False, "repond": False, "binaire": "",
             "methode": "", "raison": "apt (documenté) : Unable to locate package eyewitness"}
         recettes.RECETTES["eyewitness"] = ("recette", lambda: (True, "", ["eyewitness"]),
@@ -3038,6 +3038,223 @@ class TestBrancherALaMain(unittest.TestCase):
     def test_formulaire_dans_la_page(self):
         from vigie import interface_outils
         self.assertIn("/outil/brancher", interface_outils.page())
+
+
+class TestInstalleurDisqueEtReparations(unittest.TestCase):
+    """26/11/2026, 2e installation complète : promptfoo (ENOTEMPTY), Stratus Red Team
+    (disque plein + module deviné), auto-archiver / Nebula / garak muets."""
+
+    def setUp(self):
+        self.dossier = tempfile.mkdtemp()
+        self.racine = os.path.join(self.dossier, "vigie-outils")
+        for sous in ("tmp", "cache/go-build", "cache/pip", "bin"):
+            os.makedirs(os.path.join(self.racine, sous))
+        self.env = mock.patch.dict(os.environ, {
+            "VIGIE_OUTILS_RACINE": self.racine,
+            "TMPDIR": os.path.join(self.racine, "tmp"),
+            "GOCACHE": os.path.join(self.racine, "cache", "go-build"),
+            "PIP_CACHE_DIR": os.path.join(self.racine, "cache", "pip"),
+            "PIPX_BIN_DIR": os.path.join(self.racine, "bin")})
+        self.env.start()
+
+    def tearDown(self):
+        import shutil
+        self.env.stop()
+        shutil.rmtree(self.dossier, ignore_errors=True)
+
+    def _poser(self, *chemins):
+        for chemin in chemins:
+            chemin = os.path.join(self.racine, chemin)
+            os.makedirs(os.path.dirname(chemin), exist_ok=True)
+            with open(chemin, "w") as fichier:
+                fichier.write("x")
+
+    def test_menage_ne_touche_que_les_restes_de_vigie(self):
+        from vigie import recettes
+        dehors = os.path.join(self.dossier, "cache-perso")
+        os.makedirs(dehors)
+        open(os.path.join(dehors, "garde"), "w").close()
+        self._poser("tmp/go-build123/a", "tmp/pip-req-build-x/b", "tmp/tmpabcdef12/c",
+                    "cache/go-build/00/d", "cache/pip/http/e", "pipx/venvs/garak/f")
+        with mock.patch.dict(os.environ, {"UV_CACHE_DIR": dehors}):
+            recettes.faire_de_la_place()
+        tmp = os.listdir(os.path.join(self.racine, "tmp"))
+        self.assertEqual(tmp, ["tmpabcdef12"])  # pas un reste de compilateur : gardé
+        self.assertEqual(os.listdir(os.path.join(self.racine, "cache", "go-build")), [])
+        self.assertEqual(os.listdir(os.path.join(self.racine, "cache", "pip")), [])
+        self.assertTrue(os.path.exists(os.path.join(dehors, "garde")))  # pas à Vigie
+        self.assertTrue(os.path.exists(os.path.join(self.racine, "pipx/venvs/garak/f")))
+
+    def test_restes_vides_au_depart_seulement_chez_vigie(self):
+        from vigie import recettes
+        self._poser("tmp/go-build1/a", "tmp/tmpxyz/b")
+        recettes.nettoyer_restes()
+        self.assertEqual(os.listdir(os.path.join(self.racine, "tmp")), [])
+        systeme = os.path.join(self.dossier, "tmp-systeme")
+        os.makedirs(os.path.join(systeme, "go-build9"))
+        with mock.patch.dict(os.environ, {"TMPDIR": systeme}):
+            recettes.nettoyer_restes()
+            recettes.faire_de_la_place()
+        self.assertEqual(os.listdir(systeme), ["go-build9"])
+
+    def test_chantier_fait_le_menage_quand_personne_ne_compile(self):
+        from vigie import recettes
+        with mock.patch.object(recettes, "place_libre_mo", return_value=500), \
+                mock.patch.object(recettes, "attendre_memoire"), \
+                mock.patch.object(recettes, "faire_de_la_place") as menage, \
+                mock.patch.object(recettes, "apres_go") as apres:
+            with recettes.chantier(["pipx", "install", "garak"]):
+                pass
+            self.assertEqual(menage.call_count, 1)
+            apres.assert_not_called()
+            with recettes.chantier(["go", "install", "x@latest"]):
+                pass
+            apres.assert_called_once()
+            menage.reset_mock()
+            recettes.regler_compilations(2)
+            try:
+                with recettes.chantier(["go", "install", "a@latest"]):
+                    with recettes.chantier(["pipx", "install", "b"]):
+                        pass  # une autre compilation tourne : pas de ménage
+                self.assertEqual(menage.call_count, 1)
+            finally:
+                recettes.regler_compilations(1)
+        with mock.patch.object(recettes, "faire_de_la_place") as menage:
+            with recettes.chantier(["npm", "install", "x"]):
+                pass
+        menage.assert_not_called()
+
+    def test_apres_go_vide_le_cache_de_compilation(self):
+        from vigie import recettes
+        self._poser("tmp/go-build5/a", "tmp/pip-x/b", "cache/go-build/ab/c")
+        recettes.apres_go()
+        self.assertEqual(os.listdir(os.path.join(self.racine, "tmp")), ["pip-x"])
+        self.assertEqual(os.listdir(os.path.join(self.racine, "cache", "go-build")), [])
+
+    def test_npm_enotempty_retire_le_reste_et_reessaie(self):
+        from vigie import recettes
+        modules = os.path.join(self.racine, "node-outils", "lib", "node_modules")
+        self._poser("node-outils/lib/node_modules/promptfoo/package.json",
+                    "node-outils/lib/node_modules/.promptfoo-q6tZKrsN/x",
+                    "node-outils/lib/node_modules/lighthouse/package.json")
+        reponses = iter([(False, "npm ERR! code ENOTEMPTY",
+                          "npm ERR! code ENOTEMPTY\nnpm ERR! syscall rename\n"),
+                         (True, "", "added 1 package")])
+        vus = []
+
+        def faux(commande, env=None, **k):
+            vus.append(sorted(os.listdir(modules)))
+            return next(reponses)
+        with mock.patch.object(recettes, "version_node", return_value=22), \
+                mock.patch.object(recettes.shutil, "which", return_value="/usr/bin/node"), \
+                mock.patch.object(recettes, "_lancer", side_effect=faux), \
+                mock.patch.object(recettes, "ecrire_lanceur"):
+            reussi, message, poses = recettes.installer_npm("promptfoo", ["promptfoo"])
+        self.assertTrue(reussi, message)
+        self.assertEqual(vus[1], ["lighthouse"])  # seulement le reste de promptfoo retiré
+
+    def test_pas_de_module_devine_apres_une_recette(self):
+        from vigie import installeur, recettes
+        lances = []
+
+        def recette():
+            return False, "github.com/spf13/cobra: no space left on device", []
+        outil = {"nom": "Stratus Red Team", "lien": "https://github.com/DataDog/stratus-red-team"}
+        with mock.patch.object(recettes, "pour", return_value=("go (documenté)", recette)), \
+                mock.patch.object(installeur, "_lancer",
+                                  side_effect=lambda c, **k: lances.append(c) or (False, "x", "")):
+            compte = installeur.installer_un(outil)
+        self.assertFalse(compte["installe"])
+        self.assertFalse(any("stratus-red-team@latest" in " ".join(c) for c in lances))
+        self.assertIn("no space left", compte["raison"])
+        self.assertFalse(compte["raison"].endswith("| "))
+
+    def test_reste_pipx_casse_reinstalle_avec_un_autre_python(self):
+        """pipx ignore --python avec --force : il faut désinstaller puis réinstaller."""
+        from vigie import installeur
+        lances, reinstalle = [], [False]
+
+        def faux_lancer(commande, delai=600):
+            lances.append(commande)
+            if commande[:2] == ["pipx", "uninstall"]:
+                return True, "", "uninstalled garak!"
+            if "--python" in commande:
+                reinstalle[0] = True
+                return True, "", ("installed package garak 0.17.1, installed using Python "
+                                  "3.12.3\n  These apps are now available\n    - garak\n")
+            return True, "", ("'garak' already seems to be installed. Not modifying "
+                              "existing installation in '/opt/vigie-outils/pipx/venvs/garak'.")
+        with mock.patch.object(installeur, "_install_documentee",
+                               return_value="python -m pip install garak"), \
+                mock.patch.object(installeur, "_lancer", side_effect=faux_lancer), \
+                mock.patch.object(installeur, "_apps_pipx", return_value=["garak"]), \
+                mock.patch.object(installeur, "erreur_demarrage", return_value=""), \
+                mock.patch.object(installeur, "repond", side_effect=lambda b: reinstalle[0]):
+            compte = installeur._installer_par_doc({"nom": "garak",
+                                                    "lien": "https://github.com/NVIDIA/garak"})
+        self.assertTrue(compte["repond"], compte)
+        self.assertIn("Python 3.12", compte["methode"])
+        self.assertEqual(lances[1], ["pipx", "uninstall", "garak"])
+        self.assertNotIn("--force", lances[2])
+        self.assertIn("--python", lances[2])
+
+    def test_reinstallation_ratee_dit_que_l_outil_n_est_plus_la(self):
+        from vigie import installeur
+
+        def faux_lancer(commande, delai=600):
+            if "--python" in commande:
+                return False, "dépassement de 1800 s", ""
+            return True, "", "installed package nebula-ai 2.0.0\n    - nebula\n"
+        with mock.patch.object(installeur, "_install_documentee",
+                               return_value="pip install nebula-ai"), \
+                mock.patch.object(installeur, "_lancer", side_effect=faux_lancer), \
+                mock.patch.object(installeur, "erreur_demarrage",
+                                  return_value="ImportError: libEGL.so.1"), \
+                mock.patch.object(installeur, "repond", return_value=False):
+            compte = installeur._installer_par_doc(
+                {"nom": "Nebula", "lien": "https://github.com/berylliumsec/nebula"})
+        self.assertFalse(compte["installe"])
+        self.assertIn("libEGL", compte["raison"])
+        self.assertIn("ratée : dépassement", compte["raison"])
+
+    def test_erreur_de_demarrage_jamais_muette(self):
+        from vigie import installeur
+        with mock.patch.object(installeur.shutil, "which", return_value=None):
+            self.assertEqual(installeur.erreur_demarrage(["garak"]),
+                             "aucune commande trouvée (garak)")
+        with mock.patch.object(installeur.shutil, "which", return_value="/bin/garak"), \
+                mock.patch.object(installeur.subprocess, "run",
+                                  return_value=subprocess.CompletedProcess([], -9, "", "")):
+            self.assertIn("mémoire pleine", installeur.erreur_demarrage(["garak"]))
+        with mock.patch.object(installeur.shutil, "which", return_value="/bin/x"), \
+                mock.patch.object(installeur.subprocess, "run",
+                                  return_value=subprocess.CompletedProcess([], 3, "", "")):
+            self.assertIn("code 3", installeur.erreur_demarrage(["x"]))
+
+    def test_appli_a_fenetres_essayee_hors_ecran(self):
+        from vigie import installeur
+        vus = []
+        with mock.patch.object(installeur.shutil, "which", return_value="/bin/nebula"), \
+                mock.patch.object(installeur.subprocess, "run",
+                                  side_effect=lambda *a, **k: vus.append(k["env"]) or
+                                  subprocess.CompletedProcess([], 0, "x" * 50, "")):
+            self.assertTrue(installeur.repond("nebula"))
+        self.assertEqual(vus[0]["QT_QPA_PLATFORM"], "offscreen")
+
+    def test_nom_pipx_lu_dans_la_reponse(self):
+        from vigie import installeur
+        self.assertEqual(installeur._venv_pipx(["pipx", "install", "x"],
+                                               "'cowsay' (6.1) is already installed. Not"),
+                         "cowsay")
+        self.assertEqual(installeur._venv_pipx(["pipx", "install", "garak[audio]"], ""),
+                         "garak")
+
+    def test_nouvelles_erreurs_expliquees(self):
+        from vigie import erreurs
+        for raison in ("npm : npm ERR! code ENOTEMPTY",
+                       "installé mais ne démarre pas : aucune commande trouvée (garak)",
+                       "ImportError: libEGL.so.1: cannot open shared object file"):
+            self.assertTrue(erreurs.expliquer_installation(raison), raison)
 
 
 class RapportDiagComplet(Base):

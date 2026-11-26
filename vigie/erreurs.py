@@ -62,7 +62,7 @@ MOTIFS = [
      "règles, ou le fichier donné)."),
     (r"no space left on device",
      "Le disque est plein : il faut faire de la place avant de relancer."),
-    (r"\bkilled\b|out of memory|MemoryError|cannot allocate memory",
+    (r"\bkilled\b|out of memory|MemoryError|cannot allocate memory|mémoire pleine",
      "L'ordinateur a manqué de mémoire vive et l'outil a été arrêté."),
     # --- Outil mal installé ------------------------------------------------
     (r"ModuleNotFoundError|No module named|ImportError",
@@ -112,6 +112,9 @@ MOTIFS_INSTALL = [
     (r"\bsudo absent|a terminal is required|a password is required|sudo:.*password",
      "L'installation par apt demande le mot de passe administrateur, qui n'a pas pu être "
      "donné."),
+    (r"ENOTEMPTY|EEXIST",
+     "npm a trouvé le reste d'une installation précédente qui avait été coupée. Vigie "
+     "retire ce reste et réessaie tout seul ; si ça recommence, relancer l'installeur."),
     (r"npm ERR!|npm error|ERESOLVE|EACCES",
      "npm (l'installeur des outils JavaScript) a échoué : version de Node trop ancienne, "
      "droits insuffisants ou paquet cassé."),
@@ -142,7 +145,23 @@ MOTIFS_INSTALL = [
     (r"pkg_resources",
      "Il manque au programme un module ancien (setuptools) que les versions récentes de "
      "Python ne fournissent plus d'office."),
-    (r"Python 3\.12",
+    (r"aucune commande trouvée",
+     "L'installation n'a laissé aucune commande à lancer : souvent le reste d'une "
+     "installation coupée. Vigie retire ce reste et réinstalle l'outil tout seul."),
+    (r"réinstallation avec Python [\d.]+ ratée",
+     "Vigie a retiré l'installation en panne et a essayé de la refaire avec un Python 3.12 "
+     "à part, sans succès : la raison est écrite juste à côté."),
+    (r"lib(?:EGL|GL|xcb[\w-]*|xkbcommon[\w-]*)\.so|cannot open shared object file",
+     "Il manque au programme une bibliothèque du système, souvent celle de l'affichage "
+     "(appli à fenêtres comme Nebula). Elle est fournie avec Ubuntu « bureau » ; sans "
+     "bureau, l'outil ne peut pas s'ouvrir."),
+    (r"refusé par le processeur",
+     "Le programme demande un processeur plus récent que celui de la machine (ou de la "
+     "machine virtuelle) : il ne peut pas tourner ici."),
+    (r"s'arrête sans aucun message",
+     "Le programme s'arrête aussitôt sans rien dire : il attend sans doute une "
+     "configuration (voir sa documentation)."),
+    (r"Python 3\.12(?! ratée)",
      "Vigie a dû utiliser un Python 3.12 à part (celui de la machine est trop récent pour "
      "cet outil). C'est normal et sans risque pour le système."),
     (r"pas de dépôt|pas de méthode",
