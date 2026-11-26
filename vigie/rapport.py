@@ -3,7 +3,7 @@ import html
 import json
 import os
 
-from . import __version__, consequences, scenarios
+from . import __version__, consequences, failles, scenarios
 from .modeles import CRITIQUE, IMPORTANT, INFO, OK, fusionner, note, trier
 
 LIBELLES = {CRITIQUE: "Critique", IMPORTANT: "Important", INFO: "À savoir", OK: "Correct"}
@@ -24,9 +24,11 @@ def construire(societe, cible, date, constats, brut, non_realises, autorisation)
     # Ainsi elle tombe toujours sur une lettre déjà affichée, et jamais sous le pire bloc.
     notes_blocs = {nom: note(liste) for nom, liste in blocs.items()}
 
+    autorise = bool(autorisation)
+
     def _avec_consequences(constat):
         donnees = constat.en_dict()
-        donnees["consequences"] = consequences.pour(donnees)
+        donnees["consequences"] = consequences.pour(donnees, autorise)
         return donnees
 
     return {
@@ -73,6 +75,17 @@ def _texte_consequences(fiche, retrait):
     if exemple:
         lignes.append(f"{retrait}- Exemple réel : {exemple['texte']} "
                       f"(Source : {exemple['source']}, {exemple['url']})")
+    faille = fiche.get("faille")
+    if faille:
+        lignes.append(f"{retrait}- Faille {faille['id']} ({faille.get('famille', '')}, "
+                      f"gravité {faille.get('gravite', '')}) :")
+        for nom, libelle in failles.RUBRIQUES:
+            if faille.get(nom):
+                lignes.append(f"{retrait}  · {libelle} : {faille[nom]}")
+        for cas in faille.get("cas", []):
+            sources = ", ".join(cas["sources"])
+            lignes.append(f"{retrait}  · Cas réel : {cas['titre']} ({cas['pays']}) — "
+                          f"{cas['resume']}" + (f" (Source : {sources})" if sources else ""))
     return lignes
 
 
@@ -357,6 +370,8 @@ footer { padding:22px 40px 30px; font-size:12.5px; color:var(--gris);
 .csq dt.exemple { color:#2f5fa7; }
 .csq .src { display:block; font-size:12.5px; color:var(--gris); margin-top:2px; }
 .csq .src a { color:var(--gris); }
+.faille { margin-top:14px; padding-top:10px; border-top:1px dashed var(--trait); }
+.faille .faille-titre { font-size:13px; font-weight:800; color:var(--navy); margin:0 0 6px; }
 .p-tech .qui { font-size:12.5px; color:var(--gris); margin:0 0 4px; }
 .conseq-liste .csq-carte h3 { font-size:16px; }
 .cadre-legal { margin:24px 40px 8px; padding:18px 22px; background:#fbfaf6;
@@ -550,7 +565,25 @@ def _html_consequences(fiche):
         lignes += (f'<dt class="exemple">Exemple réel</dt><dd>{e(exemple["texte"])} '
                    f'<span class="src">Source : <a href="{e(exemple["url"])}">'
                    f'{e(exemple["source"])}</a></span></dd>')
-    return f'<dl class="csq">{lignes}</dl>'
+    return f'<dl class="csq">{lignes}</dl>' + _html_faille(fiche.get("faille"))
+
+
+def _html_faille(faille):
+    """La fiche « telle faille, telle conséquence » (table F01-F34), colonnes client."""
+    if not faille:
+        return ""
+    e = html.escape
+    lignes = "".join(f'<dt>{e(libelle)}</dt><dd>{e(faille[nom])}</dd>'
+                     for nom, libelle in failles.RUBRIQUES if faille.get(nom))
+    for cas in faille.get("cas", []):
+        liens = " ".join(f'<a href="{e(u)}">source</a>' for u in cas["sources"])
+        lieu = ", ".join(x for x in (cas.get("pays"), cas.get("date")) if x and x != "n.c.")
+        lignes += (f'<dt class="exemple">Cas réel</dt><dd><b>{e(cas["titre"])}</b>'
+                   + (f" ({e(lieu)})" if lieu else "") + f' : {e(cas["resume"])} '
+                   f'<span class="src">{liens}</span></dd>')
+    return (f'<div class="faille"><p class="faille-titre">Faille {e(faille["id"])} · '
+            f'{e(faille.get("nom_technique", ""))} · gravité {e(faille.get("gravite", ""))}</p>'
+            f'<dl class="csq">{lignes}</dl></div>')
 
 
 def _onglets(constat, numero):

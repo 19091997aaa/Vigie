@@ -208,6 +208,14 @@ Shannon, Strix…). Rien n'est scanné à l'ouverture. Outils d'audit et GATE : 
 `journal/ouvertures.jsonl`. Toujours jamais dans un diagnostic ni en automatique. Les lignes
 de démarrage viennent des docs : à confirmer sur la VM.
 
+**Table des failles F01-F34 (26/11/2026)** : la table « telle faille, telle conséquence »
+d'Anass est dans `vigie/donnees_failles/` (JSON = source lue ; 2 CSV pour Excel, un test
+vérifie qu'ils collent). `vigie/failles.py` relie les codes de constat à Fxx
+(`CORRESPONDANCE`, détail dans `docs/failles-correspondance.md`) et l'ajoute à l'onglet
+Conséquences. Garde-fous : jamais `phrase_telephone` / `place_dans_l_offre` / `statut` ;
+seulement les cas « forte » ; case C (et F01, F02, F34 = fuites) seulement avec
+autorisation signée ; F33 « à construire » jamais.
+
 Principe : **Vigie ne copie le code d'aucun outil**. Il appelle les outils installés
 sur la machine (chaque outil garde sa licence, se met à jour seul, et Vigie continue
 de marcher si l'un manque). Pour brancher un nouvel outil GitHub : voir la section
