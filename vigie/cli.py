@@ -162,6 +162,22 @@ def lire_bilan(chemin):
     return lu if isinstance(lu, dict) else {}
 
 
+def nombre_parallele(valeur):
+    """« auto » (ou vide) -> d'après la mémoire libre ; sinon le nombre demandé (≥ 1)."""
+    from . import recettes
+    texte = str(valeur or "auto").strip().lower()
+    if texte in ("auto", "0"):
+        nombre = recettes.parallele_auto()
+        libre = recettes.memoire_libre_mo()
+        print(f"Mémoire libre : {libre / 1024:.1f} Go -> {nombre} installation(s) à la fois."
+              if libre is not None else f"{nombre} installations à la fois.")
+        return nombre
+    try:
+        return max(1, int(texte))
+    except ValueError:
+        raise SystemExit(f"--parallele : « auto » ou un nombre, pas « {valeur} »")
+
+
 def ecrire_bilan(chemin, contenu):
     """Écrit le compte rendu d'un coup (fichier temporaire puis remplacement) : une
     coupure en cours d'écriture ne laisse plus un fichier vide."""
@@ -250,8 +266,12 @@ def main(arguments=None):
     inst.add_argument("--a-blanc", action="store_true",
                       help="n'installe rien : affiche ce qui serait tenté")
     inst.add_argument("--limite", type=int, help="s'arrêter après N outils (pour essayer)")
-    inst.add_argument("--parallele", type=int, default=8,
-                      help="nombre d'installations menées de front (8 par défaut, 1 = à la file)")
+    inst.add_argument("--parallele", default="auto",
+                      help="nombre d'installations menées de front : « auto » (par défaut, "
+                      "d'après la mémoire libre, 4 au plus) ou un nombre (1 = à la file)")
+    inst.add_argument("--compilations", type=int, default=0,
+                      help="compilations (pip, pipx, go) menées en même temps : 0 = auto (1 sous "
+                      "8 Go de mémoire libre, 2 au-delà) ; ce sont elles qui remplissent la mémoire")
     inst.add_argument("--rapport", default="installation.json",
                       help="fichier où écrire le compte rendu")
     inst.add_argument("--dest", help="dossier où poser TOUS les outils (ex. /opt/vigie-outils) : "
@@ -458,12 +478,22 @@ def main(arguments=None):
                   f"{avant_reprise - len(choisis)} ignorés ; {len(choisis)} à réessayer.\n")
         if args.limite:
             choisis = choisis[:args.limite]
+        parallele = nombre_parallele(args.parallele)
+        recettes.regler_compilations(args.compilations)
         print(f"{len(choisis)} outils à traiter"
               + (" (à blanc, rien ne sera installé)" if args.a_blanc else "")
-              + (f", {args.parallele} à la fois" if args.parallele > 1 and not args.a_blanc
+              + (f", {parallele} à la fois" if parallele > 1 and not args.a_blanc
                  else "") + "\n")
         debut = time.monotonic()
-        nouveaux = installeur.installer(choisis, args.a_blanc, parallele=args.parallele)
+
+        def enregistrer(faits_jusqu_ici):
+            # Écrit après CHAQUE outil : si le système coupe l'installation (mémoire
+            # pleine, coupure…), la relance reprend là où elle s'était arrêtée.
+            partiel = anciens_ok + faits_jusqu_ici
+            ecrire_bilan(args.rapport, {"resume": installeur.resume(partiel),
+                                        "details": partiel, "en_cours": True})
+        nouveaux = installeur.installer(choisis, args.a_blanc, parallele=parallele,
+                                        apres_chaque=None if args.a_blanc else enregistrer)
         # Le rapport final garde les outils déjà prêts + le résultat des réessais.
         comptes = anciens_ok + nouveaux
         bilan = installeur.resume(comptes)

@@ -91,7 +91,10 @@ liberer_apt
 attendre_apt
 $SUDO $APT update -y >/dev/null 2>&1 || true
 attendre_apt
-$SUDO $APT install -y python3 python3-pip python3-venv pipx golang-go npm git curl unzip jq \
+# build-essential + python3-dev : pour les outils Python qui se compilent (netifaces de
+# Responder, yara-python…) quand aucune version toute prête n'existe pour ce Python.
+$SUDO $APT install -y python3 python3-pip python3-venv python3-dev build-essential \
+  pipx golang-go npm git curl unzip jq \
   || echo "  [!] apt a signalé un souci ; je vérifie quand même les outils de base"
 
 # Secours : si pipx n'est pas venu par apt (vieilles versions), on le pose via pip.
@@ -141,8 +144,17 @@ if [ -f "$HOME/vigie-installation.json" ]; then
   reprise_arg="--reprendre $HOME/vigie-installation.json"
   echo "  (relance ciblée : seuls les outils encore manquants seront réessayés)"
 fi
-(cd "$racine" && python3 -m vigie installer --tous --parallele 6 $dest_arg $reprise_arg \
-    --rapport "$HOME/vigie-installation.json")
+# Mémoire : le 26/11/2026, Ubuntu a TUÉ l'installation (mémoire pleine) avec 6 installations
+# de front. Désormais Vigie règle lui-même le nombre d'après la mémoire libre (« auto »),
+# et les compilations passent une par une. Pour forcer un nombre :
+#   VIGIE_PARALLELE=1 bash installer-linux.command      (le plus sobre, plus lent)
+memoire_go="$(awk '/^MemTotal:/{printf "%d", $2/1024/1024}' /proc/meminfo 2>/dev/null)"
+if [ -n "$memoire_go" ] && [ "$memoire_go" -lt 4 ]; then
+  echo "  [!] Cette machine n'a que ${memoire_go} Go de mémoire : l'installation sera lente."
+  echo "      Si c'est une VM, donne-lui 6 Go de mémoire (VMware : Paramètres > Mémoire)."
+fi
+(cd "$racine" && python3 -m vigie installer --tous --parallele "${VIGIE_PARALLELE:-auto}" \
+    $dest_arg $reprise_arg --rapport "$HOME/vigie-installation.json")
 
 titre "Nettoyage des caches de compilation (récupère de la place)"
 # Le cache de compilation Go peut peser des dizaines de Go. Les OUTILS déjà posés

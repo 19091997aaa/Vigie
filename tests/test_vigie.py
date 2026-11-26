@@ -2794,3 +2794,78 @@ class TestInstalleurLinux25Novembre(unittest.TestCase):
             cli.ecrire_bilan(chemin, {"resume": {}, "details": []})
             self.assertEqual(cli.lire_bilan(chemin), {"resume": {}, "details": []})
             self.assertEqual(os.listdir(dossier), ["vigie-installation.json"])
+
+
+class TestInstalleurSobreEnMemoire(unittest.TestCase):
+    """26/11/2026 : Ubuntu a tué l'installeur (mémoire pleine) avec 6 installations de front."""
+
+    def tearDown(self):
+        from vigie import recettes
+        recettes.regler_compilations(1)
+
+    def test_parallele_suit_la_memoire(self):
+        from vigie import recettes
+        self.assertEqual(recettes.parallele_auto(1000), 1)
+        self.assertEqual(recettes.parallele_auto(2500), 1)
+        self.assertEqual(recettes.parallele_auto(4000), 2)
+        self.assertEqual(recettes.parallele_auto(64000), recettes.PARALLELE_MAX)
+        self.assertLessEqual(recettes.PARALLELE_MAX, 4)
+
+    def test_option_parallele(self):
+        with mock.patch("vigie.recettes.memoire_libre_mo", return_value=3000):
+            self.assertEqual(cli.nombre_parallele("auto"), 2)
+        self.assertEqual(cli.nombre_parallele("3"), 3)
+        self.assertEqual(cli.nombre_parallele("-2"), 1)
+        with self.assertRaises(SystemExit):
+            cli.nombre_parallele("beaucoup")
+
+    def test_compilations_reconnues(self):
+        from vigie import recettes
+        self.assertTrue(recettes.est_compilation(["pipx", "install", "x"]))
+        self.assertTrue(recettes.est_compilation(["/opt/x/vigie-venv/bin/pip", "install"]))
+        self.assertTrue(recettes.est_compilation(["go", "install", "a@latest"]))
+        self.assertFalse(recettes.est_compilation(["sudo", "env", "apt-get"]))
+        self.assertFalse(recettes.est_compilation(["npm", "install"]))
+
+    def test_compilations_une_par_une(self):
+        from vigie import installeur, recettes
+        recettes.regler_compilations(1)
+        en_cours, maximum, verrou = [0], [0], threading.Lock()
+
+        def faux_run(*a, **k):
+            with verrou:
+                en_cours[0] += 1
+                maximum[0] = max(maximum[0], en_cours[0])
+            time.sleep(0.05)
+            with verrou:
+                en_cours[0] -= 1
+            return subprocess.CompletedProcess(a[0], 0, "", "")
+        with mock.patch.object(installeur.shutil, "which", return_value="/usr/bin/pipx"), \
+                mock.patch.object(installeur.subprocess, "run", side_effect=faux_run), \
+                mock.patch.object(recettes, "memoire_libre_mo", return_value=8000):
+            fils = [threading.Thread(target=installeur._lancer, args=(["pipx", "install", "x"],))
+                    for _ in range(5)]
+            for f in fils:
+                f.start()
+            for f in fils:
+                f.join()
+        self.assertEqual(maximum[0], 1)
+
+    def test_attend_la_memoire(self):
+        from vigie import recettes
+        lectures = iter([300, 400, 2000])
+        with mock.patch.object(recettes, "memoire_libre_mo", side_effect=lambda: next(lectures)), \
+                mock.patch.object(recettes.time, "sleep"):
+            self.assertEqual(recettes.attendre_memoire(pause=5), 10)
+
+    def test_compte_rendu_ecrit_apres_chaque_outil(self):
+        from vigie import installeur
+        vus = []
+        with mock.patch.object(installeur, "installer_un",
+                               side_effect=lambda o, a=False: {"nom": o["nom"], "installe": True,
+                                                               "repond": True, "methode": "x",
+                                                               "raison": ""}):
+            installeur.installer([{"nom": "A"}, {"nom": "B"}, {"nom": "C"}],
+                                 journal=lambda *a: None, parallele=2,
+                                 apres_chaque=lambda c: vus.append(len(c)))
+        self.assertEqual(vus, [1, 2, 3])
