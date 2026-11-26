@@ -4,14 +4,17 @@ Aucun ne retire de points : ce sont des informations, pas des failles.
 
   - dns_complet (dnsrecon, par défaut) : la fiche DNS complète. Seul à montrer les
     services déclarés (messagerie IMAP, envoi, configuration automatique) et l'IPv6.
-  - toutes_pages (Unlighthouse, sur demande car long : ~1 min 30) : Lighthouse sur TOUTES
-    les pages, pas seulement l'accueil. Sur pavillon-noir.tech, seul à voir qu'un
-    article est aussi lent que l'accueil.
+  - toutes_pages (Unlighthouse, long : 2 à 8 minutes selon le nombre de pages, 7 min 25
+    pour 30 pages sur la VM Ubuntu le 26/11/2026) : Lighthouse sur TOUTES les pages, pas
+    seulement l'accueil. Sur pavillon-noir.tech, seul à voir qu'un article est aussi
+    lent que l'accueil. La page d'accueil, déjà mesurée par Lighthouse, n'est pas
+    recomptée : deux chiffres pour la même page déroutaient le client (26/11/2026).
 """
 import glob
 import json
 import os
 import tempfile
+import urllib.parse
 
 from .. import outils, pdf, reseau
 from ..modeles import INFO, OK, Constat, ControleImpossible
@@ -61,26 +64,59 @@ def analyser_dns(cible):
     fiches, resultat = _dnsrecon(cible.domaine, reseau.SERVEURS_DNS[0])
     if fiches is None:
         fiches, resultat = _dnsrecon(cible.domaine, None)
+    panne = ""
     if fiches is None:
-        raise ControleImpossible("dnsrecon n'a rien produit — " + _raison_dnsrecon(resultat))
+        # dnsrecon en panne (plantage du 26/11/2026 sur la VM Ubuntu) : Vigie lit lui-même
+        # les mêmes fiches publiques (services SRV et IPv6), par les résolveurs publics.
+        panne = "dnsrecon n'a rien produit — " + _raison_dnsrecon(resultat)
+        fiches = fiches_par_vigie(cible.domaine)
+        if fiches is None:
+            raise ControleImpossible(panne)
     infos = lire_dnsrecon(fiches)
     brut = {"dns_complet": infos}
+    if panne:
+        brut["panne"] = {"dnsrecon": panne + " ; Vigie a lu lui-même les mêmes fiches DNS "
+                                             "(services et IPv6)"}
+    # Qui a lu la fiche : le rapport doit le dire (même règle que tlsx / SSLyze).
+    sources = ["Fiche DNS lue par Vigie (dnsrecon en panne)"] if panne else []
     if not infos["services"] and not infos["ipv6"]:
         return [Constat(BLOC, OK, "Fiche DNS sans service particulier déclaré",
                         "Aucun service supplémentaire n'est annoncé dans le DNS.",
-                        cle="dns_complet", hors_note=True)], brut
+                        cle="dns_complet", hors_note=True, sources=sources)], brut
     morceaux = []
     if infos["services"]:
         morceaux.append("services annoncés : " + ", ".join(infos["services"]))
     if infos["ipv6"]:
         morceaux.append("le site répond aussi en IPv6 (adresse internet nouvelle génération)")
     return [Constat(
-        BLOC, INFO, "Ce que le DNS annonce publiquement — vu par dnsrecon",
+        BLOC, INFO, "Ce que le DNS annonce publiquement" + ("" if panne else " — vu par dnsrecon"),
         "Pour information : " + " ; ".join(morceaux) + ". Tout le monde peut le lire : "
         "c'est normal, mais chaque service annoncé doit être protégé (mot de passe fort, "
         "double authentification sur la messagerie).",
         "Vérifier que chaque service annoncé sert encore.", cle="dns_complet",
-        hors_note=True)], brut
+        hors_note=True, sources=sources)], brut
+
+
+# Les noms SRV que dnsrecon interroge pour les services de SERVICES.
+NOMS_SRV = {"_imaps": "_tcp", "_imap": "_tcp", "_pop3s": "_tcp", "_submission": "_tcp",
+            "_autodiscover": "_tcp", "_caldav": "_tcp", "_carddav": "_tcp", "_sip": "_udp",
+            "_xmpp-client": "_tcp"}
+
+
+def fiches_par_vigie(domaine):
+    """Les fiches SRV et AAAA du domaine, au format de dnsrecon, lues par Vigie lui-même.
+    None si le DNS est injoignable (on ne conclut pas)."""
+    fiches = []
+    try:
+        for prefixe, transport in NOMS_SRV.items():
+            nom = f"{prefixe}.{transport}.{domaine}"
+            if reseau.dns(nom, "SRV"):
+                fiches.append({"type": "SRV", "name": nom})
+        for adresse in reseau.dns(domaine, "AAAA"):
+            fiches.append({"type": "AAAA", "address": adresse})
+    except ControleImpossible:
+        return None
+    return fiches
 
 
 def _raison_dnsrecon(resultat):
@@ -124,13 +160,28 @@ def analyser_pages(cible):
     if not pages:
         raise ControleImpossible("Unlighthouse n'a analysé aucune page (Chrome est-il installé ?)")
     brut = {"toutes_pages": {"pages": pages, "lentes": lentes}}
+    accueil_a_part = outils.disponible("lighthouse")
+    if accueil_a_part:
+        lentes = [(s, url) for s, url in lentes if not est_accueil(url, cible.domaine)]
     if not lentes:
-        return [Constat(BLOC, OK, f"Les {pages} pages du site s'affichent vite",
+        autres = " (en dehors de la page d'accueil, mesurée à part)" if accueil_a_part else ""
+        return [Constat(BLOC, OK, f"Les {pages} pages du site s'affichent vite{autres}",
                         "Aucune page ne dépasse 4 secondes.", cle="toutes_pages",
                         hors_note=True)], brut
     liste = " ; ".join(f"{url} ({s} s)" for s, url in lentes[:5])
+    accueil = (" La page d'accueil n'est pas dans cette liste : sa vitesse est donnée à "
+               "part, mesurée par Lighthouse." if accueil_a_part else "")
+    nombre = (f"{len(lentes)} pages lentes" if len(lentes) > 1 else "1 page lente")
     return [Constat(
-        BLOC, INFO, f"{len(lentes)} pages lentes sur {pages} — vu par Unlighthouse",
+        BLOC, INFO, f"{nombre} sur {pages} — vu par Unlighthouse",
         f"Pages concernées : {liste}. Ce n'est pas une faille, mais une page lente fait "
-        "partir des visiteurs.", "Alléger les images de ces pages.", cle="toutes_pages",
-        hors_note=True)], brut
+        f"partir des visiteurs.{accueil}", "Alléger les images de ces pages.",
+        cle="toutes_pages", hors_note=True)], brut
+
+
+def est_accueil(url, domaine):
+    """La page d'accueil du domaine (avec ou sans www, avec ou sans « / » final)."""
+    morceaux = urllib.parse.urlparse(url or "")
+    hote = (morceaux.hostname or "").lower()
+    return hote in (domaine, "www." + domaine) and morceaux.path in ("", "/") \
+        and not morceaux.query

@@ -149,13 +149,21 @@ def lancer_ensemble(pseudo, choisis):
     return {n: par_outil[n] for n in ordre if n in par_outil}, ecartes
 
 
+# Sites qui répondent « ce compte existe » pour N'IMPORTE QUEL nom : les outils les
+# signalent à tort, parfois à plusieurs (Sherlock et Social Analyzer lisent la même
+# réponse). Cas réel du 26/11/2026 : « pavillon-noir » annoncé sur Myspace. On les
+# retire du rapport ; ajouter ici une clé (voir _site) quand un nouveau cas est vérifié.
+FAUX_POSITIFS = {"myspace"}
+
+
 def recouper(par_outil):
-    """{outil: [comptes]} -> {clé de site: {"site", "adresse", "vu_par": [outils]}}."""
+    """{outil: [comptes]} -> {clé de site: {"site", "adresse", "vu_par": [outils]}}.
+    Les sites de FAUX_POSITIFS sont écartés."""
     sites = {}
     for outil, comptes in par_outil.items():
         for compte in comptes:
             cle = _site(compte["site"])
-            if not cle:
+            if not cle or cle in FAUX_POSITIFS:
                 continue
             fiche = sites.setdefault(cle, {"site": compte["site"], "adresse": compte["adresse"],
                                            "vu_par": []})

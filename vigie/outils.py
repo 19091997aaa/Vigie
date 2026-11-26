@@ -14,6 +14,7 @@ Pour brancher un nouvel outil :
   3. inscrire l'adaptateur dans vigie/modules/__init__.py.
 """
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -377,17 +378,20 @@ def astuce_installation(nom, systeme=None):
     return "installeur Linux de Vigie (bash installer-linux.command)"
 
 
-def executer(nom, arguments, delai=300, dossier=None, entree=None, partiel=False):
+def executer(nom, arguments, delai=300, dossier=None, entree=None, partiel=False, env=None):
     """Lance un outil du catalogue et renvoie ce qu'il affiche.
 
     Les arguments sont passés en liste, jamais via un shell : une valeur saisie
     par l'utilisateur ne peut pas devenir une commande.
     """
     options = {"partiel": True} if partiel else {}
+    if env:
+        options["env"] = env
     return executer_detail(nom, arguments, delai, dossier, entree, **options).stdout
 
 
-def executer_detail(nom, arguments, delai=300, dossier=None, entree=None, partiel=False):
+def executer_detail(nom, arguments, delai=300, dossier=None, entree=None, partiel=False,
+                    env=None):
     """Comme executer(), mais renvoie tout : code de retour, sortie, messages d'erreur.
 
     entree : texte envoyé à l'outil (une liste de noms, pour dnsx). Sans entree, le
@@ -395,13 +399,14 @@ def executer_detail(nom, arguments, delai=300, dossier=None, entree=None, partie
     partiel : si l'outil dépasse son délai, on garde ce qu'il a déjà affiché (code de
     retour None) au lieu de tout perdre. Sherlock, par exemple, écrit chaque compte
     trouvé au fil de l'eau : 4 minutes de recherche valent mieux que rien.
+    env : variables d'environnement en plus (le correctif Ruby de WhatWeb, par exemple).
     """
     outil = CATALOGUE[nom]
     chemin = trouver(outil["commande"])
     if not chemin:
         raise ControleImpossible(
             f"l'outil {nom} n'est pas installé ({astuce_installation(nom)})")
-    environnement = dict(os.environ, PATH=chemin_recherche())
+    environnement = {**os.environ, "PATH": chemin_recherche(), **(env or {})}
     try:
         return subprocess.run([chemin] + list(arguments), capture_output=True, text=True,
                               timeout=delai, cwd=dossier, env=environnement,
@@ -426,12 +431,39 @@ def pourquoi(resultat):
     from . import erreurs
     texte = (resultat.stderr or "") + "\n" + (resultat.stdout or "")
     explications = erreurs.expliquer(texte, maximum=1)
+    cause = ligne_erreur(texte)
     if explications:
-        return explications[0]
+        # Un plantage sans la vraie ligne d'erreur ne permet pas de réparer (dnsrecon,
+        # 26/11/2026) : on garde la ligne qui dit ce qui a cassé, pour la relecture.
+        return explications[0] + (f" Détail : {cause[:160]}" if cause else "")
+    if cause:
+        return "message de l'outil : " + cause[:160]
     lignes = [l.strip() for l in texte.splitlines() if l.strip()]
     if lignes:
         return "message de l'outil : " + lignes[-1][:160]
     return f"l'outil s'est arrêté sans rien dire (code {resultat.returncode})"
+
+
+# Python : « KeyError: 'x' » en fin de trace. Ruby : la PREMIÈRE ligne de la trace
+# (« ...: undefined method `exists?' for File:Class (NoMethodError) »), les suivantes
+# ne sont que des « from fichier:ligne » sans intérêt (WhatWeb, 26/11/2026).
+_PYTHON = re.compile(r"^([A-Za-z_][\w.]*(?:Error|Exception|Exit|Interrupt)\b.*)$")
+_RUBY = re.compile(r"^\S+:\d+:in [`'][^']*': (.+\([A-Z]\w+(?:::\w+)*\))\s*$")
+
+
+def ligne_erreur(texte):
+    """La ligne qui dit vraiment ce qui a cassé dans une trace Python ou Ruby, sinon ""."""
+    lignes = [l.strip() for l in (texte or "").splitlines() if l.strip()]
+    for ligne in lignes:
+        trouve = _RUBY.match(ligne)
+        if trouve:
+            return trouve.group(1)
+    if any(l.startswith("Traceback (most recent call last)") for l in lignes):
+        for ligne in reversed(lignes):
+            trouve = _PYTHON.match(ligne)
+            if trouve:
+                return trouve.group(1)
+    return ""
 
 
 def etat():

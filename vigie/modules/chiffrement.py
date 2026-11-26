@@ -14,6 +14,8 @@ from .. import outils, reseau
 from ..modeles import CRITIQUE, IMPORTANT, INFO, OK, Constat, ControleImpossible
 
 BLOC = "Exposition"
+# Le point « www » vient de tlsx, pas de SSLyze : le rapport doit le dire (26/11/2026).
+SOURCE_TLSX = "Certificat de www (tlsx)"
 # Réglages passés à SSLyze : versions du chiffrement et certificat, rien d'autre.
 CONTROLES = ["--certinfo", "--sslv2", "--sslv3", "--tlsv1", "--tlsv1_1", "--tlsv1_2",
              "--tlsv1_3"]
@@ -160,11 +162,12 @@ def analyser(cible):
             if couvert and not fiche.get("expired") and not fiche.get("untrusted"):
                 constats.append(Constat(BLOC, OK, "Certificat de www valide — vu par tlsx",
                                         "Les visiteurs qui tapent « www » n'ont pas d'alerte.",
-                                        cle="certificat_www"))
+                                        cle="certificat_www", sources=[SOURCE_TLSX]))
             else:
                 constats.append(Constat(BLOC, IMPORTANT, "Certificat de www absent ou invalide — vu par tlsx",
                                         "Les visiteurs qui tapent « www » devant l'adresse voient "
                                         "une alerte de sécurité.",
-                                        "Ajouter www au certificat du site.", cle="certificat_www"))
+                                        "Ajouter www au certificat du site.", cle="certificat_www",
+                                        sources=[SOURCE_TLSX]))
             resultat["certificat_www"] = {"noms": noms, "couvert": couvert}
     return constats, {"chiffrement": resultat}

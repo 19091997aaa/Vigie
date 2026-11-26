@@ -84,7 +84,11 @@ MOTIFS = [
      "L'outil n'a pas compris la façon dont il a été appelé (la ligne de lancement ne "
      "lui convient pas). Ce n'est pas ta cible qui est en cause : la ligne devinée par "
      "Vigie est à corriger."),
-    (r"Traceback \(most recent call last\)",
+    (r"undefined method [`'](?:exists\?|untaint|taint)'",
+     "L'outil est trop ancien pour la version de Ruby de la machine : il appelle une "
+     "fonction que Ruby a retirée (cas de WhatWeb installé par apt sous Ubuntu). Vigie "
+     "le relance avec un correctif ; sinon, installer la version du dépôt GitHub."),
+    (r"Traceback \(most recent call last\)|^\s*from \S+:\d+:in [`']<main>'",
      "L'outil a planté pendant son travail (erreur interne du programme)."),
 ]
 
@@ -156,7 +160,7 @@ MOTIFS_INSTALL = [
 def _chercher(texte, motifs, maximum):
     trouve = []
     for motif, explication in motifs:
-        if re.search(motif, texte or "", re.I) and explication not in trouve:
+        if re.search(motif, texte or "", re.I | re.M) and explication not in trouve:
             trouve.append(explication)
             if len(trouve) >= maximum:
                 break
