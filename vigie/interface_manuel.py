@@ -42,21 +42,12 @@ def _options(noms, propre=False):
 
 
 def _section_mes_cibles(dossier):
-    """« Mes propres cibles » : domaines prouvés par le DNS et VM de labo."""
+    """« Mes propres cibles » : domaines et VM de labo attestés par Anass."""
     e = html.escape
     donnees = mes_cibles.lire(dossier)
     lignes = []
-    for domaine, fiche in sorted(donnees["domaines"].items()):
-        if fiche.get("prouve_le"):
-            etat = f"<b class='ok'>à toi</b> (code DNS vérifié le {e(fiche['prouve_le'][:10])})"
-            action = ""
-        else:
-            etat = ("<b class='ok'>à toi</b> (attestation de propriété). "
-                    "<span class='aide'>Preuve DNS en plus, facultative : un enregistrement "
-                    f"<b>TXT</b> sur <b>{e(domaine)}</b> avec <code>{e(fiche['jeton'])}</code>."
-                    "</span>")
-            action = _bouton("prouver", domaine, "J'ai posé le code : vérifier")
-        lignes.append(f"<li><b>{e(domaine)}</b> : {etat} {action}"
+    for domaine in sorted(donnees["domaines"]):
+        lignes.append(f"<li><b>{e(domaine)}</b> : <b class='ok'>à toi</b> "
                       f"{_bouton('retirer', domaine, 'Retirer', discret=True)}</li>")
     for reseau_ip in donnees["reseaux"]:
         lignes.append(f"<li><b>{e(reseau_ip)}</b> : machine ou réseau de labo "
@@ -104,13 +95,9 @@ def gerer_cibles(corps, dossier, journal):
     if action in ("domaine", "reseau") and un("atteste") != "oui":
         raise mes_cibles.Refus("Coche la case : tu attestes que cette cible est à toi.")
     if action == "domaine":
-        domaine, jeton = mes_cibles.ajouter_domaine(dossier, journal, valeur)
-        return (f"{domaine} est ajouté. Pour le prouver : ajoute chez ton hébergeur un "
-                f"enregistrement TXT sur {domaine} avec la valeur {jeton}, puis clique "
-                "sur « Vérifier le code DNS ».")
-    if action == "prouver":
-        mes_cibles.prouver_domaine(dossier, journal, valeur)
-        return f"{valeur} est prouvé : les outils manuels peuvent le viser sans autorisation."
+        domaine, _ = mes_cibles.ajouter_domaine(dossier, journal, valeur)
+        return (f"{domaine} est ajouté à tes cibles : les outils peuvent le viser sans "
+                "autorisation.")
     if action == "reseau":
         return f"{mes_cibles.ajouter_reseau(dossier, journal, valeur)} est ajouté à ton labo."
     if action == "retirer":
@@ -137,7 +124,7 @@ def page(dossier, message="", ok=""):
 <div class="couv">
 <div class="enseigne">{rapport.LOGO}<div class="mot">Vigie<small>Sécurité</small></div></div>
 <h1>Outils manuels</h1>
-<div class="meta"><span>Contrôles actifs, un par un : sur autorisation signée, ou sur tes propres cibles prouvées</span></div>
+<div class="meta"><span>Contrôles actifs, un par un : sur autorisation signée, ou sur tes propres cibles déclarées</span></div>
 </div>
 <div class="corps">
 {bandeau}
@@ -196,7 +183,6 @@ form.enligne { display:inline; margin:0 0 0 8px; }
 button.petit, button.discret { padding:5px 10px; font-size:13px; }
 button.discret { background:#eceef1; color:#5c6676; }
 .mes-cibles li { margin:8px 0; line-height:1.6; }
-.mes-cibles code { background:var(--fond); padding:2px 6px; border-radius:6px; word-break:break-all; }
 b.ok { color:#1e7a46; } b.attente { color:#9a5f00; }
 pre { white-space:pre-wrap; font-size:13px; background:var(--fond); padding:12px;
   border-radius:10px; }
