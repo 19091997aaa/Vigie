@@ -398,3 +398,35 @@ class CleIA(unittest.TestCase):
             "fournisseur=anthropic&cle=sk-ant-api03-abcdefghijkl1234")
         self.assertIn("Clé enregistrée", p)
         self.assertNotIn("abcdefghijkl", p)
+
+
+class PlaceDisque(unittest.TestCase):
+    """Disque des outils plein sur la VM (28/11/2026) : vérifier AVANT."""
+
+    def test_gros_outil_saute_sans_place(self):
+        from vigie import installeur, outils, recettes
+        with mock.patch.object(recettes, "place_libre_mo", return_value=2500), \
+                mock.patch.object(outils, "trouver", return_value=None):
+            raison = installeur.place_insuffisante({"nom": "garak"})
+            self.assertIn("liberer-place.command", raison)
+            self.assertEqual(installeur.place_insuffisante({"nom": "Sherlock"}), "")
+        with mock.patch.object(recettes, "place_libre_mo", return_value=20000), \
+                mock.patch.object(outils, "trouver", return_value=None):
+            self.assertEqual(installeur.place_insuffisante({"nom": "Nebula"}), "")
+
+    def test_docker_refuse_sans_place_si_pas_encore_construit(self):
+        with mock.patch.object(graphiques, "_executer", return_value=(0, "")), \
+                mock.patch.object(graphiques, "_libre_mo", return_value=1200):
+            raison = graphiques.place_docker_insuffisante("ARTEX", "/x/artex")
+        self.assertIn("Pas assez de place pour démarrer ARTEX", raison)
+        # Déjà construit : le redémarrer ne demande presque rien.
+        with mock.patch.object(graphiques, "_executer", return_value=(0, "sha256:abc\n")), \
+                mock.patch.object(graphiques, "_libre_mo", return_value=1200):
+            self.assertEqual(graphiques.place_docker_insuffisante("ARTEX", "/x/artex"), "")
+
+    def test_script_de_menage_syntaxe(self):
+        import subprocess
+        racine = os.path.join(os.path.dirname(__file__), "..")
+        fini = subprocess.run(["bash", "-n", os.path.join(racine, "liberer-place.command")],
+                              capture_output=True, text=True, timeout=10)
+        self.assertEqual(fini.returncode, 0, fini.stderr)

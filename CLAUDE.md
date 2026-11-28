@@ -293,6 +293,15 @@ relit (`set -a; . fichier`). Sans clé : refus en français avec bouton vers le 
 Badge `à la main` renommé **`hors Vigie`** (Anass croyait devoir installer à la main).
 Catalogue : clic sur un nom lançable = case cible + bouton Lancer sous le nom.
 
+**Disque des outils plein (28/11/2026, soir)** : le disque de 50 Go de la VM est arrivé à
+0 octet. `liberer-place.command` (double-clic) montre ce qui prend la place, vide restes et
+caches (Go, y compris `go clean -modcache`, pip, uv, npm, pipx, cache de construction
+Docker, images sans nom ; jamais conteneurs ni volumes) et propose de retirer garak et
+Nebula (~6 Go chacun). L'installeur saute un outil lourd sans la place
+(`installeur.GROS_OUTILS_MO`, message français) ; « Ouvrir un outil » refuse un
+`docker compose up` pas encore construit sans la place (`graphiques.PLACE_DOCKER_MO`,
+sur le disque de Docker ET celui des outils).
+
 **Avancement en direct (28/11/2026)** : demande d'Anass, la page d'un outil lancé
 (« Lancer un outil ») montre où il en est, mise à jour toutes les 2 s (`vigie/avancement.py`,
 route `/outil/resultat/<id>/etat`). `lancer_seul._executer` lit la sortie au fil de l'eau

@@ -194,6 +194,10 @@ rm -rf "$HOME/.cache/go-build" "$HOME/.cache/pip" 2>/dev/null || true   # restes
 apres="$(df -Pm "${dest:-$HOME}" 2>/dev/null | awk 'NR==2{print $4}')"
 if [ -n "$avant" ] && [ -n "$apres" ]; then
   echo "  [ok] $(( (apres - avant) / 1024 )) Go récupérés (place libre : $(( apres / 1024 )) Go)"
+  if [ "$apres" -lt 8192 ]; then
+    echo "  [!] Il reste peu de place sur le disque des outils. Double-clique sur"
+    echo "      « liberer-place.command » (dans le dossier de Vigie) pour en récupérer."
+  fi
 fi
 
 titre "Vérification : ce que Vigie voit maintenant"
