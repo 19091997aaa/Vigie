@@ -120,6 +120,29 @@ if [ -n "$manque" ]; then
   exit 1
 fi
 
+titre "Docker (pour les outils qui tournent en conteneurs : ARTEX, Web-Check, Wazuh…)"
+# Le 28/11/2026, sur la VM, ARTEX et d'autres paraissaient « pas installés » : Docker
+# manquait. On pose celui d'Ubuntu (docker.io + docker compose), on le démarre avec la
+# machine et on donne à ton compte le droit de s'en servir (groupe docker : sur une VM
+# de labo, sans risque ; effet complet après redémarrage).
+if ! command -v docker >/dev/null 2>&1; then
+  attendre_apt
+  $SUDO $APT install -y docker.io || echo "  [!] Docker n'a pas pu s'installer"
+fi
+if command -v docker >/dev/null 2>&1; then
+  if ! docker compose version >/dev/null 2>&1 && dpkg -s docker.io >/dev/null 2>&1; then
+    attendre_apt
+    $SUDO $APT install -y docker-compose-v2 >/dev/null 2>&1 \
+      || echo "  [!] le module « docker compose » n'a pas pu s'installer"
+  fi
+  $SUDO systemctl enable --now docker >/dev/null 2>&1 || true
+  if [ -n "$SUDO" ] && ! id -nG "$USER" | tr ' ' '\n' | grep -qx docker; then
+    $SUDO usermod -aG docker "$USER" \
+      && echo "  [ok] ton compte peut se servir de Docker (redémarre la machine à la fin)"
+  fi
+  echo "  [ok] Docker présent"
+fi
+
 titre "Vigie"
 if [ -d "$racine/vigie" ]; then echo "  [ok] Vigie présent"
 else echo "  [!] dossier vigie introuvable à côté de ce script"; exit 1; fi

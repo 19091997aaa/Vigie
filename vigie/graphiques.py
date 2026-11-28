@@ -45,8 +45,11 @@ def _appli(*commandes, mac="", url_apres="", note=""):
             "url_apres": url_apres, "note": note}
 
 
-def _console(*commandes, note=""):
-    return {"genre": "console", "commandes": list(commandes), "note": note}
+def _console(*commandes, note="", besoin=(), intro=""):
+    """besoin : ce qu'il faut en plus sur la machine ("docker", "node22").
+    intro : phrase affichée en français dans le terminal avant le démarrage."""
+    return {"genre": "console", "commandes": list(commandes), "note": note,
+            "besoin": list(besoin), "intro": intro}
 
 
 def _web(url, *demarrer, attente=60, note=""):
@@ -79,6 +82,10 @@ def _compose(nom):
     return {"moyen": "compose", "nom": nom}
 
 
+# Commande « npx » d'un Node 22 ou plus (celui que Vigie pose à part, sinon celui du
+# système s'il est assez récent). Résolu par _trouver().
+NPX22 = "@npx22"
+
 # Clé = nom exact du registre (docs_outils.json). Un test vérifie que chaque clé existe.
 INTERFACES = {
     # --- Logiciels à fenêtres ------------------------------------------------
@@ -91,6 +98,7 @@ INTERFACES = {
     "VeraCrypt": _appli(["veracrypt"], mac="VeraCrypt"),
     "Burp Suite Community": _appli(["burpsuite"], ["BurpSuiteCommunity"],
                                    ["/opt/BurpSuiteCommunity/BurpSuiteCommunity"],
+                                   ["~/BurpSuiteCommunity/BurpSuiteCommunity"],
                                    mac="Burp Suite Community Edition"),
     "OWASP ZAP": _appli(["zaproxy"], ["zap.sh"], ["/opt/zaproxy/zap.sh"], ["owasp-zap"],
                         mac="ZAP"),
@@ -129,7 +137,14 @@ INTERFACES = {
     "ROADtools": _web("http://127.0.0.1:5000",
                       _cmd("roadrecon", "gui", dossier="roadtools"),
                       note="Il montre ce qui a été récolté avant (roadrecon gather)."),
-    "mitmproxy": _web("http://127.0.0.1:8081", _cmd("mitmweb", "--web-host", "127.0.0.1")),
+    # mitmproxy 11 et plus protège sa page par un jeton (« ?token=… ») écrit au
+    # démarrage : sans lui, la page refuse d'afficher (28/11/2026 sur la VM). Vigie le lit
+    # dans le journal (JETON) ; mitmweb n'ouvre plus d'onglet de son côté.
+    "mitmproxy": _web("http://127.0.0.1:8081",
+                      _cmd("mitmweb", "--web-host", "127.0.0.1",
+                           "--set", "web_open_browser=false"),
+                      note="Le proxy écoute sur 127.0.0.1:8080 : règle ce proxy dans le "
+                           "navigateur ou l'appareil à observer."),
     "OWASP Nettacker": _web("https://127.0.0.1:5000",
                             _cmd("nettacker", "--start-api"),
                             _cmd("python3", "nettacker.py", "--start-api",
@@ -157,9 +172,18 @@ INTERFACES = {
     "radare2": _console(["r2", "-"]),
     "Recon-ng": _console(["recon-ng"]),
     "Metasploit Framework": _console(["msfconsole"]),
-    "Shannon": _console(["shannon"], ["npx", "@keygraph/shannon@latest"],
+    # Shannon n'est pas installé par Vigie (offensif) : il passe par « npx », qui le
+    # télécharge au 1er lancement. Il lui faut Node 22 ou plus (celui de Vigie s'il est
+    # là) et Docker. Le 28/11/2026, avec le Node d'Ubuntu, le terminal restait vide.
+    "Shannon": _console(["shannon"], [NPX22, "--yes", "@keygraph/shannon@latest"],
+                        besoin=["docker", "node22"],
+                        intro="Shannon démarre. Au 1er lancement, il se télécharge "
+                              "(1 à 3 minutes sans rien afficher) : patiente. Il pose ensuite "
+                              "ses questions à l'écran, en anglais (clé d'IA, cible, dossier du "
+                              "code source).",
                         note="Son lanceur pose les questions à l'écran (clé d'IA, cible). "
-                             "Il lui faut Docker et une clé d'IA."),
+                             "Il lui faut Docker, Node 22 et une clé d'IA. Il lit le CODE "
+                             "SOURCE de l'appli testée : seulement TON appli."),
     "PentestGPT": _console(["pentestgpt"], note="Il lui faut une clé d'IA."),
     "Strix": _console(["strix"], note="Il lui faut une clé d'IA (LLM_API_KEY)."),
     # --- Dans le navigateur --------------------------------------------------
@@ -230,9 +254,88 @@ def repond(url, delai=0.5):
 
 
 def _trouver(argv0):
+    if argv0 == NPX22:
+        return npx22()
+    argv0 = os.path.expanduser(argv0)
     if os.path.isabs(argv0):
         return argv0 if os.access(argv0, os.X_OK) else None
     return outils.trouver(argv0)
+
+
+def npx22():
+    """Le « npx » d'un Node 22 ou plus, ou None."""
+    for racine in _dossiers_outils()[:3]:
+        npx = os.path.join(racine, f"node{recettes.NODE_MINIMUM}", "bin", "npx")
+        if os.access(npx, os.X_OK):
+            return npx
+    npx = outils.trouver("npx")
+    node = outils.trouver("node")
+    if npx and node and recettes.version_node(node) >= recettes.NODE_MINIMUM:
+        return npx
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Docker : beaucoup de services (ARTEX, Web-Check, Wazuh…) tournent en conteneurs.
+# Le 28/11/2026, ARTEX apparaissait « pas installé » sur la VM sans dire pourquoi :
+# Vigie dit maintenant précisément ce qui manque.
+DOCKER_MESSAGES = {
+    "absent": "Docker n'est pas installé sur cette machine. Relance l'installeur de Vigie : "
+              "il pose Docker, puis redémarre la machine.",
+    "arrete": "Docker est installé mais arrêté. Redémarre la machine (Docker démarre avec "
+              "elle), puis réessaie.",
+    "droits": "Docker est installé, mais ton compte n'a pas encore le droit de s'en servir. "
+              "Relance l'installeur de Vigie (il te donne ce droit), puis redémarre la "
+              "machine.",
+}
+
+_CACHE_ETAT_DOCKER = {"quand": 0.0, "etat": ""}
+
+
+def _dans_groupe_docker():
+    """Le compte est-il inscrit dans le groupe docker (même si la session ne le sait pas
+    encore, avant de se reconnecter) ?"""
+    try:
+        import grp
+        import pwd
+        utilisateur = pwd.getpwuid(os.getuid()).pw_name
+        return utilisateur in grp.getgrnam("docker").gr_mem
+    except (ImportError, KeyError, OSError):
+        return False
+
+
+def docker_etat():
+    """"ok", "sg" (droit donné, session pas encore rafraîchie : on passe par « sg »),
+    "absent", "arrete" ou "droits"."""
+    if time.time() - _CACHE_ETAT_DOCKER["quand"] < 15 and _CACHE_ETAT_DOCKER["etat"]:
+        return _CACHE_ETAT_DOCKER["etat"]
+    if not outils.trouver("docker"):
+        etat_ = "absent"
+    else:
+        code, sortie = _executer(["docker", "info", "--format", "{{.ServerVersion}}"], 8)
+        bas = sortie.lower()
+        if code == 0:
+            etat_ = "ok"
+        elif "permission denied" in bas:
+            etat_ = "sg" if _dans_groupe_docker() and shutil.which("sg") else "droits"
+        else:
+            etat_ = "arrete"
+        if etat_ == "sg":
+            code, _ = _executer(["sg", "docker", "-c", "docker info"], 8)
+            etat_ = "sg" if code == 0 else "arrete"
+    _CACHE_ETAT_DOCKER.update(quand=time.time(), etat=etat_)
+    return etat_
+
+
+def docker_pret():
+    return docker_etat() in ("ok", "sg")
+
+
+def _avec_docker(argv):
+    """La ligne à lancer pour une commande docker (via « sg docker » si besoin)."""
+    if argv and argv[0] == "docker" and docker_etat() == "sg":
+        return ["sg", "docker", "-c", " ".join(_citer(a) for a in argv)]
+    return argv
 
 
 def _dossiers_outils():
@@ -281,8 +384,9 @@ def conteneurs():
     if time.time() - _CACHE_DOCKER["quand"] < 15:
         return _CACHE_DOCKER["noms"]
     noms = set()
-    if outils.trouver("docker"):
-        code, sortie = _executer(["docker", "ps", "-a", "--format", "{{.Names}}"], 6)
+    if outils.trouver("docker") and docker_pret():
+        code, sortie = _executer(_avec_docker(["docker", "ps", "-a", "--format",
+                                               "{{.Names}}"]), 6)
         if code == 0:
             noms = {ligne.strip() for ligne in sortie.splitlines() if ligne.strip()}
     _CACHE_DOCKER.update(quand=time.time(), noms=noms)
@@ -311,8 +415,38 @@ def moyen_disponible(moyen):
     if genre == "docker":
         return moyen["nom"] in conteneurs()
     if genre == "compose":
-        return bool(outils.trouver("docker")) and bool(dossier_compose(moyen["nom"]))
+        return docker_pret() and bool(dossier_compose(moyen["nom"]))
     return False
+
+
+def manques(nom):
+    """Ce qui manque, précisément et en français, pour ouvrir cet outil ici (vide si rien).
+    Exemple : ARTEX = dossier bien copié, mais Docker absent."""
+    fiche = INTERFACES[nom]
+    raisons = []
+    if fiche["genre"] == "console":
+        besoin = fiche.get("besoin", [])
+        if "docker" in besoin and not docker_pret():
+            raisons.append(DOCKER_MESSAGES[docker_etat()])
+        if "node22" in besoin and not npx22() and not _trouver(
+                fiche["commandes"][0][0]):
+            raisons.append("Il lui faut Node 22 ou plus. Relance l'installeur de Vigie : il "
+                           "pose Node 22 à part (pour sitespeed.io), Shannon s'en servira.")
+        return raisons
+    if fiche["genre"] != "web":
+        return raisons
+    moyens = fiche.get("demarrer", [])
+    if any(moyen_disponible(dict(m, _outil=_dossier_nom(nom))) for m in moyens):
+        return raisons
+    conteneurs_ = [m for m in moyens if m["moyen"] in ("docker", "compose")]
+    if conteneurs_ and len(conteneurs_) == len(moyens) and not docker_pret():
+        raisons.append(DOCKER_MESSAGES[docker_etat()])
+    composes = [m for m in moyens if m["moyen"] == "compose"]
+    if composes and not any(dossier_compose(m["nom"]) for m in composes):
+        if recettes.RECETTES.get(nom.lower()):
+            raisons.append(f"Le dossier de {nom} n'est pas encore sur la machine : relance "
+                           "l'installeur de Vigie, il le copie.")
+    return raisons
 
 
 # Un script lancé par un interprète : il faut trouver le dossier de l'outil.
@@ -425,7 +559,10 @@ def etat(nom):
     """{"present": True/False, "en_marche": True/False/None} sans rien lancer."""
     fiche = INTERFACES[nom]
     genre = fiche["genre"]
-    if genre in ("appli", "console"):
+    if genre == "console":
+        return {"present": bool(commande_dispo(nom)) and not manques(nom),
+                "en_marche": None}
+    if genre == "appli":
         return {"present": bool(commande_dispo(nom) or _appli_mac(nom)), "en_marche": None}
     if genre == "web":
         en_marche = repond(fiche["url"])
@@ -514,9 +651,15 @@ def _surveiller(processus, nom, chemin_journal, secondes=4):
         time.sleep(0.3)
 
 
-def _ouvrir_terminal(argv, titre):
-    """Ouvre une fenêtre de terminal qui lance argv et reste ouverte à la fin."""
+def _ouvrir_terminal(argv, titre, intro="", chemin_en_plus=""):
+    """Ouvre une fenêtre de terminal qui lance argv et reste ouverte à la fin.
+    intro : phrase en français affichée d'abord ; chemin_en_plus : dossier mis en tête
+    du PATH (le Node 22 de Vigie pour « npx »)."""
     ligne = " ".join(_citer(a) for a in argv)
+    if chemin_en_plus:
+        ligne = f'export PATH={_citer(chemin_en_plus)}:"$PATH"; {ligne}'
+    if intro:
+        ligne = f"echo {_citer(intro)}; echo; {ligne}"
     garde = f"{ligne}; echo; read -r -p 'Appuie sur Entrée pour fermer cette fenêtre.' _"
     if systeme() == "Darwin":
         script = ligne.replace("\\", "\\\\").replace('"', '\\"')
@@ -613,10 +756,15 @@ def _ouvrir_console(nom, fiche):
     if not argv:
         raise Refus(f"{nom} n'est pas installé sur cette machine (aucune de ses commandes "
                     "n'a été trouvée).")
+    manque = manques(nom)
+    if manque:
+        raise Refus(f"{nom} ne peut pas démarrer ici : " + " ".join(manque))
     if not _ecran_disponible():
         raise Refus(SANS_ECRAN)
     chemin = _trouver(argv[0])
-    terminal = _ouvrir_terminal([chemin] + argv[1:], f"Vigie - {nom}")
+    en_plus = os.path.dirname(chemin) if argv[0] == NPX22 else ""
+    terminal = _ouvrir_terminal([chemin] + argv[1:], f"Vigie - {nom}",
+                                fiche.get("intro", ""), en_plus)
     if not terminal:
         raise Refus("Aucun terminal trouvé sur cette machine pour ouvrir la console.")
     _detacher(terminal, nom)
@@ -662,16 +810,20 @@ def _demarrer(nom, moyen, suivre):
                         + " ".join(erreurs.expliquer(sortie)))
     elif genre == "docker":
         suivre(f"Démarrage du conteneur {moyen['nom']}…")
-        code, sortie = _executer(["docker", "start", moyen["nom"]], 120)
+        code, sortie = _executer(_avec_docker(["docker", "start", moyen["nom"]]), 120)
         if code != 0:
             raise Refus(f"Le conteneur {moyen['nom']} n'a pas démarré. "
                         + " ".join(erreurs.expliquer(sortie)))
     elif genre == "compose":
         dossier = dossier_compose(moyen["nom"])
-        suivre("Démarrage des conteneurs Docker (la première fois, ça peut être long)…")
+        cree = preparer_env(dossier)
+        if cree:
+            suivre(cree)
+        suivre("Démarrage des conteneurs Docker. La première fois, Docker télécharge et "
+               "construit l'outil : 10 à 30 minutes, laisse cette page ouverte…")
         try:
-            fini = subprocess.run(["docker", "compose", "up", "-d"], cwd=dossier,
-                                  capture_output=True, text=True, timeout=600,
+            fini = subprocess.run(_avec_docker(["docker", "compose", "up", "-d"]),
+                                  cwd=dossier, capture_output=True, text=True, timeout=2400,
                                   env=_environnement())
         except (OSError, subprocess.SubprocessError) as erreur:
             raise Refus(f"Docker n'a pas pu démarrer {nom} : {erreur}.") from erreur
@@ -681,15 +833,58 @@ def _demarrer(nom, moyen, suivre):
     return chemin
 
 
+# Lignes d'un .env d'exemple dont la valeur est à remplacer par un vrai mot de passe.
+_A_REMPLACER = re.compile(r"^([A-Z0-9_]*(?:PASSWORD|SECRET)[A-Z0-9_]*)=(change-?me[^\n]*)$",
+                          re.M | re.I)
+
+
+def preparer_env(dossier):
+    """Un outil Docker Compose qui attend un fichier .env (ARTEX : « Please set
+    POSTGRES_PASSWORD in .env ») : Vigie le crée depuis le .env.example du dépôt, avec des
+    mots de passe tirés au hasard. Ne touche jamais un .env existant. Renvoie la phrase
+    d'avancement, ou "" s'il n'y avait rien à faire."""
+    if not dossier:
+        return ""
+    cible = os.path.join(dossier, ".env")
+    exemple = os.path.join(dossier, ".env.example")
+    if os.path.exists(cible) or not os.path.isfile(exemple):
+        return ""
+    import secrets
+    with open(exemple, encoding="utf-8", errors="replace") as fichier:
+        texte = fichier.read()
+    texte = _A_REMPLACER.sub(lambda m: f"{m.group(1)}={secrets.token_urlsafe(24)}", texte)
+    with open(cible, "w", encoding="utf-8") as fichier:
+        fichier.write(texte)
+    os.chmod(cible, 0o600)
+    return "Réglages de départ créés (fichier .env, mots de passe tirés au hasard)."
+
+
+# Page protégée par un jeton écrit au démarrage (mitmproxy 11 et plus).
+JETON = re.compile(r"(https?://[^\s/]+/\?token=[A-Za-z0-9_-]+)")
+
+
+def _url_avec_jeton(url, chemin):
+    """L'adresse avec son jeton si l'outil en a écrit un dans son journal (le dernier)."""
+    hote, port = _hote_port(url)
+    for trouve in reversed(JETON.findall(_lire(chemin, 20000))):
+        if _hote_port(trouve) == (hote, port):
+            return trouve
+    return url
+
+
 MOT_DE_PASSE = re.compile(r"password\s+([A-Za-z0-9]{6,64})\b", re.I)
 
 
 def _ouvrir_web(nom, fiche, suivre):
     url = fiche["url"]
     if repond(url):
-        return {"message": f"{nom} tourne déjà : sa page s'ouvre.", "url": url, "detail": ""}
+        return {"message": f"{nom} tourne déjà : sa page s'ouvre.",
+                "url": _url_avec_jeton(url, journal_fichier(nom)), "detail": ""}
     moyens = [m for m in _moyens(nom) if moyen_disponible(m)]
     if not moyens:
+        manque = manques(nom)
+        if manque:
+            raise Refus(f"{nom} ne peut pas démarrer ici : " + " ".join(manque))
         raise Refus(f"{nom} ne tourne pas, et Vigie ne trouve pas comment le démarrer sur "
                     "cette machine (ni commande, ni service, ni conteneur Docker). "
                     "Il n'est sans doute pas installé ici.")
@@ -705,8 +900,9 @@ def _ouvrir_web(nom, fiche, suivre):
                 return {"message": f"{nom} est prêt. Note son mot de passe de départ "
                                    f"(utilisateur admin) : {trouve.group(1)}",
                         "url": url, "detail": "", "garder": True}
-            return {"message": f"{nom} est prêt : sa page s'ouvre.", "url": url,
-                    "detail": ""}
+            time.sleep(0.5)  # le jeton s'écrit juste après l'ouverture du port
+            return {"message": f"{nom} est prêt : sa page s'ouvre.",
+                    "url": _url_avec_jeton(url, chemin), "detail": ""}
         time.sleep(1)
     raise Refus(f"{nom} a été démarré mais ne répond pas encore sur {url}. Il est peut-être "
                 "encore en train de se lancer : réessaie dans une minute. "

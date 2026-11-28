@@ -195,7 +195,8 @@ class Page(unittest.TestCase):
         self.assertNotIn("Velociraptor", prets)
         self.assertIn("Velociraptor", absents)
         self.assertNotIn("<button", absents)              # aucun bouton qui promet
-        self.assertIn("/outils-un#a-la-main", absents)
+        # Le bloc « Je l'ai installé à la main » embrouillait Anass (28/11/2026) : retiré.
+        self.assertNotIn("/outils-un#a-la-main", absents)
         self.assertIn("la commande velociraptor", absents)
 
     def test_barre_de_recherche(self):
@@ -233,3 +234,78 @@ class Page(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OutilsDockerEtJetons(unittest.TestCase):
+    """Retours de la VM du 28/11/2026 : ARTEX « pas installé » sans dire pourquoi,
+    mitmproxy en page d'erreur, Shannon bloqué dans un terminal vide."""
+
+    def setUp(self):
+        graphiques._CACHE_ETAT_DOCKER.update(quand=0.0, etat="")
+
+    tearDown = setUp
+
+    def test_artex_dit_que_docker_manque(self):
+        with mock.patch.object(graphiques, "docker_etat", return_value="absent"):
+            manque = graphiques.manques("ARTEX")
+            self.assertFalse(graphiques.etat("ARTEX")["present"])
+        self.assertTrue(any("Docker n'est pas installé" in m for m in manque))
+
+    def test_artex_present_avec_docker_et_dossier(self):
+        with tempfile.TemporaryDirectory() as racine:
+            os.makedirs(os.path.join(racine, "artex"))
+            open(os.path.join(racine, "artex", "docker-compose.yml"), "w").close()
+            with mock.patch.object(graphiques, "docker_etat", return_value="ok"), \
+                    mock.patch.object(graphiques, "_dossiers_outils", return_value=[racine]), \
+                    mock.patch.object(graphiques, "repond", return_value=False):
+                self.assertEqual(graphiques.manques("ARTEX"), [])
+                self.assertTrue(graphiques.etat("ARTEX")["present"])
+
+    def test_env_cree_avec_mots_de_passe_au_hasard(self):
+        with tempfile.TemporaryDirectory() as dossier:
+            with open(os.path.join(dossier, ".env.example"), "w") as f:
+                f.write("POSTGRES_USER=artex\nPOSTGRES_PASSWORD=change-me-please\n"
+                        "ARTEX_SECRET_KEY=\nANTHROPIC_API_KEY=\n")
+            self.assertIn(".env", graphiques.preparer_env(dossier))
+            texte = open(os.path.join(dossier, ".env")).read()
+            self.assertNotIn("change-me", texte)
+            self.assertRegex(texte, r"POSTGRES_PASSWORD=[\w-]{20,}\n")
+            self.assertIn("ARTEX_SECRET_KEY=\n", texte)      # vide = l'outil le crée
+            # Un .env existant n'est jamais touché.
+            self.assertEqual(graphiques.preparer_env(dossier), "")
+
+    def test_jeton_mitmproxy_lu_dans_le_journal(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".log", delete=False) as f:
+            f.write("[12:00] HTTP(S) proxy listening at *:8080.\n"
+                    "[12:00] Web server listening at http://127.0.0.1:8081/?token=ab12Cd\n")
+        try:
+            self.assertEqual(graphiques._url_avec_jeton("http://127.0.0.1:8081", f.name),
+                             "http://127.0.0.1:8081/?token=ab12Cd")
+            self.assertEqual(graphiques._url_avec_jeton("http://127.0.0.1:9999", f.name),
+                             "http://127.0.0.1:9999")
+        finally:
+            os.unlink(f.name)
+
+    def test_shannon_refuse_sans_docker(self):
+        with mock.patch.object(graphiques, "docker_etat", return_value="arrete"), \
+                mock.patch.object(graphiques, "commande_dispo", return_value=["shannon"]), \
+                mock.patch.object(graphiques, "npx22", return_value="/x/npx"):
+            self.assertFalse(graphiques.etat("Shannon")["present"])
+            with self.assertRaises(graphiques.Refus) as refus:
+                graphiques.ouvrir("Shannon", engagement=True,
+                                  journal=tempfile.mkdtemp())
+        self.assertIn("Docker est installé mais arrêté", str(refus.exception))
+
+    def test_terminal_affiche_l_intro_et_le_node_de_vigie(self):
+        with mock.patch.object(graphiques, "systeme", return_value="Linux"), \
+                mock.patch.object(graphiques.shutil, "which",
+                                  side_effect=lambda c: "/usr/bin/xterm" if c == "xterm" else None):
+            argv = graphiques._ouvrir_terminal(["/n/bin/npx", "--yes", "x"], "t",
+                                               "Patiente.", "/n/bin")
+        self.assertIn("echo Patiente.", argv[-1])
+        self.assertIn("export PATH=/n/bin:", argv[-1])
+
+    def test_docker_via_sg_si_le_droit_est_donne(self):
+        graphiques._CACHE_ETAT_DOCKER.update(quand=graphiques.time.time(), etat="sg")
+        self.assertEqual(graphiques._avec_docker(["docker", "compose", "up", "-d"]),
+                         ["sg", "docker", "-c", "docker compose up -d"])

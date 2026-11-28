@@ -15,6 +15,16 @@ import re
 # (motif, explication). L'ordre compte : du plus précis au plus général.
 MOTIFS = [
     # --- Outils précis (avant les motifs généraux) ----------------------------
+    (r"permission denied while trying to connect to the docker",
+     "Ton compte n'a pas encore le droit de se servir de Docker. Relance l'installeur de "
+     "Vigie (il te donne ce droit), puis redémarre la machine."),
+    (r"Cannot connect to the Docker daemon|Is the docker daemon running",
+     "Docker est arrêté. Redémarre la machine (Docker démarre avec elle), puis réessaie."),
+    (r"Please set \w+ in \.env",
+     "L'outil attend un fichier de réglages (.env). Vigie le crée tout seul au prochain "
+     "essai : réessaie."),
+    (r"docker: '?compose'? is not a docker command|unknown (?:shorthand )?flag.*compose",
+     "Le module « docker compose » manque. Relance l'installeur de Vigie : il l'ajoute."),
     (r"missing DNSPython",
      "dnstwist a été installé sans son module DNS (dnspython). Relancer l'installeur de "
      "Vigie : il l'ajoute tout seul. En attendant, Vigie le fait passer par le DNS de la "

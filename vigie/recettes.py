@@ -1107,8 +1107,9 @@ MANUELS.update({
         GROS_SERVEUR + " ; utile pour l'audit sur autorisation (conteneurs Greenbone "
         "Community)", TOUS),
     "wazuh": (GROS_SERVEUR + " ; utile pour une offre de surveillance des postes", TOUS),
-    "burp suite community": ("application à télécharger sur portswigger.net, puis à "
-                             "brancher dans « Je l'ai installé à la main »", TOUS),
+    "burp suite community": ("application à télécharger sur portswigger.net (installeur "
+                             "Linux, choix par défaut) : Vigie la retrouve ensuite seul",
+                             TOUS),
     "scubagear": (SUR_WINDOWS + " ; utile pour l'audit Microsoft 365 (Maester et "
                   "Monkey365 font le même travail ici)", TOUS),
     "hardeningkitty": (SUR_WINDOWS + " ; utile pendant la sécurisation des postes du "

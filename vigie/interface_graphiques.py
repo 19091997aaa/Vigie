@@ -22,6 +22,8 @@ CSS = """
   letter-spacing:.04em; }
 .carte p { margin:0; font-size:14px; }
 .carte .note { font-size:13px; color:var(--gris); }
+.carte .manque { font-size:13px; color:#8a4b00; background:#fff4e0; border-radius:6px;
+  padding:6px 8px; margin:6px 0; }
 .carte form { display:grid; gap:8px; margin:0; }
 .carte button { font:inherit; font-weight:800; padding:10px 14px; border:0; border-radius:9px;
   background:var(--navy); color:#fff; cursor:pointer; }
@@ -179,21 +181,23 @@ def _carte(nom, etat):
 def _carte_absente(nom):
     """Carte grisée d'un outil que Vigie ne trouve pas : pas de bouton qui promet."""
     e = html.escape
+    manque = graphiques.manques(nom)
     pistes = graphiques.pistes(nom)
-    cherche = (f"<p class='note'>Vigie a cherché {e(', '.join(pistes))}.</p>"
-               if pistes else "")
+    if manque:   # ce qui manque, précisément (ex. ARTEX : Docker absent)
+        cherche = "".join(f"<p class='manque'>{e(m)}</p>" for m in manque)
+    else:
+        cherche = (f"<p class='note'>Vigie a cherché {e(', '.join(pistes))}.</p>"
+                   if pistes else "")
     raison = recettes.MANUELS.get(nom.lower())
     manuel = (f"<p class='note'>À installer à la main : {e(raison[0])}.</p>"
               if raison else "")
     lien = (graphiques._fiche(nom) or {}).get("lien", "")
-    doc = (f" · <a href='{e(lien)}' target='_blank' rel='noopener'>Page officielle</a>"
-           if lien.startswith("https://") else "")
+    doc = (f"<p class='liens'><a href='{e(lien)}' target='_blank' rel='noopener'>Page "
+           f"officielle</a></p>" if lien.startswith("https://") else "")
     return (f"<div class='carte absente' data-nom='{e(nom)}'><span class='genre'>"
             f"{e(graphiques.GENRES[graphiques.INTERFACES[nom]['genre']])}</span>"
             f"<h3>{e(nom)}</h3><span class='pastille-etat e-absent'>pas installé ici</span>"
-            f"<p>{e(_role(nom))}</p>{manuel}{cherche}"
-            f"<p class='liens'><a href='/outils-un#a-la-main'>Je l'ai installé à la "
-            f"main</a>{doc}</p></div>")
+            f"<p>{e(_role(nom))}</p>{manuel}{cherche}{doc}</div>")
 
 
 def _blocs(noms, etats, absents=False):
@@ -228,10 +232,8 @@ def page(message=""):
     if absents:
         partie_absents = (
             f"<details class='absents'><summary>Pas encore sur cette machine "
-            f"({len(absents)})</summary><p class='aide'>Vigie ne trouve pas ces outils "
-            "ici : il ne peut donc pas les ouvrir. Beaucoup sont des serveurs à installer "
-            "à la main. Une fois installé, si Vigie ne le voit toujours pas, utilise "
-            "« Je l'ai installé à la main ».</p>"
+            f"({len(absents)})</summary><p class='aide'>Vigie ne peut pas encore ouvrir "
+            "ces outils ici. Sur chaque carte, il dit ce qui manque et quoi faire.</p>"
             f"{_blocs(absents, etats, absents=True)}</details>")
     return f"""<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8">
@@ -304,9 +306,6 @@ def page_suivi(ident):
         # La page de l'outil remplace cet onglet : l'onglet Vigie reste ouvert à côté.
         if not etat.get("garder"):
             script = f"<script>location.replace({_js(etat['url'])});</script>"
-    if etat["etat"] == "erreur" and "pas installé" in etat["texte"]:
-        lien = ("<p><a href='/outils-un#a-la-main'>Il est installé ? Montre à Vigie où il "
-                "est : « Je l'ai installé à la main »</a></p>")
     classe = {"en_cours": "", "fini": " fini", "erreur": " erreur"}[etat["etat"]]
     detail = (f"<details><summary>Détail technique</summary><pre class='detail'>"
               f"{e(etat['detail'])}</pre></details>") if etat.get("detail") else ""

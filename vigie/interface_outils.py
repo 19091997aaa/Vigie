@@ -311,7 +311,6 @@ Pour toute autre cible, il faut une autorisation signée.</p>
 (<a href="/ouvrir">Ouvrir un outil</a>) ·
 <span class='marque m-main'>à la main</span> s'utilise à la main.</p>
 {_catalogue_html(etats)}</div>
-{_formulaire_brancher(etats)}
 <div class="corps"><p><a href="/">Accueil</a> · <a href="/manuel">Outils manuels</a></p></div>
 </main></body></html>"""
 
