@@ -337,6 +337,21 @@ outil GATE dans un combo** (sqlmap reste à la main). uncover absent (clés Shod
 pas de ligne). `combos.regrouper` : sous-domaines / pages / profils **sans doublon**, avec
 « vu par » (recoupement) — première brique de l'agrégation globale voulue par Anass.
 
+**Bilan d'une cible (28/11/2026)** : demande d'Anass (l'agrégation globale), onglet
+« Bilan d'une cible » (`/bilan`, `vigie/bilan.py` + `vigie/interface_bilan.py`). Chaque
+lancement (Lancer un outil, Combos, Outils manuels) est **gardé** dans
+`resultats/<cible>/<date>_<outil>.json` (avant : perdu à la fermeture). Le bilan d'un domaine
+réunit aussi ses sous-domaines. Chaque sortie devient des **trouvailles** (genre, clé,
+niveau, texte : faille, porte, imitation, techno, sous-domaine, page, compte) via les
+traducteurs existants (audit_actif, ports, spiderfoot, combos) ; même (genre, clé) = même
+chose → une ligne, « vu par », niveau le plus grave ; grave vu par un seul outil = « à
+confirmer ». Lancements décochables. **Import d'un rapport ZAP** (JSON/XML traditionnel, lu
+par la page) : `bilan.ZAP_FR` traduit les alertes courantes et les relie aux clés de
+Conséquences (csp, hsts, nosniff, cadre, versions_visibles). Bouton « Faire le rapport » :
+`bilan.constats` → `rapport.construire/ecrire` (dossier `rapports/<cible>_bilan_<date>`).
+Résultats actifs = `autorisation = {"bilan": …, "signee": …}` : sans autorisation signée,
+les failles case C restent cachées. Jamais dans un diagnostic gratuit.
+
 Principe : **Vigie ne copie le code d'aucun outil**. Il appelle les outils installés
 sur la machine (chaque outil garde sa licence, se met à jour seul, et Vigie continue
 de marcher si l'un manque). Pour brancher un nouvel outil GitHub : voir la section

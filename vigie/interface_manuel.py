@@ -15,7 +15,7 @@ import secrets
 import threading
 import urllib.parse
 
-from . import __version__, audit_actif, manuel, mandat, mes_cibles, ports, rapport
+from . import __version__, audit_actif, bilan, manuel, mandat, mes_cibles, ports, rapport
 
 NUMERO = re.compile(r"[0-9]{8}-[0-9a-f]{6}")
 FICHIER = re.compile(r"[A-Za-z0-9 ._-]{1,120}")
@@ -216,7 +216,7 @@ def page_autorisation(dossier, numero):
         return fichier.read()
 
 
-def lancer(corps, dossier, journal):
+def lancer(corps, dossier, journal, resultats=None):
     """Vérifie tout, puis lance l'outil en arrière-plan. Renvoie le code du lancement.
     Lève manuel.Refus (raison en clair) si quelque chose n'est pas en règle."""
     c = _champs(corps)
@@ -243,6 +243,9 @@ def lancer(corps, dossier, journal):
             with open(chemin, encoding="utf-8") as fichier:
                 brut = fichier.read()
             texte = _traduire(args[0], chemin) or brut[:20000]
+            bilan.enregistrer(resultats, args[0], args[1], brut, depuis="Outils manuels",
+                              garde=("autorisation signée (" + os.path.basename(args[2])
+                                     + ")") if args[2] else "propre cible")
             etat = {"etat": "fini", "resultat": texte}
         except Exception as erreur:  # refus tardif ou outil en échec : on le montre
             etat = {"etat": "erreur", "resultat": str(erreur)}

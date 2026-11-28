@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 rapports/
+resultats/
 comparaisons/
 .DS_Store
 essais/resultats/

@@ -19,15 +19,20 @@ import time
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import (__version__, interface_combos, interface_duel, interface_graphiques,
-               interface_manuel, interface_outils, rapport)
+from . import (__version__, interface_bilan, interface_combos, interface_duel,
+               interface_graphiques, interface_manuel, interface_outils, rapport)
 from .cli import dossier_rapport, lancer, nettoyer_domaine
 from .modeles import Cible, ControleImpossible
 
 # Où l'onglet « Outils manuels » range les autorisations et le journal des lancements.
 AUTORISATIONS = "autorisations"
 JOURNAL = "journal"
+# Où chaque lancement est gardé, rangé par cible, pour le « Bilan d'une cible ».
+RESULTATS = "resultats"
 from .modules import COMPLET, MODULES, PAR_DEFAUT
+
+# Un rapport ZAP XML abîmé.
+from xml.etree.ElementTree import ParseError as ET_ERREURS  # noqa: E402
 
 NOM_RAPPORT = re.compile(r"[a-z0-9_-]{3,120}")
 
@@ -39,6 +44,7 @@ NAVIGATION = """<nav class="vigie-nav" aria-label="Navigation Vigie">
 <a class="vigie-accueil" href="/">&larr; Accueil</a>
 <a href="/outils-un">Lancer un outil</a>
 <a href="/combos">Combos</a>
+<a href="/bilan">Bilan d'une cible</a>
 <a href="/ouvrir">Ouvrir un outil</a>
 <a href="/comparer">Comparer des outils</a>
 <a href="/manuel">Outils manuels</a>
@@ -161,7 +167,7 @@ Sans cela, ces recherches ne sont pas faites.</p>
 <p class="aide">Contrôles rapides&nbsp;: {controles}. Tous lisent des informations publiques,
 sans action sur les machines de la société. Vous suivez chaque outil en direct.</p>
 </form>
-<p><a href="/outils-un">Lancer un outil</a> · <a href="/combos">Combos (plusieurs outils d'un coup)</a> · <a href="/ouvrir">Ouvrir un outil (sa propre interface)</a> · <a href="/comparer">Comparer des outils</a> · <a href="/manuel">Outils manuels (contrôles actifs, sur autorisation signée)</a></p>
+<p><a href="/outils-un">Lancer un outil</a> · <a href="/combos">Combos (plusieurs outils d'un coup)</a> · <a href="/bilan">Bilan d'une cible (tous les résultats réunis)</a> · <a href="/ouvrir">Ouvrir un outil (sa propre interface)</a> · <a href="/comparer">Comparer des outils</a> · <a href="/manuel">Outils manuels (contrôles actifs, sur autorisation signée)</a></p>
 <h2>Rapports déjà produits</h2>
 {rapports}
 </div>
@@ -407,6 +413,14 @@ def fabrique(sortie, code):
                 self._envoyer(200, interface_graphiques.page_suivi(ouverture.group(1)),
                               [("Cache-Control", "no-store")])
                 return
+            if adresse.path == "/bilan":
+                cible, garder = interface_bilan.lire_requete(adresse.query)
+                if cible:
+                    self._envoyer(200, interface_bilan.page_cible(RESULTATS, cible, garder),
+                                  [("Cache-Control", "no-store")])
+                else:
+                    self._envoyer(200, interface_bilan.page(RESULTATS))
+                return
             if adresse.path == "/combos":
                 self._envoyer(200, interface_combos.page())
                 return
@@ -514,11 +528,27 @@ def fabrique(sortie, code):
                 corps = self.rfile.read(taille).decode("utf-8", "replace")
                 self._envoyer(200, interface_outils.brancher(corps))
                 return
+            if self.path in ("/bilan/zap", "/bilan/rapport"):
+                # Un rapport ZAP peut peser plusieurs Mo : limite plus large ici.
+                limite = 30_000_000 if self.path == "/bilan/zap" else 65536
+                taille = min(int(self.headers.get("Content-Length", "0") or 0), limite)
+                corps = self.rfile.read(taille).decode("utf-8", "replace")
+                try:
+                    if self.path == "/bilan/zap":
+                        cible, phrase = interface_bilan.importer(RESULTATS, corps)
+                        self._envoyer(200, interface_bilan.page_cible(RESULTATS, cible,
+                                                                      ok=phrase))
+                    else:
+                        nom = interface_bilan.faire_rapport(RESULTATS, corps, sortie)
+                        self._envoyer(303, "", [("Location", f"/rapport/{nom}")])
+                except (interface_bilan.bilan.ImportImpossible, ET_ERREURS) as erreur:
+                    self._envoyer(400, interface_bilan.page(RESULTATS, str(erreur)))
+                return
             if self.path == "/combo/lancer":
                 taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
                 corps = self.rfile.read(taille).decode("utf-8", "replace")
                 try:
-                    ident = interface_combos.lancer(corps, AUTORISATIONS, JOURNAL)
+                    ident = interface_combos.lancer(corps, AUTORISATIONS, JOURNAL, RESULTATS)
                     self._envoyer(303, "", [("Location", f"/combo/resultat/{ident}")])
                 except interface_outils.lancer_seul.Refus as erreur:
                     self._envoyer(400, interface_combos.page(str(erreur)))
@@ -527,7 +557,7 @@ def fabrique(sortie, code):
                 taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
                 corps = self.rfile.read(taille).decode("utf-8", "replace")
                 try:
-                    ident = interface_outils.lancer(corps, AUTORISATIONS, JOURNAL)
+                    ident = interface_outils.lancer(corps, AUTORISATIONS, JOURNAL, RESULTATS)
                     self._envoyer(303, "", [("Location", f"/outil/resultat/{ident}")])
                 except interface_outils.lancer_seul.Refus as erreur:
                     self._envoyer(400, interface_outils.page(str(erreur)))
@@ -562,7 +592,7 @@ def fabrique(sortie, code):
                             "la faire signer, puis déposer le scan signé dans le dossier "
                             "« autorisations »."))
                     else:
-                        ident = interface_manuel.lancer(corps, AUTORISATIONS, JOURNAL)
+                        ident = interface_manuel.lancer(corps, AUTORISATIONS, JOURNAL, RESULTATS)
                         self._envoyer(303, "", [("Location", f"/manuel/resultat/{ident}")])
                 except (ValueError, ControleImpossible) as erreur:
                     self._envoyer(400, interface_manuel.page(AUTORISATIONS, str(erreur)))
