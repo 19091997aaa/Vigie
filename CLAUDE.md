@@ -315,6 +315,17 @@ Conséquences. Garde-fous : jamais `phrase_telephone` / `place_dans_l_offre` / `
 seulement les cas « forte » ; case C (et F01, F02, F34 = fuites) seulement avec
 autorisation signée ; F33 « à construire » jamais.
 
+**Combos (28/11/2026)** : demande d'Anass, onglet « Combos » (`/combos`, `vigie/combos.py` +
+`vigie/interface_combos.py`) : 7 enchaînements d'outils lancés en un clic sur une cible, **un
+par un** en ligne de commande (mémoire), via `lancer_seul.lancer` (mêmes garde-fous). Passifs
+libres (domaine, site web, exposition) ; un outil actif d'un combo passif (SpiderFoot) est
+**sauté** hors de mes propres cibles. Sur une personne (pseudo, e-mail) : case « accord écrit »
+obligatoire, notée au journal. Actifs (failles : Subfinder/httpx/Nuclei/Nikto ; pages et
+paramètres : Katana/Arjun) : propres cibles seulement, sinon refus du combo entier. **Aucun
+outil GATE dans un combo** (sqlmap reste à la main). uncover absent (clés Shodan/Censys,
+pas de ligne). `combos.regrouper` : sous-domaines / pages / profils **sans doublon**, avec
+« vu par » (recoupement) — première brique de l'agrégation globale voulue par Anass.
+
 Principe : **Vigie ne copie le code d'aucun outil**. Il appelle les outils installés
 sur la machine (chaque outil garde sa licence, se met à jour seul, et Vigie continue
 de marcher si l'un manque). Pour brancher un nouvel outil GitHub : voir la section
