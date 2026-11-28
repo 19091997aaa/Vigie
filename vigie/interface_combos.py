@@ -9,7 +9,7 @@ import secrets
 import threading
 import urllib.parse
 
-from . import avancement, combos, interface_outils, lancer_seul, manuel, mes_cibles, \
+from . import avancement, bilan, combos, interface_outils, lancer_seul, manuel, mes_cibles, \
     presence, rapport
 
 LANCEMENTS = {}
@@ -111,7 +111,7 @@ accord écrit. Aucun outil offensif n'est jamais lancé par un combo.</p>
 </main></body></html>"""
 
 
-def lancer(corps, dossier_cibles=None, journal="journal"):
+def lancer(corps, dossier_cibles=None, journal="journal", resultats=None):
     """Vérifie puis lance un combo en arrière-plan. Renvoie l'identifiant de suivi.
     Lève combos.Refus (raison en français) si le combo ne peut pas partir."""
     c = _champs(corps)
@@ -157,6 +157,11 @@ def lancer(corps, dossier_cibles=None, journal="journal"):
                 compte = lancer_seul.lancer(nom, etape["cible"], propre_ok=prevu["propre"],
                                             suivi=suivi)
                 bon = combos.reussi(compte)
+                if compte.get("lance"):
+                    bilan.enregistrer(resultats, nom, etape["cible"], compte.get("sortie"),
+                                      compte.get("erreurs"), "Combo : " + combo["titre"],
+                                      "propre cible" if prevu["propre"] else "passif",
+                                      compte.get("commande", ""), bon)
                 brut = compte.get("sortie") or ""
                 if compte.get("erreurs") and compte["erreurs"] not in brut:
                     brut += "\n" + compte["erreurs"]
