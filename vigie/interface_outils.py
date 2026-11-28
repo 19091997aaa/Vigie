@@ -29,6 +29,13 @@ CSS = """
   padding: 0; cursor: pointer; }
 .nom-outil:hover { color: #1c4e8a; }
 .ouvrir-direct { display: inline; margin: 0; }
+.sur-place { display: inline; }
+.sur-place summary { display: inline; list-style: none; }
+.sur-place summary::-webkit-details-marker { display: none; }
+.sur-place[open] form { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; }
+.sur-place input { flex: 1 1 140px; min-width: 0; padding: 6px 8px; font-size: 14px; }
+.sur-place button { padding: 6px 12px; font-size: 14px; }
+.sur-place-note { font-size: 12px; color: #9a5f00; width: 100%; }
 .liste-outils li { font-size: 14px; padding: 6px 0; border-bottom: 1px solid var(--trait); }
 .liste-outils .marque { font-size: 11px; font-weight: 800; letter-spacing: .04em;
   padding: 2px 7px; border-radius: 6px; margin-left: 6px; }
@@ -194,10 +201,37 @@ def _catalogue_html(etats=None):
     return "".join(blocs)
 
 
+def _lancer_sur_place(o, classe):
+    """Clic sur un nom lançable : la case « cible » et le bouton Lancer s'ouvrent JUSTE
+    SOUS le nom (Anass, 28/11/2026 : le clic le renvoyait en haut de page et il croyait
+    que rien ne partait). Un outil sans cible part au clic. Même route que le formulaire
+    du haut : mêmes garde-fous (propres cibles pour « autorisation »)."""
+    e = html.escape
+    nom = o["nom"]
+    f = fiches_outils.fiche(nom, o)
+    attendu = fiches_outils.CIBLES.get(f.get("cible"))
+    cache = f"<input type='hidden' name='nom' value='{e(nom)}'>"
+    if f.get("cible") == "aucune":
+        return (f"<form class='ouvrir-direct' method='post' action='/outil/lancer'>{cache}"
+                f"<input type='hidden' name='cible' value=''><button type='submit' "
+                f"class='nom-outil' title='Lancer {e(nom, quote=True)}'>{e(nom)}</button>"
+                f"</form>")
+    exemple = attendu[1] if attendu else "exemple.fr"
+    quoi = attendu[0] if attendu else "la cible"
+    garde = ("<span class='sur-place-note'>Seulement sur tes propres cibles.</span>"
+             if classe == "m-auto" else "")
+    return (f"<details class='sur-place'><summary class='nom-outil' title='Lancer "
+            f"{e(nom, quote=True)}'>{e(nom)}</summary>"
+            f"<form method='post' action='/outil/lancer'>{cache}"
+            f"<input name='cible' required placeholder='{e(exemple, quote=True)}' "
+            f"aria-label='{e(quoi, quote=True)}' title='{e(quoi, quote=True)}'>"
+            f"<button type='submit'>Lancer</button>{garde}</form></details>")
+
+
 def _nom_cliquable(o, classe, etats):
     """Le nom d'un outil dans le catalogue, cliquable quand il peut partir d'ici
     (demande d'Anass, 28/11/2026 : « cliquer dessus, que ça se lance direct ») :
-      - lançable : le formulaire juste au-dessus, outil déjà choisi (reste la cible) ;
+      - lançable : la case cible et le bouton Lancer s'ouvrent sous le nom ;
       - à ouvrir : installé et sans case d'engagement -> s'ouvre tout de suite (sa
         fenêtre ou sa page) ; sinon -> sa carte dans « Ouvrir un outil ».
     Rien n'est lancé sur une cible par un simple lien."""
@@ -205,8 +239,7 @@ def _nom_cliquable(o, classe, etats):
     e = html.escape
     nom = o["nom"]
     if classe in ("m-pret", "m-auto"):
-        return (f"<a class='nom-outil' href='/outils-un?outil={urllib.parse.quote(nom)}"
-                f"#lancer' title='Lancer {e(nom, quote=True)}'>{e(nom)}</a>")
+        return _lancer_sur_place(o, classe)
     if classe == "m-ouvrir":
         if etats.get(nom) and not graphiques.demande_engagement(nom):
             return (f"<form class='ouvrir-direct' method='post' action='/ouvrir/lancer' "

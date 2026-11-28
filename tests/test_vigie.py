@@ -1726,8 +1726,9 @@ class TestInterfaceOutils(unittest.TestCase):
         # Les noms sont cliquables depuis le 28/11/2026 (lien ou bouton autour du nom).
         self.assertRegex(p, r"<li><[^>]*>OWASP ZAP</(a|button)>(</form>)?"
                             r"<span class='marque m-ouvrir'>à ouvrir</span>")
-        self.assertRegex(p, r"<li><a [^>]*>Sherlock</a>"
-                            r"<span class='marque m-pret'>lançable</span>")
+        # Lançable : la case cible et le bouton s'ouvrent sous le nom (28/11/2026).
+        self.assertRegex(p, r"<li><details class='sur-place'><summary [^>]*>Sherlock"
+                            r"</summary>.*?</details><span class='marque m-pret'>lançable</span>")
 
     def test_outil_sans_recette_absent_du_menu(self):
         # Les outils non lançables ne sont plus proposés dans le menu déroulant.
@@ -4042,7 +4043,12 @@ class TestNomsCliquables(unittest.TestCase):
         with mock.patch.object(interface_outils.presence, "etat",
                                return_value={"Uptime Kuma": True}):
             page = interface_outils.page()
-        self.assertIn("href='/outils-un?outil=Sherlock#lancer'", page)
+        # Lançable : on tape la cible juste sous le nom et ça part (même route).
+        sherlock = re.search(r"<summary [^>]*>Sherlock</summary><form method='post' "
+                             r"action='/outil/lancer'>(.*?)</form>", page)
+        self.assertTrue(sherlock)
+        self.assertIn("name='nom' value='Sherlock'", sherlock.group(1))
+        self.assertIn("name='cible' required", sherlock.group(1))
         self.assertIn("href='/ouvrir?outil=OWASP%20ZAP'", page)          # pas installé
         self.assertIn("<li>Aircrack-ng<span", page)                       # à la main
         self.assertIn('id="lancer"', page)
