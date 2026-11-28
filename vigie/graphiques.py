@@ -876,6 +876,9 @@ def _demarrer(nom, moyen, suivre):
                         + " ".join(erreurs.expliquer(sortie)))
     elif genre == "compose":
         dossier = dossier_compose(moyen["nom"])
+        manque_place = place_docker_insuffisante(nom, dossier)
+        if manque_place:
+            raise Refus(manque_place)
         cree = preparer_env(dossier)
         if cree:
             suivre(cree)
@@ -891,6 +894,50 @@ def _demarrer(nom, moyen, suivre):
             raise Refus(f"Docker n'a pas pu démarrer {nom}. "
                         + " ".join(erreurs.expliquer(fini.stdout + fini.stderr)))
     return chemin
+
+
+# Place à prévoir avant un « docker compose up » (1re fois : téléchargement et
+# construction des images). Le 28/11/2026, le disque de la VM s'est rempli : on vérifie
+# AVANT, au lieu de laisser Docker échouer à mi-chemin.
+PLACE_DOCKER_MO = {"ARTEX": 6000, "PentAGI": 8000, "RedAmon": 8000, "MISP": 6000,
+                   "Wazuh": 8000, "BloodHound": 4000, "Flowsint": 4000}
+PLACE_DOCKER_DEFAUT_MO = 3000
+
+
+def _dossier_docker():
+    code, sortie = _executer(_avec_docker(["docker", "info", "--format",
+                                           "{{.DockerRootDir}}"]), 8)
+    chemin = sortie.strip().splitlines()[-1] if code == 0 and sortie.strip() else ""
+    return chemin if chemin.startswith("/") else "/var/lib/docker"
+
+
+def _libre_mo(chemin):
+    while chemin and not os.path.exists(chemin):
+        chemin = os.path.dirname(chemin)
+    try:
+        return shutil.disk_usage(chemin or "/").free // (1024 * 1024)
+    except OSError:
+        return None
+
+
+def place_docker_insuffisante(nom, dossier):
+    """La raison en français s'il manque de la place pour démarrer cet outil Docker la
+    première fois (images pas encore là), sinon ""."""
+    besoin = PLACE_DOCKER_MO.get(nom, PLACE_DOCKER_DEFAUT_MO)
+    if dossier:   # déjà construit une fois : le redémarrer ne prend presque rien
+        code, sortie = _executer(_avec_docker(["docker", "compose", "images", "-q"]), 20,
+                                 dossier)
+        if code == 0 and sortie.strip():
+            return ""
+    for chemin, quoi in ((_dossier_docker(), "le disque de Docker"),
+                         (dossier, "le disque des outils")):
+        libre = _libre_mo(chemin)
+        if libre is not None and libre < besoin:
+            return (f"Pas assez de place pour démarrer {nom} : il faut environ "
+                    f"{round(besoin / 1000)} Go sur {quoi}, il en reste "
+                    f"{round(libre / 1000, 1)} Go. Double-clique sur « liberer-place.command » "
+                    "(dans le dossier de Vigie), puis réessaie.")
+    return ""
 
 
 # Lignes d'un .env d'exemple dont la valeur est à remplacer par un vrai mot de passe.

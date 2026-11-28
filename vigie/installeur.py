@@ -372,6 +372,9 @@ def installer_un(outil, a_blanc=False):
             return _compte(outil, True, True, deja, "installé à la main")
     if raison:
         return _compte(outil, raison="à installer à la main : " + raison, manuel=True)
+    manque_place = place_insuffisante(outil, a_blanc)
+    if manque_place:
+        return _compte(outil, raison=manque_place)
     recette = _par_recette(outil, a_blanc)
     if recette and (recette["installe"] or a_blanc):
         return recette
@@ -384,6 +387,29 @@ def installer_un(outil, a_blanc=False):
                                         if r)[:300]
         resultat.pop("manuel", None)
     return resultat
+
+
+# Outils lourds (Mo à prévoir sur le disque des outils). Le 28/11/2026, le disque de
+# 50 Go de la VM s'est retrouvé plein : garak et Nebula (~6 Go chacun, la bibliothèque
+# d'IA torch) partaient avec trop peu de place et échouaient à mi-chemin.
+GROS_OUTILS_MO = {"garak": 8000, "nebula": 8000}
+MESSAGE_PLACE = ("pas assez de place sur le disque des outils : il faut environ {besoin} Go, "
+                 "il en reste {libre} Go. Double-clique sur « liberer-place.command » (dans "
+                 "le dossier de Vigie), puis relance l'installeur.")
+
+
+def place_insuffisante(outil, a_blanc=False):
+    """La raison en français si un outil lourd n'a pas la place de s'installer, sinon ""."""
+    from . import outils as outils_
+    from . import recettes
+    nom = outil["nom"].lower()
+    besoin = GROS_OUTILS_MO.get(nom)
+    if not besoin or a_blanc or outils_.trouver(nom):
+        return ""
+    libre = recettes.place_libre_mo()
+    if libre is None or libre >= besoin:
+        return ""
+    return MESSAGE_PLACE.format(besoin=round(besoin / 1000), libre=round(libre / 1000, 1))
 
 
 def _deja_pose(outil):
