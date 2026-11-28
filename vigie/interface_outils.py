@@ -11,10 +11,11 @@ import urllib.parse
 import secrets
 import threading
 
-from . import (__version__, fiches_outils, lancer_seul, manuel, mes_cibles, presence, rapport,
+from . import (__version__, avancement, fiches_outils, lancer_seul, manuel, mes_cibles, presence, rapport,
                registre)
 
 LANCEMENTS = {}
+SUIVIS = {}          # identifiant -> avancement.Suivi, le temps que l'outil tourne
 VERROU = threading.Lock()
 
 CSS = """
@@ -49,6 +50,21 @@ CSS = """
 .explication p, .reussi p { margin: 4px 0; }
 .aide-outil { font-size: 14px; color: #3c4656; margin: -4px 0 10px; min-height: 1.4em; }
 details.brut summary { cursor: pointer; font-weight: 700; margin: 12px 0 6px; }
+.avancement { padding: 14px 16px; border-radius: 10px; background: #eef3fa;
+  border-left: 4px solid #1c4e8a; margin: 4px 0 14px; line-height: 1.5; }
+.avancement p { margin: 4px 0; }
+.av-chiffre { font-size: 30px; font-weight: 800; color: #1c4e8a; }
+.av-sorte { font-size: 13px; font-weight: 700; color: #3c4656; margin-left: 8px; }
+.av-barre { height: 14px; border-radius: 7px; background: #d7e1ee; overflow: hidden;
+  margin: 8px 0; }
+.av-barre span { display: block; height: 100%; background: #1c4e8a;
+  transition: width .6s ease; }
+.av-barre.av-temps { height: 6px; }
+.av-barre.av-temps span { background: #8a96a8; }
+.av-barre.av-inconnu span { width: 30%; background: #9db4d3;
+  animation: av-va 1.6s ease-in-out infinite alternate; }
+@keyframes av-va { from { margin-left: 0; } to { margin-left: 70%; } }
+.av-petit { font-size: 13px; color: #3c4656; }
 """
 
 
@@ -319,7 +335,9 @@ def lancer(corps, dossier_cibles=None, journal="journal"):
                                   "autorisation": "propre cible (" + mes_cibles.ATTESTATION
                                   + ")", "resultat": "lancé", "depuis": "Lancer un outil"})
     ident = secrets.token_urlsafe(9)
+    suivi = avancement.Suivi(habituel=avancement.habituel(journal, nom))
     with VERROU:
+        SUIVIS[ident] = suivi
         LANCEMENTS[ident] = {"etat": "en_cours", "outil": nom,
                              "cible": prepa["cible"] or "cet ordinateur",
                              "resultat": "", "explication": [], "brut": "",
@@ -327,7 +345,7 @@ def lancer(corps, dossier_cibles=None, journal="journal"):
 
     def travail():
         try:
-            compte = lancer_seul.lancer(nom, cible, propre_ok=propre)
+            compte = lancer_seul.lancer(nom, cible, propre_ok=propre, suivi=suivi)
             reussi = bool(compte.get("lance")) and not compte.get("code") \
                 and not compte.get("panne") and bool((compte.get("sortie") or "").strip())
             brut = (compte.get("sortie") or "")
@@ -343,12 +361,92 @@ def lancer(corps, dossier_cibles=None, journal="journal"):
                     "explication": compte.get("explication", []),
                     "resultat": compte.get("traduction") if reussi else "",
                     "brut": brut.strip(), "commande": compte.get("commande", "")}
+            if reussi and not compte.get("depasse"):
+                # Durée habituelle : la prochaine fois, Vigie pourra estimer l'avancement.
+                avancement.noter(journal, compte["outil"], compte.get("secondes"))
         except Exception as erreur:
             etat = {"etat": "erreur", "explication": [str(erreur)]}
         with VERROU:
             LANCEMENTS[ident].update(etat)
+            SUIVIS.pop(ident, None)
     threading.Thread(target=travail, daemon=True).start()
     return ident
+
+
+def etat_avancement(ident):
+    """L'avancement d'un lancement, pour la page (rafraîchie toute seule), ou None."""
+    with VERROU:
+        etat = LANCEMENTS.get(ident)
+        if etat is None:
+            return None
+        suivi = SUIVIS.get(ident)
+        en_cours = etat["etat"] == "en_cours"
+    if not en_cours or suivi is None:
+        return {"en_cours": False}
+    return {"en_cours": True, **suivi.etat()}
+
+
+def _bloc_avancement(av):
+    """Le cadre « où en est l'outil » (rempli ici, puis mis à jour par la page)."""
+    e = html.escape
+    pourcent = av.get("pourcent")
+    if pourcent is None:
+        chiffre = ""
+        barre = "<div class='av-barre av-inconnu' id='av-barre'><span></span></div>"
+    else:
+        sorte = "donné par l'outil" if av.get("sorte") == "outil" else "estimation"
+        chiffre = (f"<p><span class='av-chiffre' id='av-chiffre'>{pourcent} %</span>"
+                   f"<span class='av-sorte' id='av-sorte'>{sorte}</span></p>")
+        barre = (f"<div class='av-barre' id='av-barre'><span style='width:{pourcent}%'>"
+                 "</span></div>")
+    temps = ""
+    if av.get("maximum"):
+        temps = (f"<p class='av-petit' id='av-temps'>Temps écoulé : {e(av['ecoule'])} · "
+                 f"arrêt automatique au bout de {e(av['maximum'])}.</p>"
+                 f"<div class='av-barre av-temps'><span id='av-temps-barre' "
+                 f"style='width:{av.get('part_delai') or 0}%'></span></div>")
+    dernieres = "\n".join(av.get("dernieres") or [])
+    return (f"<div class='avancement' id='avancement'>{chiffre}{barre}"
+            f"<p id='av-phrase'>{e(av.get('phrase', ''))}</p>"
+            f"<p id='av-activite'>{e(av.get('activite', ''))}</p>{temps}"
+            "<details class='brut'><summary>Ce que l'outil écrit en ce moment (en anglais)"
+            f"</summary><pre id='av-lignes'>{e(dernieres) or '(rien pour l’instant)'}"
+            "</pre></details></div>")
+
+
+# Met le cadre à jour toutes les 2 s sans recharger la page (le repli dépliable reste
+# ouvert) ; recharge une seule fois quand l'outil a fini, pour afficher le résultat.
+_SCRIPT_AVANCEMENT = """<script>
+(function () {
+  var adresse = location.pathname.replace(/\\/$/, "") + "/etat";
+  function texte(id, valeur) { var n = document.getElementById(id); if (n) n.textContent = valeur; }
+  function maj() {
+    fetch(adresse, {cache: "no-store"}).then(function (r) { return r.json(); })
+    .then(function (av) {
+      if (!av.en_cours) { location.reload(); return; }
+      var barre = document.getElementById("av-barre");
+      if (av.pourcent === null || av.pourcent === undefined) {
+        barre.className = "av-barre av-inconnu"; barre.firstChild.style.width = "";
+        texte("av-chiffre", ""); texte("av-sorte", "");
+      } else {
+        barre.className = "av-barre"; barre.firstChild.style.width = av.pourcent + "%";
+        texte("av-chiffre", av.pourcent + " %");
+        texte("av-sorte", av.sorte === "outil" ? "donné par l'outil" : "estimation");
+      }
+      texte("av-phrase", av.phrase); texte("av-activite", av.activite);
+      if (av.maximum) {
+        texte("av-temps", "Temps écoulé : " + av.ecoule + " · arrêt automatique au bout de "
+              + av.maximum + ".");
+        var t = document.getElementById("av-temps-barre");
+        if (t) t.style.width = (av.part_delai || 0) + "%";
+      }
+      texte("av-lignes", (av.dernieres || []).join("\\n") || "(rien pour l’instant)");
+      setTimeout(maj, 2000);
+    }).catch(function () { setTimeout(maj, 4000); });
+  }
+  setTimeout(maj, 2000);
+})();
+</script>"""
 
 
 def page_resultat(ident):
@@ -358,7 +456,9 @@ def page_resultat(ident):
         return None
     e = html.escape
     en_cours = etat["etat"] == "en_cours"
-    rafraichir = "<meta http-equiv='refresh' content='4'>" if en_cours else ""
+    # Sans JavaScript, la page se recharge seule ; avec, seul le cadre change.
+    rafraichir = "<noscript><meta http-equiv='refresh' content='4'></noscript>" \
+        if en_cours else ""
     if en_cours:
         titre = "En cours…"
     elif etat.get("reussi"):
@@ -370,6 +470,9 @@ def page_resultat(ident):
     morceaux = []
     if en_cours:
         morceaux.append("<p>L'outil tourne. Cette page se met à jour toute seule.</p>")
+        av = etat_avancement(ident) or {}
+        if av.get("en_cours"):
+            morceaux.append(_bloc_avancement(av) + _SCRIPT_AVANCEMENT)
     phrases = etat.get("explication") or []
     if phrases:
         classe = "reussi" if etat.get("reussi") else "explication"

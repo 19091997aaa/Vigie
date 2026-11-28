@@ -269,6 +269,15 @@ Catalogue de « Lancer un outil » : **noms cliquables** (lançable → formulai
 choisi ; à ouvrir → ouvert direct s'il est installé et sans case d'engagement, sinon sa
 carte dans « Ouvrir un outil »).
 
+**Avancement en direct (28/11/2026)** : demande d'Anass, la page d'un outil lancé
+(« Lancer un outil ») montre où il en est, mise à jour toutes les 2 s (`vigie/avancement.py`,
+route `/outil/resultat/<id>/etat`). `lancer_seul._executer` lit la sortie au fil de l'eau
+(`suivi=`). Jamais un faux pourcentage : **vrai %** si l'outil l'écrit dans ses 3 dernières
+lignes (« 45% », « Requests: 50/200 ») ; sinon **estimation** d'après la médiane des 5
+derniers lancements réussis ici (`journal/durees-outils.json`, plafond 95 %) ; sinon
+(1er lancement) pas de % : temps écoulé / arrêt automatique, lignes déjà écrites, et les
+dernières lignes de l'outil (repliées, en anglais).
+
 **Mes propres cibles (26/11/2026)** : demande d'Anass, pas d'autorisation signée à
 lui-même pour SES cibles (`vigie/mes_cibles.py`, partie « Mes propres cibles » de l'onglet
 « Outils manuels », route `/manuel/cibles`, depuis la machine seulement). Un **domaine**

@@ -409,9 +409,17 @@ def fabrique(sortie, code):
             if adresse.path == "/outils-un":
                 self._envoyer(200, interface_outils.page())
                 return
-            resultat_outil = re.fullmatch(r"/outil/resultat/([A-Za-z0-9_-]{8,40})", adresse.path)
-            if resultat_outil and interface_outils.page_resultat(resultat_outil.group(1)):
-                self._envoyer(200, interface_outils.page_resultat(resultat_outil.group(1)))
+            resultat_outil = re.fullmatch(r"/outil/resultat/([A-Za-z0-9_-]{8,40})(/etat)?",
+                                          adresse.path)
+            if resultat_outil and resultat_outil.group(2):
+                avance = interface_outils.etat_avancement(resultat_outil.group(1))
+                if avance is not None:
+                    self._envoyer(200, json.dumps(avance, ensure_ascii=False),
+                                  [("Cache-Control", "no-store")], type_="application/json")
+                    return
+            elif resultat_outil and interface_outils.page_resultat(resultat_outil.group(1)):
+                self._envoyer(200, interface_outils.page_resultat(resultat_outil.group(1)),
+                              [("Cache-Control", "no-store")])
                 return
 
             if adresse.path == "/manuel":
