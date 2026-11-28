@@ -142,6 +142,13 @@ INTERFACES = {
                              _compose("monkey"), attente=120),
     "PentAGI": _web("https://127.0.0.1:8443", _compose("pentagi"), attente=180,
                     note="Il lui faut une clé d'IA (fichier .env de PentAGI)."),
+    "ARTEX": _web("http://127.0.0.1:8787", _compose("artex"), attente=300,
+                  note="Attaquant IA AUTONOME : un planificateur enchaîne de vrais outils "
+                       "offensifs tout seul. À ouvrir UNIQUEMENT sur ton labo ou une cible à "
+                       "toi (coche obligatoire), jamais sur la cible d'autrui. Il lui faut "
+                       "Docker, PostgreSQL (fournis par sa compose) et une clé d'IA "
+                       "(ANTHROPIC_API_KEY ou OPENAI_API_KEY, dans le .env ou sa page). "
+                       "Le jeton de configuration s'affiche dans les journaux au 1er démarrage."),
     "RedAmon": _web("http://127.0.0.1:3000", _compose("redamon"), attente=180,
                     note="Il lui faut une clé d'IA, réglée dans sa page « Settings »."),
     "Bettercap": _web("http://127.0.0.1", _admin("bettercap", "-caplet", "http-ui")),

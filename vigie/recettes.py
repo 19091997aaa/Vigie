@@ -1022,6 +1022,13 @@ RECETTES = {
     # Des listes de mots (pour ffuf, Gobuster…), pas un programme. « apt » : Kali seulement.
     "seclists": ("copie du dépôt GitHub (recette Vigie)",
                  depot_donnees("https://github.com/danielmiessler/SecLists", "SecLists"), TOUS),
+    # ARTEX : le dépôt d'origine a été supprimé. À la demande d'Anass (28/11/2026), on pose
+    # le fork communautaire BaaRai/ARTEX, qui tourne en Docker Compose (PostgreSQL + web).
+    # On clone seulement : l'image se construit au 1er démarrage par « Ouvrir un outil ».
+    # Attaquant IA AUTONOME (famille GATE) : jamais en diagnostic ni en automatique, ouvert
+    # seulement après la case « labo ou autorisation signée », sur une cible à soi.
+    "artex": ("fork communautaire BaaRai + Docker Compose (recette Vigie)",
+              depot_donnees("https://github.com/BaaRai/ARTEX", "artex"), TOUS),
     # --- Ajoutés le 26/11/2026 (tri des outils « à poser à la main »). ---
     # Les modèles de tests de Nuclei : sans eux, Nuclei (audit sur autorisation) ne teste rien.
     "nuclei templates": ("modèles Nuclei (documenté, recette Vigie)", nuclei_modeles(), TOUS),
@@ -1055,7 +1062,6 @@ MANUELS = {
                  "machine à protéger (chez le client), avec son dépôt officiel", TOUS),
     "coraza waf": ("bibliothèque pour serveur web (Caddy, Nginx), pas un programme seul", TOUS),
     "hardentools": ("outil pour Windows uniquement", TOUS),
-    "artex": ("le dépôt d'origine a été supprimé : aucune source sûre", TOUS),
     "xalgorix": ("se compile à la main (Go + Node.js) : pas de méthode automatique sûre", TOUS),
     "adalanche": ("programme à télécharger sur sa page officielle (Releases)", TOUS),
     "dorkagent": ("demande des clés d'accès payantes (Serper + IA) : à poser à la main", TOUS),
@@ -1178,7 +1184,7 @@ MANUELS.update({nom: (raison, TOUS) for nom, raison in _PAS_ICI.items()})
 # Déjà dans MANUELS plus haut, mais rien à faire sur la machine de Vigie non plus.
 PAS_ICI = set(_PAS_ICI) | {
     "geo-sleuth", "xingrin", "arl-next", "mitre caldera", "grr rapid response",
-    "velociraptor", "crowdsec", "coraza waf", "hardentools", "artex", "xalgorix",
+    "velociraptor", "crowdsec", "coraza waf", "hardentools", "xalgorix",
     "adalanche", "dorkagent", "sparrow-wifi", "peass-ng (winpeas/linpeas)",
     "metasploit framework", "airgeddon", "kismet", "veracrypt", "rustscan", "feroxbuster",
     "kubescape", "kube-bench", "owasp dependency-check"}
