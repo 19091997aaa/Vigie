@@ -24,7 +24,8 @@ def construire(societe, cible, date, constats, brut, non_realises, autorisation)
     # Ainsi elle tombe toujours sur une lettre déjà affichée, et jamais sous le pire bloc.
     notes_blocs = {nom: note(liste) for nom, liste in blocs.items()}
 
-    autorise = bool(autorisation)
+    # Un bilan d'outils actifs sur une propre cible n'est pas une autorisation signée.
+    autorise = bool(autorisation) and autorisation.get("signee", True)
 
     def _avec_consequences(constat):
         donnees = constat.en_dict()
@@ -506,6 +507,7 @@ def _perimetre(rapport):
     liste = ", ".join(domaines)
     methode = ("à partir d'informations publiques, sans action sur vos machines"
                if not rapport["autorisation"]
+               else "résultats d'outils actifs réunis" if "bilan" in rapport["autorisation"]
                else "contrôles autorisés par le dirigeant")
     return f"Périmètre : {liste} — {methode}."
 
@@ -690,8 +692,8 @@ def en_html(rapport, public="technique"):
         etiquette_doc = "Rapport technique"
     autorisation = rapport["autorisation"]
     cadre = ("Contrôles réalisés à partir d'informations publiques, sans action sur vos machines."
-             if not autorisation else
-             f"Contrôles couverts par l'autorisation « {e(autorisation['fichier'])} » "
+             if not autorisation else e(autorisation["bilan"]) + "." if "bilan" in autorisation
+             else f"Contrôles couverts par l'autorisation « {e(autorisation['fichier'])} » "
              f"(empreinte {e(autorisation['empreinte_sha256'][:16])}…).")
     note = rapport["note_globale"]
     return f"""<!DOCTYPE html>

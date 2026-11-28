@@ -11,7 +11,8 @@ import urllib.parse
 import secrets
 import threading
 
-from . import (__version__, avancement, fiches_outils, lancer_seul, manuel, mes_cibles, presence, rapport,
+from . import (__version__, avancement, bilan, combos, fiches_outils, lancer_seul, manuel,
+               mes_cibles, presence, rapport,
                registre)
 
 LANCEMENTS = {}
@@ -348,7 +349,7 @@ Pour toute autre cible, il faut une autorisation signée.</p>
 </main></body></html>"""
 
 
-def lancer(corps, dossier_cibles=None, journal="journal"):
+def lancer(corps, dossier_cibles=None, journal="journal", resultats=None):
     """Lance un outil passif en arrière-plan. Renvoie l'identifiant de suivi.
     Lève lancer_seul.Refus (raison en clair, en français) si le lancement n'est pas
     permis ou ne peut pas marcher : outil actif, service, mauvaise cible…"""
@@ -378,6 +379,12 @@ def lancer(corps, dossier_cibles=None, journal="journal"):
     def travail():
         try:
             compte = lancer_seul.lancer(nom, cible, propre_ok=propre, suivi=suivi)
+            if compte.get("lance"):
+                # Gardé pour le « Bilan d'une cible » (bilan.py).
+                bilan.enregistrer(resultats, compte["outil"], compte.get("cible") or cible,
+                                  compte.get("sortie"), compte.get("erreurs"),
+                                  "Lancer un outil", "propre cible" if propre else "passif",
+                                  compte.get("commande", ""), combos.reussi(compte))
             reussi = bool(compte.get("lance")) and not compte.get("code") \
                 and not compte.get("panne") and bool((compte.get("sortie") or "").strip())
             brut = (compte.get("sortie") or "")
