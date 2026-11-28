@@ -1680,8 +1680,11 @@ class TestInterfaceOutils(unittest.TestCase):
         from vigie import interface_outils
         p = interface_outils.page()
         self.assertRegex(p, r"<li>Aircrack-ng<span class='marque m-main'>à la main</span>")
-        self.assertRegex(p, r"<li>OWASP ZAP<span class='marque m-ouvrir'>à ouvrir</span>")
-        self.assertRegex(p, r"<li>Sherlock<span class='marque m-pret'>lançable</span>")
+        # Les noms sont cliquables depuis le 28/11/2026 (lien ou bouton autour du nom).
+        self.assertRegex(p, r"<li><[^>]*>OWASP ZAP</(a|button)>(</form>)?"
+                            r"<span class='marque m-ouvrir'>à ouvrir</span>")
+        self.assertRegex(p, r"<li><a [^>]*>Sherlock</a>"
+                            r"<span class='marque m-pret'>lançable</span>")
 
     def test_outil_sans_recette_absent_du_menu(self):
         # Les outils non lançables ne sont plus proposés dans le menu déroulant.
@@ -3929,3 +3932,84 @@ class TestArretAuTempsMaximum(unittest.TestCase):
         phrases = lancer_seul.expliquer("SpiderFoot", compte)
         self.assertIn("20 min", phrases[0])
         self.assertIn("INCOMPLET", phrases[0])
+
+
+class TestRepriseApresSpiderFootEtPipx(unittest.TestCase):
+    """VM, 28/11/2026 : SpiderFoot gardé « prêt » (ancienne commande « sf »), garak et
+    Nebula sans commande (« aucune commande trouvée (, , garak) »)."""
+
+    def test_spiderfoot_refait_tant_que_son_lanceur_manque(self):
+        from vigie import recettes
+        with tempfile.TemporaryDirectory() as dossier, \
+                mock.patch.object(recettes, "dossiers", return_value=(dossier, dossier)), \
+                mock.patch.object(recettes.shutil, "which", return_value=None):
+            self.assertIn("spiderfoot", recettes.a_reparer())
+            lanceur = os.path.join(dossier, "spiderfoot")
+            with open(lanceur, "w", encoding="utf-8") as ecrit:
+                ecrit.write("#!/bin/sh\n")
+            self.assertNotIn("spiderfoot", recettes.a_reparer())
+
+    def test_reste_pipx_efface_avant_reinstallation(self):
+        from vigie import installeur
+        with tempfile.TemporaryDirectory() as dossier, \
+                mock.patch.dict(os.environ, {"PIPX_HOME": dossier}):
+            reste = os.path.join(dossier, "venvs", "garak")
+            os.makedirs(os.path.join(reste, "lib"))
+            self.assertTrue(installeur.effacer_reste_pipx("garak"))
+            self.assertFalse(os.path.exists(reste))
+            self.assertFalse(installeur.effacer_reste_pipx("../garak"))   # jamais ailleurs
+
+    def test_reinstallation_retire_le_reste_puis_dit_pourquoi(self):
+        from vigie import installeur
+        appels = []
+
+        def faux_lancer(commande, delai=None):
+            appels.append(commande)
+            if commande[:2] == ["pipx", "install"]:
+                return True, "", "'garak' already seems to be installed."
+            return True, "", ""
+        with tempfile.TemporaryDirectory() as dossier, \
+                mock.patch.dict(os.environ, {"PIPX_HOME": dossier}), \
+                mock.patch.object(installeur, "_lancer", faux_lancer), \
+                mock.patch.object(installeur, "_apps_pipx", return_value=[]), \
+                mock.patch.object(installeur, "repond", return_value=False):
+            os.makedirs(os.path.join(dossier, "venvs", "garak"))
+            binaire, _, pourquoi, _ = installeur._reparer_pipx(
+                "pipx (documenté)", ["pipx", "install", "garak"], "", ["garak"])
+            self.assertFalse(os.path.exists(os.path.join(dossier, "venvs", "garak")))
+        self.assertEqual(binaire, "")
+        self.assertEqual(appels[0], ["pipx", "uninstall", "garak"])
+        self.assertIn("déjà installé", pourquoi)
+        self.assertNotIn("(, ", pourquoi)
+
+    def test_jamais_de_nom_vide_dans_la_raison(self):
+        from vigie import installeur
+        with mock.patch.object(installeur.shutil, "which", return_value=None):
+            self.assertEqual(installeur.erreur_demarrage(["", "", "garak"]),
+                             "aucune commande trouvée (garak)")
+
+
+class TestNomsCliquables(unittest.TestCase):
+    """Catalogue de « Lancer un outil » : un clic sur un nom le lance ou l'ouvre (28/11/2026)."""
+
+    def test_liens_selon_le_statut(self):
+        from vigie import interface_outils
+        with mock.patch.object(interface_outils.presence, "etat",
+                               return_value={"Uptime Kuma": True}):
+            page = interface_outils.page()
+        self.assertIn("href='/outils-un?outil=Sherlock#lancer'", page)
+        self.assertIn("href='/ouvrir?outil=OWASP%20ZAP'", page)          # pas installé
+        self.assertIn("<li>Aircrack-ng<span", page)                       # à la main
+        self.assertIn('id="lancer"', page)
+        self.assertIn('get("outil")', page)                              # présélection
+
+    def test_ouvert_direct_si_installe_et_sans_engagement(self):
+        from vigie import graphiques, interface_outils
+        nom = next(n for n in graphiques.INTERFACES if not graphiques.demande_engagement(n))
+        sous_case = next(n for n in graphiques.INTERFACES if graphiques.demande_engagement(n))
+        etats = {nom: True, sous_case: True}
+        direct = interface_outils._nom_cliquable({"nom": nom}, "m-ouvrir", etats)
+        self.assertIn("action='/ouvrir/lancer'", direct)
+        avec_case = interface_outils._nom_cliquable({"nom": sous_case}, "m-ouvrir", etats)
+        self.assertIn("/ouvrir?outil=", avec_case)                       # case à cocher d'abord
+        self.assertNotIn("<form", avec_case)
