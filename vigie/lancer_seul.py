@@ -260,13 +260,15 @@ def _lecteur(nom):
     return None
 
 
-def lancer(nom, cible, delai=None, propre_ok=False):
+def lancer(nom, cible, delai=None, propre_ok=False, suivi=None):
     """Lance UN outil PASSIF sur la cible et renvoie le compte rendu.
 
     Le compte rendu contient toujours une explication en français (« explication »,
     une liste de phrases) : ce qui s'est passé, et pourquoi si ça n'a pas marché.
     Refuse (Refus) un outil inconnu, payant, actif/offensif, ou qui ne se lance pas
     sur cette cible : la raison est dite en français.
+    `suivi` (avancement.Suivi, facultatif) reçoit la sortie au fil de l'eau, pour
+    montrer l'avancement pendant que l'outil tourne.
     """
     import shutil
     prepa = preparer(nom, cible, propre_ok=propre_ok)
@@ -278,7 +280,11 @@ def lancer(nom, cible, delai=None, propre_ok=False):
     chemin = shutil.which(commande, path=outils.chemin_recherche())
     if lecteur and chemin:
         remarques += lecteur.avant_lancement(chemin)
-    compte = _lancer_commande(commande, arguments, delai)
+    if suivi is not None:
+        suivi.delai = delai
+        compte = _lancer_commande(commande, arguments, delai, suivi=suivi)
+    else:
+        compte = _lancer_commande(commande, arguments, delai)
     compte["outil"] = vrai_nom
     compte["cible"] = prepa["cible"]
     compte["verifiee"] = verifiee
@@ -360,7 +366,7 @@ def raison_installation(nom):
     return presence.echecs_installation().get((nom or "").lower(), "")
 
 
-def _lancer_commande(commande, arguments, delai):
+def _lancer_commande(commande, arguments, delai, suivi=None):
     import shutil
     import time
     chemin = shutil.which(commande, path=outils.chemin_recherche())
@@ -378,7 +384,7 @@ def _lancer_commande(commande, arguments, delai):
                      "PYTHONUNBUFFERED": "1"}
     depart = time.monotonic()
     code, sortie, erreurs, depasse = _executer([chemin] + arguments, delai, dossier,
-                                               environnement)
+                                               environnement, suivi=suivi)
     secondes = round(time.monotonic() - depart, 1)
     # On retire les codes couleur ANSI : sinon l'écran affiche « [92m », « [0m »… au
     # lieu du texte (beaucoup d'outils colorent même sans vrai terminal, ex. Arjun).
@@ -415,31 +421,67 @@ def _signaler(processus, nom_signal):
         pass
 
 
-def _executer(argv, delai, dossier=None, env=None):
+def _executer(argv, delai, dossier=None, env=None, suivi=None):
     """Lance argv (sans shell) et attend au plus `delai` secondes.
 
     Renvoie (code, sortie, erreurs, dépassé). Au-delà du délai, l'outil et tout son
     groupe sont arrêtés, et on garde ce qu'il avait déjà écrit (code None).
+    La sortie est lue au fil de l'eau : `suivi` (facultatif) la reçoit en direct.
     """
     import subprocess
+    import threading
     processus = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                  stdin=subprocess.DEVNULL, cwd=dossier, env=env,
                                  start_new_session=True)
+    recu = {"sortie": [], "erreurs": []}
+
+    def lire(tuyau, flux):
+        lecture = getattr(tuyau, "read1", tuyau.read)
+        try:
+            while True:
+                bloc = lecture(65536)
+                if not bloc:
+                    break
+                recu[flux].append(bloc)
+                if suivi is not None:
+                    try:
+                        suivi.ajouter(flux, bloc)
+                    except Exception:        # le suivi ne doit jamais gêner l'outil
+                        pass
+        except (OSError, ValueError):
+            pass
+    lecteurs = [threading.Thread(target=lire, args=(processus.stdout, "sortie"), daemon=True),
+                threading.Thread(target=lire, args=(processus.stderr, "erreurs"), daemon=True)]
+    for lecteur in lecteurs:
+        lecteur.start()
+
+    def lu(flux):
+        return outils._texte(b"".join(recu[flux]))
     try:
-        sortie, erreurs = processus.communicate(timeout=delai)
-        return processus.returncode, outils._texte(sortie), outils._texte(erreurs), False
-    except subprocess.TimeoutExpired as depassement:
-        sortie, erreurs = depassement.stdout, depassement.stderr
+        processus.wait(timeout=delai)
+        for lecteur in lecteurs:             # la fin de ce qu'il a écrit
+            lecteur.join(timeout=10)
+        resultat = processus.returncode, lu("sortie"), lu("erreurs"), False
+        for tuyau in (processus.stdout, processus.stderr):
+            try:
+                tuyau.close()
+            except (OSError, AttributeError, ValueError):
+                pass
+        return resultat
+    except subprocess.TimeoutExpired:
+        pass
     for nom_signal, attente in _ARRET:
         _signaler(processus, nom_signal)
         try:
-            sortie, erreurs = processus.communicate(timeout=attente)
+            processus.wait(timeout=attente)
             break
-        except subprocess.TimeoutExpired as encore:
-            sortie, erreurs = encore.stdout or sortie, encore.stderr or erreurs
+        except subprocess.TimeoutExpired:
+            pass
     _signaler(processus, "SIGKILL")       # rien ne doit continuer à tourner derrière
     if processus.poll() is None:
         processus.kill()
+    for lecteur in lecteurs:
+        lecteur.join(timeout=2)
     for tuyau in (processus.stdout, processus.stderr):
         try:
             tuyau.close()
@@ -449,4 +491,4 @@ def _executer(argv, delai, dossier=None, env=None):
         processus.wait(timeout=2)
     except subprocess.TimeoutExpired:
         pass
-    return None, outils._texte(sortie), outils._texte(erreurs), True
+    return None, lu("sortie"), lu("erreurs"), True
