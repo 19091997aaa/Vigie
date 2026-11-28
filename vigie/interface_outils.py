@@ -175,7 +175,9 @@ def _statut(o, interfaces):
         return ("m-auto", "autorisation") if o["autorisation_requise"] else ("m-pret", "lançable")
     if o["nom"] in interfaces:
         return "m-ouvrir", "à ouvrir"
-    return "m-main", "à la main"
+    # « à la main » faisait croire à Anass qu'il devait installer quelque chose lui-même
+    # (28/11/2026). Le badge dit maintenant ce que c'est : Vigie ne le lance pas d'ici.
+    return "m-main", "hors Vigie"
 
 
 def _catalogue_html(etats=None):
@@ -252,28 +254,6 @@ def _nom_cliquable(o, classe, etats):
     return e(nom)
 
 
-def _formulaire_brancher(etats):
-    """« Je l'ai installé à la main » : on montre où est le programme, Vigie le relie."""
-    e = html.escape
-    manquants = sorted((o["nom"] for o in registre.charger()
-                        if not o["payant"] and not etats.get(o["nom"])), key=str.lower)
-    if not manquants:
-        return ""
-    options = "".join(f"<option>{e(nom)}</option>" for nom in manquants)
-    return f"""<div class="corps" id="a-la-main"><h2>Je l'ai installé à la main</h2>
-<p>Tu as posé un outil toi-même (programme téléchargé, dossier copié depuis GitHub…) ?
-Montre à Vigie où il est : Vigie le relie, vérifie qu'il démarre et le marque
-<span class='marque m-installe'>installé</span>. Rien n'est téléchargé.</p>
-<form method="post" action="/outil/brancher">
-<label>Outil<select name="nom">{options}</select></label>
-<label>Où est le programme (ou son dossier)
-<input name="chemin" placeholder="/home/moi/Téléchargements/chainsaw/chainsaw"></label>
-<p class="aide-outil">Astuce : dans le gestionnaire de fichiers, clic droit sur le fichier
-&gt; Copier, puis clique dans la case et fais Ctrl+V : le chemin s'écrit tout seul.</p>
-<button type="submit">Brancher sur Vigie</button>
-</form></div>"""
-
-
 def brancher(corps):
     """Traite le formulaire « Je l'ai installé à la main ». Renvoie la page avec le
     résultat en français (réussite ou raison du refus)."""
@@ -343,7 +323,8 @@ Pour toute autre cible, il faut une autorisation signée.</p>
 <span class='marque m-auto'>autorisation</span> seulement sur tes propres cibles ·
 <span class='marque m-ouvrir'>à ouvrir</span> s'ouvre avec sa propre fenêtre
 (<a href="/ouvrir">Ouvrir un outil</a>) ·
-<span class='marque m-main'>à la main</span> s'utilise à la main.</p>
+<span class='marque m-main'>hors Vigie</span> Vigie ne sait pas encore le lancer pour
+toi (serveur, appli Windows, outil à régler avant…). Rien à faire de ton côté.</p>
 {_catalogue_html(etats)}</div>
 <div class="corps"><p><a href="/">Accueil</a> · <a href="/manuel">Outils manuels</a></p></div>
 </main></body></html>"""

@@ -45,18 +45,19 @@ def _appli(*commandes, mac="", url_apres="", note=""):
             "url_apres": url_apres, "note": note}
 
 
-def _console(*commandes, note="", besoin=(), intro="", script=""):
+def _console(*commandes, note="", besoin=(), intro="", script="", ia=False):
     """besoin : ce qu'il faut en plus sur la machine ("docker", "node22").
     intro : phrase affichée en français dans le terminal avant le démarrage.
     script : lignes bash qui posent les questions en français puis lancent l'outil
     ({cmd} = la commande trouvée), pour un outil qui ne démarre pas sans réglages."""
     return {"genre": "console", "commandes": list(commandes), "note": note,
-            "besoin": list(besoin), "intro": intro, "script": script}
+            "besoin": list(besoin), "intro": intro, "script": script, "ia": ia}
 
 
-def _web(url, *demarrer, attente=60, note=""):
+def _web(url, *demarrer, attente=60, note="", ia=False):
+    """ia : l'outil a besoin de la clé d'IA enregistrée dans Vigie (cles_ia.py)."""
     return {"genre": "web", "url": url, "demarrer": list(demarrer), "attente": attente,
-            "note": note}
+            "note": note, "ia": ia}
 
 
 def _cmd(*argv, dossier="", fichier="", avant=None):
@@ -87,6 +88,19 @@ def _compose(nom):
 # Commande « npx » d'un Node 22 ou plus (celui que Vigie pose à part, sinon celui du
 # système s'il est assez récent). Résolu par _trouver().
 NPX22 = "@npx22"
+
+# Questions en français pour un outil d'IA qui lit sa clé dans l'environnement
+# (OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, DEEPSEEK_API_KEY). La clé reste
+# dans ce terminal seulement : rien n'est écrit sur le disque.
+CLE_IA = (
+    'if [ -z "$OPENAI_API_KEY$ANTHROPIC_API_KEY$GEMINI_API_KEY$DEEPSEEK_API_KEY" ]; then '
+    'echo "Quel fournisseur d\'IA ?  1 = Anthropic (Claude)   2 = OpenAI (ChatGPT)   '
+    '3 = Google (Gemini)   4 = DeepSeek"; read -r -p "Tape 1, 2, 3 ou 4 : " choix; '
+    'case "$choix" in 2) var=OPENAI_API_KEY;; 3) var=GEMINI_API_KEY;; '
+    '4) var=DEEPSEEK_API_KEY;; *) var=ANTHROPIC_API_KEY;; esac; '
+    'read -r -s -p "Colle ta clé d\'IA (elle ne s\'affiche pas) puis Entrée : " cle; echo; '
+    'export "$var=$cle"; echo "Clé prise pour cette fois (elle n\'est pas enregistrée)."; '
+    'echo; fi; ')
 
 # Clé = nom exact du registre (docs_outils.json). Un test vérifie que chaque clé existe.
 INTERFACES = {
@@ -157,16 +171,16 @@ INTERFACES = {
                           attente=120),
     "Infection Monkey": _web("https://127.0.0.1:5000", _docker("monkey-island"),
                              _compose("monkey"), attente=120),
-    "PentAGI": _web("https://127.0.0.1:8443", _compose("pentagi"), attente=180,
+    "PentAGI": _web("https://127.0.0.1:8443", _compose("pentagi"), attente=180, ia=True,
                     note="Il lui faut une clé d'IA (fichier .env de PentAGI)."),
-    "ARTEX": _web("http://127.0.0.1:8787", _compose("artex"), attente=300,
+    "ARTEX": _web("http://127.0.0.1:8787", _compose("artex"), attente=300, ia=True,
                   note="Attaquant IA AUTONOME : un planificateur enchaîne de vrais outils "
                        "offensifs tout seul. À ouvrir UNIQUEMENT sur ton labo ou une cible à "
                        "toi (coche obligatoire), jamais sur la cible d'autrui. Il lui faut "
                        "Docker, PostgreSQL (fournis par sa compose) et une clé d'IA "
                        "(ANTHROPIC_API_KEY ou OPENAI_API_KEY, dans le .env ou sa page). "
                        "Le jeton de configuration s'affiche dans les journaux au 1er démarrage."),
-    "RedAmon": _web("http://127.0.0.1:3000", _compose("redamon"), attente=180,
+    "RedAmon": _web("http://127.0.0.1:3000", _compose("redamon"), attente=180, ia=True,
                     note="Il lui faut une clé d'IA, réglée dans sa page « Settings »."),
     "Bettercap": _web("http://127.0.0.1", _admin("bettercap", "-caplet", "http-ui")),
     # --- Consoles (l'outil se pilote au clavier) ----------------------------
@@ -177,7 +191,7 @@ INTERFACES = {
     # Shannon n'est pas installé par Vigie (offensif) : il passe par « npx », qui le
     # télécharge au 1er lancement. Il lui faut Node 22 ou plus (celui de Vigie s'il est
     # là) et Docker. Le 28/11/2026, avec le Node d'Ubuntu, le terminal restait vide.
-    "Shannon": _console(["shannon"], [NPX22, "--yes", "@keygraph/shannon@latest"],
+    "Shannon": _console(["shannon"], [NPX22, "--yes", "@keygraph/shannon@latest"], ia=True,
                         besoin=["docker", "node22"],
                         intro="Shannon démarre. Au 1er lancement, il se télécharge "
                               "(1 à 3 minutes sans rien afficher) : patiente. Il pose ensuite "
@@ -186,10 +200,18 @@ INTERFACES = {
                         note="Son lanceur pose les questions à l'écran (clé d'IA, cible). "
                              "Il lui faut Docker, Node 22 et une clé d'IA. Il lit le CODE "
                              "SOURCE de l'appli testée : seulement TON appli."),
-    "PentestGPT": _console(["pentestgpt"], note="Il lui faut une clé d'IA."),
+    # PentestGPT s'arrêtait en anglais « No LLM provider is configured » (28/11/2026) :
+    # le terminal demande d'abord, en français, quel fournisseur et quelle clé.
+    "PentestGPT": _console(["pentestgpt"], ia=True,
+                           intro="PentestGPT : assistant d'IA pour les tests d'intrusion. "
+                                 "Il lui faut une clé d'IA (payante, chez le fournisseur).",
+                           script=CLE_IA + "{cmd}",
+                           note="Il lui faut une clé d'IA : le terminal te la demande au "
+                                "démarrage (elle n'est pas enregistrée). Seulement sur TES "
+                                "cibles."),
     # Strix ne démarre pas sans cible ni clé d'IA (28/11/2026) : le terminal pose les
     # questions en français, puis lance « strix --target ». Bac à sable Docker.
-    "Strix": _console(["strix"], besoin=["docker"],
+    "Strix": _console(["strix"], ia=True, besoin=["docker"],
                       intro="Strix : agents d'IA qui testent TON site ou TON code. "
                             "Réponds aux questions ci-dessous.",
                       script=(
@@ -592,9 +614,14 @@ def etat(nom):
 
 # ---------------------------------------------------------------------------
 # Ouvrir
-def _environnement():
+def _environnement(nom=""):
+    """L'environnement des programmes lancés. Un outil d'IA reçoit en plus la clé d'IA
+    enregistrée dans Vigie (cles_ia.py) ; les autres outils, jamais."""
     env = dict(os.environ)
     env["PATH"] = outils.chemin_recherche()
+    if INTERFACES.get(nom, {}).get("ia"):
+        from . import cles_ia
+        env.update(cles_ia.environnement())
     return env
 
 
@@ -615,6 +642,10 @@ def _ecran_disponible():
     return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
 
 
+SANS_CLE_IA = ("{nom} a besoin de ta clé d'IA. Entre-la une seule fois en haut de "
+               "« Ouvrir un outil », partie « Ta clé d'IA » : Vigie la garde et la donne "
+               "à tous les outils d'IA.")
+
 SANS_ECRAN = ("Vigie a été démarré sans écran (par exemple à distance, par SSH) : la "
               "fenêtre de l'outil ne peut pas s'afficher. Démarre Vigie depuis le bureau "
               "de la machine (double-clic), puis réessaie.")
@@ -622,14 +653,14 @@ SANS_ECRAN = ("Vigie a été démarré sans écran (par exemple à distance, par
 
 def _detacher(argv, titre):
     """Démarre un programme qui continue de tourner après la réponse de Vigie."""
-    return _detacher_journal(argv, open(journal_fichier(titre), "ab"))
+    return _detacher_journal(argv, open(journal_fichier(titre), "ab"), nom=titre)
 
 
-def _detacher_journal(argv, journal, dossier=None):
+def _detacher_journal(argv, journal, dossier=None, nom=""):
     try:
         return subprocess.Popen(argv, cwd=dossier or None, stdin=subprocess.DEVNULL,
                                 stdout=journal, stderr=subprocess.STDOUT,
-                                start_new_session=True, env=_environnement())
+                                start_new_session=True, env=_environnement(nom))
     except OSError as erreur:
         raise Refus(f"Le programme n'a pas pu démarrer : {erreur}.") from erreur
     finally:
@@ -715,6 +746,10 @@ def verifier(nom, engagement=False):
     if demande_engagement(nom) and not engagement:
         raise Refus(f"{nom} est un outil d'audit ou offensif. Coche d'abord la case : tu ne "
                     "vises que ton labo ou une cible couverte par une autorisation signée.")
+    if INTERFACES[nom].get("ia"):
+        from . import cles_ia
+        if not cles_ia.lire():
+            raise Refus(SANS_CLE_IA.format(nom=nom))
 
 
 def ouvrir(nom, suivre=lambda texte: None, engagement=False, journal=JOURNAL):
@@ -782,8 +817,14 @@ def _ouvrir_console(nom, fiche):
         raise Refus(SANS_ECRAN)
     chemin = _trouver(argv[0])
     en_plus = os.path.dirname(chemin) if argv[0] == NPX22 else ""
+    script = fiche.get("script", "")
+    if fiche.get("ia"):
+        # Le terminal ne reçoit pas toujours l'environnement de Vigie : il relit la clé.
+        from . import cles_ia
+        script = (f"set -a; . {_citer(cles_ia.fichier())} 2>/dev/null; set +a; "
+                  + (script or "{cmd}"))
     terminal = _ouvrir_terminal([chemin] + argv[1:], f"Vigie - {nom}",
-                                fiche.get("intro", ""), en_plus, fiche.get("script", ""))
+                                fiche.get("intro", ""), en_plus, script)
     if not terminal:
         raise Refus("Aucun terminal trouvé sur cette machine pour ouvrir la console.")
     _detacher(terminal, nom)
@@ -810,7 +851,7 @@ def _demarrer(nom, moyen, suivre):
                 for argv in moyen["avant"]:
                     _executer(argv, 300, dossier)
         suivre(f"Démarrage : {' '.join(moyen['argv'])}")
-        processus = _detacher_journal(moyen["argv"], open(chemin, "ab"), dossier)
+        processus = _detacher_journal(moyen["argv"], open(chemin, "ab"), dossier, nom)
         _surveiller(processus, nom, chemin, 3)
     elif genre == "admin":
         if not shutil.which("pkexec") and systeme() == "Linux":
@@ -843,7 +884,7 @@ def _demarrer(nom, moyen, suivre):
         try:
             fini = subprocess.run(_avec_docker(["docker", "compose", "up", "-d"]),
                                   cwd=dossier, capture_output=True, text=True, timeout=2400,
-                                  env=_environnement())
+                                  env=_environnement(nom))
         except (OSError, subprocess.SubprocessError) as erreur:
             raise Refus(f"Docker n'a pas pu démarrer {nom} : {erreur}.") from erreur
         if fini.returncode != 0:

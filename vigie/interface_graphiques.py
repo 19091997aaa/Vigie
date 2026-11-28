@@ -6,7 +6,7 @@ import secrets
 import threading
 import urllib.parse
 
-from . import fiches_outils, graphiques, rapport, recettes
+from . import cles_ia, fiches_outils, graphiques, rapport, recettes
 
 OUVERTURES = {}
 VERROU = threading.Lock()
@@ -22,6 +22,13 @@ CSS = """
   letter-spacing:.04em; }
 .carte p { margin:0; font-size:14px; }
 .carte .note { font-size:13px; color:var(--gris); }
+.cle-ia { border:1px solid var(--trait); border-radius:12px; padding:14px 18px;
+  margin:18px 0; background:#f7f9fc; }
+.cle-ia h2 { margin-top:0; }
+.cle-form { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+.cle-form label { display:flex; flex-direction:column; flex:1 1 200px; font-size:14px; }
+.cle-ok { color:#2e7d4f; font-weight:700; }
+.cle-effacer { margin-top:8px; }
 .carte .manque { font-size:13px; color:#8a4b00; background:#fff4e0; border-radius:6px;
   padding:6px 8px; margin:6px 0; }
 .carte form { display:grid; gap:8px; margin:0; }
@@ -171,6 +178,9 @@ def _carte(nom, etat):
                 "Je ne vise que mes propres cibles (mon domaine, mon labo) ou une cible "
                 "couverte par une autorisation signée.</label>")
     note = f"<p class='note'>{e(fiche['note'])}</p>" if fiche.get("note") else ""
+    if fiche.get("ia") and not cles_ia.lire():
+        note += ("<p class='manque'>Il lui faut ta clé d'IA : <a href='#cle-ia'>entre-la "
+                 "en haut de la page</a> (une seule fois).</p>")
     return (f"<div class='carte' data-nom='{e(nom)}'><span class='genre'>{e(graphiques.GENRES[fiche['genre']])}"
             f"</span><h3>{e(nom)}</h3>{pastille}<p>{e(_role(nom))}</p>{note}"
             f"<form method='post' action='/ouvrir/lancer' target='_blank'>"
@@ -189,7 +199,7 @@ def _carte_absente(nom):
         cherche = (f"<p class='note'>Vigie a cherché {e(', '.join(pistes))}.</p>"
                    if pistes else "")
     raison = recettes.MANUELS.get(nom.lower())
-    manuel = (f"<p class='note'>À installer à la main : {e(raison[0])}.</p>"
+    manuel = (f"<p class='note'>L'installeur ne le pose pas : {e(raison[0])}.</p>"
               if raison else "")
     lien = (graphiques._fiche(nom) or {}).get("lien", "")
     doc = (f"<p class='liens'><a href='{e(lien)}' target='_blank' rel='noopener'>Page "
@@ -216,7 +226,49 @@ def _blocs(noms, etats, absents=False):
     return "".join(blocs)
 
 
-def page(message=""):
+def bloc_cle_ia(ok=""):
+    """« Ta clé d'IA » : saisie unique, gardée sur cette machine (demande d'Anass,
+    28/11/2026 : « on me demande la clé, je la rentre »)."""
+    e = html.escape
+    actuelle = cles_ia.resume()
+    choix = "".join(f"<option value='{k}'>{e(v[0])}</option>"
+                    for k, v in cles_ia.FOURNISSEURS.items())
+    etat = (f"<p class='cle-ok'>Clé enregistrée : {e(actuelle)}.</p>" if actuelle else
+            "<p class='aide'>Aucune clé pour l'instant. Sans elle, PentestGPT, Strix, "
+            "Shannon, ARTEX, PentAGI et RedAmon ne peuvent pas démarrer.</p>")
+    effacer = ("<form method='post' action='/ouvrir/cle' class='cle-effacer'>"
+               "<input type='hidden' name='effacer' value='oui'>"
+               "<button type='submit'>Effacer la clé</button></form>") if actuelle else ""
+    bandeau = f"<div class='bandeau'>{e(ok)}</div>" if ok else ""
+    return f"""<div class="cle-ia" id="cle-ia"><h2>Ta clé d'IA</h2>{bandeau}{etat}
+<p class="aide">Les outils d'IA ont besoin d'une clé (un code payant, pris sur le site du
+fournisseur : console.anthropic.com pour Claude, platform.openai.com pour ChatGPT…).
+Colle-la ici <b>une seule fois</b> : Vigie la garde sur cette machine (jamais sur GitHub)
+et la donne à chaque outil d'IA que tu ouvres.</p>
+<form method="post" action="/ouvrir/cle" class="cle-form">
+<label>Fournisseur<select name="fournisseur">{choix}</select></label>
+<label>Ta clé<input name="cle" type="password" autocomplete="off" required
+ placeholder="colle ta clé ici"></label>
+<label>Modèle (facultatif, pour Strix)<input name="modele" autocomplete="off"
+ placeholder="laisse vide si tu ne sais pas"></label>
+<button type="submit">{'Remplacer la clé' if actuelle else 'Enregistrer la clé'}</button>
+</form>{effacer}</div>"""
+
+
+def enregistrer_cle(corps):
+    """Traite le formulaire « Ta clé d'IA ». Renvoie la page avec le résultat."""
+    champs = urllib.parse.parse_qs(corps)
+    if champs.get("effacer", [""])[0] == "oui":
+        return page(ok=cles_ia.effacer())
+    try:
+        texte = cles_ia.enregistrer(champs.get("fournisseur", [""])[0],
+                                    champs.get("cle", [""])[0], champs.get("modele", [""])[0])
+    except (cles_ia.Refus, OSError) as erreur:
+        return page(str(erreur))
+    return page(ok=texte)
+
+
+def page(message="", ok=""):
     e = html.escape
     bandeau = f"<div class='erreur'>{e(message)}</div>" if message else ""
     noms = graphiques.liste()
@@ -253,6 +305,7 @@ service demande les droits administrateur, une fenêtre demande ton mot de passe
  aria-expanded="false">
 <ul id="suggestions" class="suggestions" role="listbox" hidden></ul>
 <p id="rien" class="aide" hidden>Aucun outil de cet onglet ne porte ce nom.</p></div>
+{bloc_cle_ia(ok)}
 <h2>Prêts à ouvrir ({len(prets)})</h2>
 {partie_prets}
 {partie_absents}
@@ -306,6 +359,8 @@ def page_suivi(ident):
         # La page de l'outil remplace cet onglet : l'onglet Vigie reste ouvert à côté.
         if not etat.get("garder"):
             script = f"<script>location.replace({_js(etat['url'])});</script>"
+    if etat["etat"] == "erreur" and "clé d'IA" in etat["texte"]:
+        lien = "<p><a class='bouton' href='/ouvrir#cle-ia'>Entrer ma clé d'IA</a></p>"
     classe = {"en_cours": "", "fini": " fini", "erreur": " erreur"}[etat["etat"]]
     detail = (f"<details><summary>Détail technique</summary><pre class='detail'>"
               f"{e(etat['detail'])}</pre></details>") if etat.get("detail") else ""

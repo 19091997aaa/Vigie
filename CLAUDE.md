@@ -282,6 +282,17 @@ phrase d'attente en français dans le terminal. **Bloc « Je l'ai installé à l
 retiré de la page** (Anass : « j'ai rien compris, j'en veux pas ») ; la route et
 `a_la_main.py` restent, Burp est cherché aussi dans `~/BurpSuiteCommunity`.
 
+**Clé d'IA et badges (28/11/2026, après-midi)** : Anass ne savait pas où mettre une clé
+d'IA (PentestGPT s'arrêtait en anglais). `vigie/cles_ia.py` : partie « Ta clé d'IA » en
+haut de « Ouvrir un outil » (route `/ouvrir/cle`, depuis la machine seulement),
+fournisseur + clé (+ modèle pour Strix), gardée dans `~/.config/vigie/cles-ia.env`
+(droits 600, jamais dans le dépôt, jamais réaffichée). Donnée **aux seuls outils `ia=True`**
+(PentestGPT, Strix, Shannon, ARTEX, PentAGI, RedAmon) par l'environnement ; un terminal la
+relit (`set -a; . fichier`). Sans clé : refus en français avec bouton vers le formulaire
+(après la case d'engagement). Clé validée (lettres, chiffres, - . _) car lue par bash.
+Badge `à la main` renommé **`hors Vigie`** (Anass croyait devoir installer à la main).
+Catalogue : clic sur un nom lançable = case cible + bouton Lancer sous le nom.
+
 **Avancement en direct (28/11/2026)** : demande d'Anass, la page d'un outil lancé
 (« Lancer un outil ») montre où il en est, mise à jour toutes les 2 s (`vigie/avancement.py`,
 route `/outil/resultat/<id>/etat`). `lancer_seul._executer` lit la sortie au fil de l'eau
