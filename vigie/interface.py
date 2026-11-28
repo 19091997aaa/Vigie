@@ -490,6 +490,18 @@ def fabrique(sortie, code):
                 except interface_graphiques.graphiques.Refus as erreur:
                     self._envoyer(400, interface_graphiques.page(str(erreur)))
                 return
+            if self.path == "/ouvrir/cle":
+                # La clé d'IA se saisit depuis la machine elle-même seulement.
+                if self.client_address[0] not in ("127.0.0.1", "::1"):
+                    self._envoyer(403, interface_graphiques.page(
+                        "La clé d'IA s'entre depuis l'ordinateur où tourne Vigie, pas "
+                        "depuis le téléphone."))
+                    return
+                taille = min(int(self.headers.get("Content-Length", "0") or 0), 4096)
+                corps = self.rfile.read(taille).decode("utf-8", "replace")
+                self._envoyer(200, interface_graphiques.enregistrer_cle(corps),
+                              [("Cache-Control", "no-store")])
+                return
             if self.path == "/outil/brancher":
                 # Relier un programme de la machine : seulement depuis la machine
                 # elle-même, jamais depuis un téléphone du réseau local.

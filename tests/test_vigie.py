@@ -1722,7 +1722,7 @@ class TestInterfaceOutils(unittest.TestCase):
         # main » (Aircrack-ng) ou « à ouvrir » s'il a sa propre interface (OWASP ZAP).
         from vigie import interface_outils
         p = interface_outils.page()
-        self.assertRegex(p, r"<li>Aircrack-ng<span class='marque m-main'>à la main</span>")
+        self.assertRegex(p, r"<li>Aircrack-ng<span class='marque m-main'>hors Vigie</span>")
         # Les noms sont cliquables depuis le 28/11/2026 (lien ou bouton autour du nom).
         self.assertRegex(p, r"<li><[^>]*>OWASP ZAP</(a|button)>(</form>)?"
                             r"<span class='marque m-ouvrir'>à ouvrir</span>")

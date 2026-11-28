@@ -70,7 +70,9 @@ class Verifier(unittest.TestCase):
         with self.assertRaises(graphiques.Refus) as refus:
             graphiques.verifier("Shannon", engagement=False)
         self.assertIn("autorisation signée", str(refus.exception))
-        graphiques.verifier("Shannon", engagement=True)
+        from vigie import cles_ia     # case cochée + clé d'IA enregistrée : accepté
+        with mock.patch.object(cles_ia, "lire", return_value={"fournisseur": "openai"}):
+            graphiques.verifier("Shannon", engagement=True)
 
 
 class OuvrirWeb(unittest.TestCase):
@@ -287,7 +289,9 @@ class OutilsDockerEtJetons(unittest.TestCase):
             os.unlink(f.name)
 
     def test_shannon_refuse_sans_docker(self):
+        from vigie import cles_ia
         with mock.patch.object(graphiques, "docker_etat", return_value="arrete"), \
+                mock.patch.object(cles_ia, "lire", return_value={"fournisseur": "openai"}), \
                 mock.patch.object(graphiques, "commande_dispo", return_value=["shannon"]), \
                 mock.patch.object(graphiques, "npx22", return_value="/x/npx"):
             self.assertFalse(graphiques.etat("Shannon")["present"])
@@ -320,3 +324,77 @@ class OutilsDockerEtJetons(unittest.TestCase):
         self.assertIn('/b/strix --target "$cible"', argv[-1])
         self.assertIn("LLM_API_KEY", argv[-1])
         self.assertIn("docker", fiche["besoin"])
+
+    def test_pentestgpt_demande_la_cle_en_francais(self):
+        fiche = graphiques.INTERFACES["PentestGPT"]
+        script = fiche["script"].replace("{cmd}", "/b/pentestgpt")
+        self.assertIn("ANTHROPIC_API_KEY", script)
+        self.assertIn("Colle ta clé d'IA", script)
+        self.assertTrue(script.endswith("/b/pentestgpt"))
+        import subprocess
+        # Syntaxe bash correcte ; avec une clé déjà là, aucune question n'est posée.
+        fini = subprocess.run(["bash", "-c", fiche["script"].replace("{cmd}", "echo parti")],
+                              env={"PATH": os.environ["PATH"], "OPENAI_API_KEY": "x"},
+                              capture_output=True, text=True, timeout=10)
+        self.assertEqual(fini.stdout.strip(), "parti")
+
+
+class CleIA(unittest.TestCase):
+    """« Ta clé d'IA » : entrée une fois, gardée, donnée aux seuls outils d'IA (28/11/2026)."""
+
+    def setUp(self):
+        self.dossier = tempfile.mkdtemp()
+        self.env = mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": self.dossier})
+        self.env.start()
+        from vigie import cles_ia
+        self.cles_ia = cles_ia
+
+    def tearDown(self):
+        self.env.stop()
+
+    def test_enregistrer_relire_effacer(self):
+        texte = self.cles_ia.enregistrer("anthropic", "sk-ant-api03-abcdefghijkl1234")
+        self.assertIn("…1234", texte)
+        chemin = self.cles_ia.fichier()
+        self.assertTrue(chemin.startswith(self.dossier))          # hors du dépôt
+        self.assertEqual(stat.S_IMODE(os.stat(chemin).st_mode), 0o600)
+        self.assertEqual(self.cles_ia.environnement()["ANTHROPIC_API_KEY"],
+                         "sk-ant-api03-abcdefghijkl1234")
+        self.assertNotIn("abcdefghijkl", self.cles_ia.resume())   # jamais réaffichée
+        self.cles_ia.effacer()
+        self.assertIsNone(self.cles_ia.lire())
+
+    def test_refuse_ce_qui_n_est_pas_une_cle(self):
+        for mauvaise in ("trop-court", "sk-ant-'; rm -rf ~; echo '", "sk ant avec espaces 12345"):
+            with self.assertRaises(self.cles_ia.Refus):
+                self.cles_ia.enregistrer("openai", mauvaise)
+
+    def test_fichier_lisible_par_bash(self):
+        import subprocess
+        self.cles_ia.enregistrer("openai", "sk-proj-abcdefghijklmnop", "gpt-5")
+        fini = subprocess.run(["bash", "-c", f"set -a; . '{self.cles_ia.fichier()}'; "
+                               "echo $OPENAI_API_KEY $LLM_API_KEY $STRIX_LLM"],
+                              capture_output=True, text=True, timeout=10)
+        self.assertEqual(fini.stdout.split(), ["sk-proj-abcdefghijklmnop"] * 2 + ["openai/gpt-5"])
+
+    def test_outil_ia_sans_cle_demande_la_cle_en_francais(self):
+        with self.assertRaises(graphiques.Refus) as refus:
+            graphiques.ouvrir("PentestGPT", engagement=True, journal=self.dossier)
+        self.assertIn("Ta clé d'IA", str(refus.exception))
+
+    def test_cle_donnee_aux_seuls_outils_ia(self):
+        self.cles_ia.enregistrer("anthropic", "sk-ant-api03-abcdefghijkl1234")
+        self.assertIn("ANTHROPIC_API_KEY", graphiques._environnement("ARTEX"))
+        self.assertNotIn("LLM_API_KEY", graphiques._environnement("Wireshark"))
+
+    def test_page_montre_le_formulaire(self):
+        with mock.patch.object(graphiques, "etat",
+                               return_value={"present": True, "en_marche": None}):
+            p = interface_graphiques.page()
+        self.assertIn("id=\"cle-ia\"", p)
+        self.assertIn("action=\"/ouvrir/cle\"", p)
+        self.assertIn("Il lui faut ta clé d'IA", p)            # sur la carte PentestGPT
+        p = interface_graphiques.enregistrer_cle(
+            "fournisseur=anthropic&cle=sk-ant-api03-abcdefghijkl1234")
+        self.assertIn("Clé enregistrée", p)
+        self.assertNotIn("abcdefghijkl", p)
