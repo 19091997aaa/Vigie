@@ -198,7 +198,7 @@ def erreur_demarrage(binaires):
     garak étaient « installés mais ne démarrent pas » sans aucune raison, parce que leur
     commande n'existait pas (reste d'une installation coupée) et que Vigie se taisait."""
     introuvables, muet = [], ""
-    for binaire in binaires:
+    for binaire in dict.fromkeys(b for b in binaires if b):
         chemin = shutil.which(binaire)
         if not chemin:
             introuvables.append(binaire)
@@ -447,8 +447,27 @@ def _reinstaller_pipx(commande, sortie):
     when you pass --force ») : avant le 26/11/2026, la « réparation avec Python 3.12 »
     réinstallait en fait avec le même Python, et l'outil restait en panne. On retire donc
     d'abord ce que pipx a posé (l'outil ne démarre pas de toute façon), puis on réinstalle."""
-    _lancer(["pipx", "uninstall", _venv_pipx(commande, sortie)], delai=300)
+    venv = _venv_pipx(commande, sortie)
+    _lancer(["pipx", "uninstall", venv], delai=300)
+    effacer_reste_pipx(venv)
     return _lancer(_pipx_secours(commande), delai=DELAI_PYTHON)
+
+
+def effacer_reste_pipx(venv):
+    """Retire le dossier pipx d'un outil s'il reste après « pipx uninstall ».
+
+    Une installation coupée (disque plein, mémoire) laisse un dossier sans ses infos :
+    pipx uninstall répond « pas installé » et n'y touche pas, puis la réinstallation dit
+    « déjà installé » sans rien poser. C'est ce qui laissait garak et Nebula sans
+    commande (28/11/2026)."""
+    if not venv or "/" in venv or venv in (".", ".."):
+        return False
+    racine = os.environ.get("PIPX_HOME") or os.path.expanduser("~/.local/share/pipx")
+    dossier = os.path.join(racine, "venvs", venv)
+    if not os.path.isdir(dossier):
+        return False
+    shutil.rmtree(dossier, ignore_errors=True)
+    return True
 
 
 def _installer_npm(commande):
@@ -479,7 +498,13 @@ def _reparer_pipx(libelle, commande, sortie, candidats):
             pourquoi, f"réinstallation avec Python {PYTHON_SECOURS} ratée : {message}") if r), \
             False
     libelle = f"{libelle} avec Python {PYTHON_SECOURS}"
-    candidats = binaires_poses("pipx", sortie2, "", "") + candidats
+    venv = _venv_pipx(commande, sortie2)
+    if _DEJA_PIPX.search(sortie2 or "") and not APPS_PIPX.findall(sortie2 or ""):
+        return "", libelle, "; ".join(r for r in (
+            pourquoi, f"pipx dit l'outil « déjà installé » sans poser ses commandes : "
+                      f"reste d'installation à retirer ({venv})") if r), True
+    candidats = [b for b in APPS_PIPX.findall(sortie2 or "") + _apps_pipx(venv)
+                 if b and b not in candidats] + candidats
     binaire = _premier_qui_repond(candidats)
     if binaire:
         return binaire, libelle, "", True

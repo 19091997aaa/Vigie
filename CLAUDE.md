@@ -261,6 +261,13 @@ Délai par fiche (`fiches_outils._f(delai=)`, 20 min pour SpiderFoot) ; au-delà
 `lancer_seul._executer` arrête **tout le groupe de processus** (Ctrl+C puis de force) et
 garde la sortie partielle (`PYTHONUNBUFFERED=1`). Le scan reste visible dans l'interface
 de SpiderFoot (onglet « Scans »).
+**28/11/2026, 1er essai VM** : la reprise gardait SpiderFoot « prêt » (commande `sf` du
+fork) → `recettes.LANCEURS_DE_RECETTE` : tant que le lanceur d'une recette manque,
+`a_reparer()` le refait. garak/Nebula sans commande = reste pipx d'installation coupée :
+`installeur.effacer_reste_pipx` retire le dossier `venvs/<outil>` avant la réinstallation.
+Catalogue de « Lancer un outil » : **noms cliquables** (lançable → formulaire avec l'outil
+choisi ; à ouvrir → ouvert direct s'il est installé et sans case d'engagement, sinon sa
+carte dans « Ouvrir un outil »).
 
 **Mes propres cibles (26/11/2026)** : demande d'Anass, pas d'autorisation signée à
 lui-même pour SES cibles (`vigie/mes_cibles.py`, partie « Mes propres cibles » de l'onglet

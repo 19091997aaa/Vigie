@@ -7,6 +7,7 @@ renvoient vers l'onglet « Outils manuels », qui exige l'autorisation signée (
 d'or). Tous les garde-fous sont dans lancer_seul.py.
 """
 import html
+import urllib.parse
 import secrets
 import threading
 
@@ -22,6 +23,11 @@ CSS = """
 .fam h2 { margin: 0 0 10px; }
 .liste-outils { display: grid; grid-template-columns: repeat(auto-fill,minmax(230px,1fr));
   gap: 8px 16px; list-style: none; padding: 0; margin: 0; }
+.nom-outil { color: var(--encre, #14213d); font: inherit; font-weight: 700;
+  text-decoration: underline; text-underline-offset: 3px; background: none; border: 0;
+  padding: 0; cursor: pointer; }
+.nom-outil:hover { color: #1c4e8a; }
+.ouvrir-direct { display: inline; margin: 0; }
 .liste-outils li { font-size: 14px; padding: 6px 0; border-bottom: 1px solid var(--trait); }
 .liste-outils .marque { font-size: 11px; font-weight: 800; letter-spacing: .04em;
   padding: 2px 7px; border-radius: 6px; margin-left: 6px; }
@@ -164,12 +170,36 @@ def _catalogue_html(etats=None):
             marque = f"<span class='marque {classe}'>{texte}</span>"
             if etats.get(o["nom"]):
                 marque += "<span class='marque m-installe'>installé</span>"
-            items.append(f"<li>{e(o['nom'])}{marque}</li>")
+            items.append(f"<li>{_nom_cliquable(o, classe, etats)}{marque}</li>")
         installes = sum(1 for o in liste if etats.get(o["nom"]))
         blocs.append(f"<div class='fam'><h2>{e(titres[fam])} ({len(liste)})"
                      f" — {installes} installé{'s' if installes > 1 else ''}</h2>"
                      f"<ul class='liste-outils'>{''.join(items)}</ul></div>")
     return "".join(blocs)
+
+
+def _nom_cliquable(o, classe, etats):
+    """Le nom d'un outil dans le catalogue, cliquable quand il peut partir d'ici
+    (demande d'Anass, 28/11/2026 : « cliquer dessus, que ça se lance direct ») :
+      - lançable : le formulaire juste au-dessus, outil déjà choisi (reste la cible) ;
+      - à ouvrir : installé et sans case d'engagement -> s'ouvre tout de suite (sa
+        fenêtre ou sa page) ; sinon -> sa carte dans « Ouvrir un outil ».
+    Rien n'est lancé sur une cible par un simple lien."""
+    from . import graphiques
+    e = html.escape
+    nom = o["nom"]
+    if classe in ("m-pret", "m-auto"):
+        return (f"<a class='nom-outil' href='/outils-un?outil={urllib.parse.quote(nom)}"
+                f"#lancer' title='Lancer {e(nom, quote=True)}'>{e(nom)}</a>")
+    if classe == "m-ouvrir":
+        if etats.get(nom) and not graphiques.demande_engagement(nom):
+            return (f"<form class='ouvrir-direct' method='post' action='/ouvrir/lancer' "
+                    f"target='_blank'><input type='hidden' name='nom' value='{e(nom)}'>"
+                    f"<button type='submit' class='nom-outil' title='Ouvrir "
+                    f"{e(nom, quote=True)} (sa propre interface)'>{e(nom)}</button></form>")
+        return (f"<a class='nom-outil' href='/ouvrir?outil={urllib.parse.quote(nom)}' "
+                f"title='Voir {e(nom, quote=True)} dans « Ouvrir un outil »'>{e(nom)}</a>")
+    return e(nom)
 
 
 def _formulaire_brancher(etats):
@@ -229,7 +259,7 @@ def page(message="", ok=""):
 <b>actifs</b> ou <b>offensifs</b> ne partent que sur <b>tes propres cibles prouvées</b>
 (ton domaine, tes machines de labo : à déclarer dans <a href="/manuel">Outils manuels</a>).
 Pour toute autre cible, il faut une autorisation signée.</p>
-<form method="post" action="/outil/lancer">
+<form method="post" action="/outil/lancer" id="lancer">
 <label>Outil<select name="nom" id="choix-outil">{_options_passifs(etats)}</select></label>
 <p class="aide-outil" id="aide-outil"></p>
 <label>Cible<input name="cible" placeholder="exemple.fr ou un pseudo"></label>
@@ -242,6 +272,15 @@ Pour toute autre cible, il faut une autorisation signée.</p>
   function maj() {{
     var o = choix.options[choix.selectedIndex];
     aide.textContent = o ? (o.getAttribute("data-aide") || "") : "";
+  }}
+  // Arrivé d'un clic sur un nom du catalogue : l'outil est déjà choisi, reste la cible.
+  var voulu = new URLSearchParams(location.search).get("outil");
+  if (voulu) {{
+    for (var i = 0; i < choix.options.length; i++) {{
+      if (choix.options[i].value === voulu) {{ choix.selectedIndex = i; break; }}
+    }}
+    var cible = document.querySelector("input[name=cible]");
+    if (cible) {{ cible.focus(); }}
   }}
   choix.addEventListener("change", maj); maj();
 }})();

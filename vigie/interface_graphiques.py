@@ -14,6 +14,7 @@ VERROU = threading.Lock()
 CSS = """
 .cartes { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:12px;
   margin:10px 0 24px; }
+.carte.choisie { outline: 3px solid #1c4e8a; outline-offset: 2px; }
 .carte { border:1px solid var(--trait); border-radius:12px; padding:14px 16px; display:grid;
   gap:8px; align-content:start; }
 .carte h3 { margin:0; font-size:16px; }
@@ -82,6 +83,22 @@ def _role(nom):
 # noms qui commencent par ces lettres (puis ceux qui les contiennent). Sans accents ni
 # majuscules : « wi » trouve Wireshark, « ve » trouve Velociraptor et VeraCrypt.
 SCRIPT_RECHERCHE = r"""
+(function () {
+  // Arrivé d'un clic sur un nom du catalogue (« Lancer un outil ») : sa carte en vue.
+  const voulu = new URLSearchParams(location.search).get("outil");
+  if (voulu) {
+    const carte = Array.from(document.querySelectorAll(".carte"))
+      .find(c => c.dataset.nom === voulu);
+    if (carte) {
+      const replie = carte.closest("details");
+      if (replie) { replie.open = true; }
+      carte.classList.add("choisie");
+      carte.scrollIntoView({block: "center"});
+      const bouton = carte.querySelector("button");
+      if (bouton) { bouton.focus(); }
+    }
+  }
+})();
 (function () {
   const champ = document.getElementById("recherche");
   const liste = document.getElementById("suggestions");

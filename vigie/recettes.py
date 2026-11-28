@@ -1218,4 +1218,15 @@ def a_reparer():
     reparer = []
     if shutil.which("pipx") and module_manquant("dnstwist", "dnspython"):
         reparer.append("dnstwist")
+    # Outils passés à une recette Vigie : un ancien bilan les dit « prêts » avec une
+    # autre commande (SpiderFoot : « sf » du fork spiderfoot-ng, 28/11/2026). Tant que
+    # le lanceur écrit par la recette manque, la reprise les refait.
+    _, commandes = dossiers()
+    for nom, commande in LANCEURS_DE_RECETTE.items():
+        if not (os.path.exists(os.path.join(commandes, commande)) or shutil.which(commande)):
+            reparer.append(nom)
     return reparer
+
+
+# Outil (minuscules) -> commande que sa recette écrit.
+LANCEURS_DE_RECETTE = {"spiderfoot": "spiderfoot"}
