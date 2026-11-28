@@ -1511,11 +1511,54 @@ class TestAuditActif(unittest.TestCase):
         lignes = audit_actif.traduire_sslscan(self._fichier(xml, ".xml"))
         self.assertEqual(lignes[0][0], OK)
 
+    def test_nikto_garde_les_constats(self):
+        from vigie import audit_actif
+        contenu = ("- Nikto v2.5\n"
+                   "+ Target IP: 1.2.3.4\n"
+                   "+ Server: Apache/2.2.3 (outdated)\n"
+                   "+ The X-Frame-Options header is not present.\n"
+                   "+ Retrieved x-powered-by header: PHP/5.3\n")
+        lignes = audit_actif.traduire_nikto(self._fichier(contenu, ".txt"))
+        textes = [t for _, t in lignes]
+        self.assertTrue(any("X-Frame-Options" in t for t in textes))
+        self.assertFalse(any("Target IP" in t for t in textes))   # l'en-tête est ignoré
+        self.assertEqual(lignes[0][0], CRITIQUE)                   # serveur obsolète en tête
+
+    def test_nikto_rien_a_signaler(self):
+        from vigie import audit_actif
+        lignes = audit_actif.traduire_nikto(self._fichier("- Nikto v2.5\n", ".txt"))
+        self.assertEqual(lignes[0][0], OK)
+
+    def test_katana_compte_les_pages_et_parametres(self):
+        from vigie import audit_actif
+        contenu = ('{"request":{"endpoint":"https://x.fr/","method":"GET"}}\n'
+                   '{"request":{"endpoint":"https://x.fr/login?u=1","method":"GET"}}\n'
+                   '{"endpoint":"https://x.fr/contact","request":{"method":"POST"}}\n')
+        lignes = audit_actif.traduire_katana(self._fichier(contenu, ".jsonl"))
+        self.assertIn("3 page", lignes[0][1])
+        self.assertTrue(any("2 avec" in t for _, t in lignes))
+
+    def test_tlsx_signale_certificat_expire(self):
+        from vigie import audit_actif
+        contenu = '{"host":"x.fr","expired":true,"not_after":"2024-01-01"}\n'
+        lignes = audit_actif.traduire_tlsx(self._fichier(contenu, ".jsonl"))
+        self.assertEqual(lignes[0][0], CRITIQUE)
+        self.assertIn("expiré", lignes[0][1])
+
+    def test_tlsx_rien_a_signaler(self):
+        from vigie import audit_actif
+        lignes = audit_actif.traduire_tlsx(self._fichier('{"host":"x.fr"}\n', ".jsonl"))
+        self.assertEqual(lignes[0][0], OK)
+
     def test_outils_manuels_connaissent_naabu_et_sslscan(self):
-        from vigie import manuel
-        for nom in ("nmap", "nuclei", "naabu", "sslscan"):
+        from vigie import manuel, outils, audit_actif
+        for nom in ("nmap", "nuclei", "naabu", "sslscan", "nikto", "katana", "tlsx"):
             self.assertIn(nom, manuel.OUTILS)
             self.assertIn("test", manuel.OUTILS[nom])
+            self.assertIn(manuel.OUTILS[nom]["outil"], outils.CATALOGUE)
+        # chaque outil actif a sa traduction française (pas de sortie brute à l'écran)
+        for nom in ("naabu", "nuclei", "sslscan", "nikto", "katana", "tlsx"):
+            self.assertIn(nom, audit_actif.TRADUCTEURS)
 
 
 class TestRegistre(unittest.TestCase):
