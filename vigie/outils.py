@@ -316,19 +316,6 @@ CATALOGUE = {
         "depot": "https://github.com/lgandx/Responder",
         "licence": "GPL-3.0", "actif": True, "adaptateur": None, "attaque": True,
     },
-    "nikto": {
-        "role": "Scan d'un serveur web : fichiers dangereux, logiciels obsolètes, "
-                "en-têtes manquants (détecte, n'exploite pas)",
-        "commande": "nikto", "installation": "apt install nikto",
-        "depot": "https://github.com/sullo/nikto",
-        "licence": "GPL-2.0", "actif": True, "adaptateur": None, "attaque": True,
-    },
-    "katana": {
-        "role": "Cartographie des pages et points d'entrée d'un site (crawl actif)",
-        "commande": "katana", "installation": "go install github.com/projectdiscovery/katana/cmd/katana@latest",
-        "depot": "https://github.com/projectdiscovery/katana",
-        "licence": "MIT", "actif": True, "adaptateur": None, "attaque": True,
-    },
 }
 
 # Outils Windows (PowerShell), à brancher quand le bloc « Réseau et postes » démarre :

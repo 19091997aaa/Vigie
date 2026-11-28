@@ -39,17 +39,6 @@ OUTILS = {
     "sslscan": {"outil": "sslscan", "test": "failles",
                 "arguments": ["--xml=-", "--no-colour", "{cible}"],
                 "role": "Versions du chiffrement et certificat acceptés par le site"},
-    "nikto": {"outil": "nikto", "test": "failles",
-              "arguments": ["-h", "https://{cible}", "-ask", "no", "-maxtime", "600s"],
-              "role": "Serveur web : fichiers dangereux, logiciels obsolètes, en-têtes manquants"},
-    "katana": {"outil": "katana", "test": "manuels",
-               "arguments": ["-u", "https://{cible}", "-jsonl", "-silent", "-d", "2",
-                             "-timeout", "10", "-rate-limit", "50"],
-               "role": "Cartographie du site : pages et points d'entrée (formulaires, paramètres)"},
-    "tlsx": {"outil": "tlsx", "test": "failles",
-             "arguments": ["-u", "{cible}", "-json", "-silent", "-san", "-cn",
-                           "-ex", "-ss", "-mm", "-re"],
-             "role": "Certificat du site : expiré, auto-signé, mauvais nom, révoqué"},
 }
 CIBLE = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}|(?:\d{1,3}\.){3}\d{1,3}")
 
