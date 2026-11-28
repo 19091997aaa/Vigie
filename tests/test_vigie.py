@@ -3142,9 +3142,11 @@ class TestBrancherALaMain(unittest.TestCase):
         self.assertTrue(compte["installe"])
         self.assertEqual(compte["methode"], "installé à la main")
 
-    def test_formulaire_dans_la_page(self):
+    def test_formulaire_retire_de_la_page(self):
+        # Anass (28/11/2026) : « j'ai rien compris, j'en veux pas ». Le bloc est retiré de
+        # la page ; Vigie retrouve seul les outils posés aux endroits habituels.
         from vigie import interface_outils
-        self.assertIn("/outil/brancher", interface_outils.page())
+        self.assertNotIn("/outil/brancher", interface_outils.page())
 
 
 class TestInstalleurDisqueEtReparations(unittest.TestCase):

@@ -269,6 +269,19 @@ Catalogue de « Lancer un outil » : **noms cliquables** (lançable → formulai
 choisi ; à ouvrir → ouvert direct s'il est installé et sans case d'engagement, sinon sa
 carte dans « Ouvrir un outil »).
 
+**Ouvrir un outil, retours VM (28/11/2026)** : un outil qui ne s'ouvre pas dit
+**précisément ce qui manque** (`graphiques.manques()` : Docker absent / arrêté / sans droit,
+dossier pas copié, Node 22). Docker était la cause d'ARTEX « pas installé » : l'installeur
+Linux pose `docker.io` + `docker-compose-v2`, le démarre et met le compte dans le groupe
+docker (avant reconnexion, Vigie passe par `sg docker`). ARTEX : `.env` créé depuis
+`.env.example` avec mots de passe au hasard (`preparer_env`, jamais par-dessus un `.env`),
+1re construction jusqu'à 40 min. mitmproxy 11+ : page protégée par un jeton lu dans le
+journal (`_url_avec_jeton`), mitmweb n'ouvre plus d'onglet. Shannon (non installé par
+Vigie) : `npx --yes` d'un Node ≥ 22 (`npx22()`, celui de Vigie d'abord), Docker exigé,
+phrase d'attente en français dans le terminal. **Bloc « Je l'ai installé à la main »
+retiré de la page** (Anass : « j'ai rien compris, j'en veux pas ») ; la route et
+`a_la_main.py` restent, Burp est cherché aussi dans `~/BurpSuiteCommunity`.
+
 **Avancement en direct (28/11/2026)** : demande d'Anass, la page d'un outil lancé
 (« Lancer un outil ») montre où il en est, mise à jour toutes les 2 s (`vigie/avancement.py`,
 route `/outil/resultat/<id>/etat`). `lancer_seul._executer` lit la sortie au fil de l'eau
