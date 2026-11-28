@@ -309,3 +309,14 @@ class OutilsDockerEtJetons(unittest.TestCase):
         graphiques._CACHE_ETAT_DOCKER.update(quand=graphiques.time.time(), etat="sg")
         self.assertEqual(graphiques._avec_docker(["docker", "compose", "up", "-d"]),
                          ["sg", "docker", "-c", "docker compose up -d"])
+
+    def test_strix_pose_les_questions_puis_lance_la_cible(self):
+        fiche = graphiques.INTERFACES["Strix"]
+        with mock.patch.object(graphiques, "systeme", return_value="Linux"), \
+                mock.patch.object(graphiques.shutil, "which",
+                                  side_effect=lambda c: "/usr/bin/xterm" if c == "xterm" else None):
+            argv = graphiques._ouvrir_terminal(["/b/strix"], "t", fiche["intro"], "",
+                                               fiche["script"])
+        self.assertIn('/b/strix --target "$cible"', argv[-1])
+        self.assertIn("LLM_API_KEY", argv[-1])
+        self.assertIn("docker", fiche["besoin"])

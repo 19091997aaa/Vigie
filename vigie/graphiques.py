@@ -45,11 +45,13 @@ def _appli(*commandes, mac="", url_apres="", note=""):
             "url_apres": url_apres, "note": note}
 
 
-def _console(*commandes, note="", besoin=(), intro=""):
+def _console(*commandes, note="", besoin=(), intro="", script=""):
     """besoin : ce qu'il faut en plus sur la machine ("docker", "node22").
-    intro : phrase affichée en français dans le terminal avant le démarrage."""
+    intro : phrase affichée en français dans le terminal avant le démarrage.
+    script : lignes bash qui posent les questions en français puis lancent l'outil
+    ({cmd} = la commande trouvée), pour un outil qui ne démarre pas sans réglages."""
     return {"genre": "console", "commandes": list(commandes), "note": note,
-            "besoin": list(besoin), "intro": intro}
+            "besoin": list(besoin), "intro": intro, "script": script}
 
 
 def _web(url, *demarrer, attente=60, note=""):
@@ -185,7 +187,22 @@ INTERFACES = {
                              "Il lui faut Docker, Node 22 et une clé d'IA. Il lit le CODE "
                              "SOURCE de l'appli testée : seulement TON appli."),
     "PentestGPT": _console(["pentestgpt"], note="Il lui faut une clé d'IA."),
-    "Strix": _console(["strix"], note="Il lui faut une clé d'IA (LLM_API_KEY)."),
+    # Strix ne démarre pas sans cible ni clé d'IA (28/11/2026) : le terminal pose les
+    # questions en français, puis lance « strix --target ». Bac à sable Docker.
+    "Strix": _console(["strix"], besoin=["docker"],
+                      intro="Strix : agents d'IA qui testent TON site ou TON code. "
+                            "Réponds aux questions ci-dessous.",
+                      script=(
+                          'if [ -z "$LLM_API_KEY" ]; then read -r -s -p "Ta clé d\'IA '
+                          '(elle ne s\'affiche pas pendant que tu la colles) : " LLM_API_KEY; '
+                          'echo; export LLM_API_KEY; fi; '
+                          'if [ -z "$STRIX_LLM" ]; then read -r -p "Modèle d\'IA, '
+                          'par exemple openai/gpt-5 ou anthropic/<nom du modèle> : " '
+                          'STRIX_LLM; export STRIX_LLM; fi; '
+                          'read -r -p "Cible : TON site (https://…) ou le dossier de TON '
+                          'code : " cible; {cmd} --target "$cible"'),
+                      note="Il lui faut Docker et une clé d'IA. Le terminal te demande la "
+                           "clé, le modèle et la cible. Seulement TON site ou TON code."),
     # --- Dans le navigateur --------------------------------------------------
     "CyberChef": {"genre": "page", "url": "https://gchq.github.io/CyberChef/",
                   "fichiers": ["cyberchef/CyberChef*.html", "CyberChef/CyberChef*.html",
@@ -651,11 +668,13 @@ def _surveiller(processus, nom, chemin_journal, secondes=4):
         time.sleep(0.3)
 
 
-def _ouvrir_terminal(argv, titre, intro="", chemin_en_plus=""):
+def _ouvrir_terminal(argv, titre, intro="", chemin_en_plus="", script=""):
     """Ouvre une fenêtre de terminal qui lance argv et reste ouverte à la fin.
     intro : phrase en français affichée d'abord ; chemin_en_plus : dossier mis en tête
-    du PATH (le Node 22 de Vigie pour « npx »)."""
+    du PATH (le Node 22 de Vigie pour « npx ») ; script : questions puis lancement."""
     ligne = " ".join(_citer(a) for a in argv)
+    if script:
+        ligne = script.replace("{cmd}", ligne)
     if chemin_en_plus:
         ligne = f'export PATH={_citer(chemin_en_plus)}:"$PATH"; {ligne}'
     if intro:
@@ -764,7 +783,7 @@ def _ouvrir_console(nom, fiche):
     chemin = _trouver(argv[0])
     en_plus = os.path.dirname(chemin) if argv[0] == NPX22 else ""
     terminal = _ouvrir_terminal([chemin] + argv[1:], f"Vigie - {nom}",
-                                fiche.get("intro", ""), en_plus)
+                                fiche.get("intro", ""), en_plus, fiche.get("script", ""))
     if not terminal:
         raise Refus("Aucun terminal trouvé sur cette machine pour ouvrir la console.")
     _detacher(terminal, nom)
